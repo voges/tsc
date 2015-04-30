@@ -44,7 +44,7 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage: Compress:   tsc <file.sam>\n");
-    printf("       Decompress: tsc -d <file.sam.ts>\n\n");
+    printf("       Decompress: tsc -d <file.sam.tsc>\n\n");
     printf("Options:\n");
     printf("  -h, --help       Print this help\n");
     printf("  -d  --decompress Decompress\n");
