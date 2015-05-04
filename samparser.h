@@ -14,7 +14,7 @@
 typedef struct samparser_t_ {
     FILE*        fp;
     str_t*       head;
-    samrecord_t* curr;
+    samrecord_t  curr;
 } samparser_t;
 
 samparser_t* samparser_new(FILE* fp);

@@ -41,8 +41,4 @@ typedef struct samrecord_t_ {
     int64_t int_fields[5];
 } samrecord_t;
 
-samrecord_t* samrecord_new(void);
-void samrecord_free(samrecord_t* samrecord);
-void samrecord_clear(samrecord_t* samrecord);
-
 #endif /* TSC_SAMRECORD_H */

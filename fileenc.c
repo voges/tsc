@@ -7,6 +7,8 @@
 #include "fileenc.h"
 #include "tsclib.h"
 
+#include <string.h>
+
 static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp)
 {
     fileenc->ifp = ifp;
@@ -36,13 +38,13 @@ void fileenc_free(fileenc_t* fileenc)
 
 void fileenc_encode(fileenc_t* fileenc)
 {
-    samrecord_t* samrecord = fileenc->samparser->curr;
+    samrecord_t* samrecord = &(fileenc->samparser->curr);
 
     while (samparser_next(fileenc->samparser)) {
         str_t* qual = str_new();
         str_append_cstr(qual, samrecord->str_fields[QUAL]);
         DEBUG("%s", samrecord->str_fields[QUAL]);
-        DEBUG("%s, n=%d, size=%d,", qual->s, qual->n, qual->size);
+        DEBUG("%s", qual->s);
         str_free(qual);
     }
 }

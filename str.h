@@ -10,6 +10,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+/*
+ * 'str_t' handles strings. All functions take care of appending the
+ * terminating NULL byte themselves.
+ */
+
 typedef struct str_t_ {
     unsigned char* s;    /* null-terminated string */
     uint32_t       n;    /* length of s */
@@ -26,6 +31,6 @@ void str_append_str(str_t* str, const str_t* app);
 void str_append_cstr(str_t* str , const char* cstr);
 void str_append_char(str_t* str, char c);
 void str_copy_str(str_t* dest, const str_t* src);
-void str_copy_cstr(str_t* dest, const char* src, const size_t n);
+void str_copy_cstr(str_t* dest, const char* src);
 
 #endif /* TSC_STR_H */

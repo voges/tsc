@@ -13,6 +13,10 @@ static void str_init(str_t* str)
     str->s = NULL;
     str->n = 0;
     str->size = 0;
+
+    /* Init string with terminating NULL byte */
+    str_reserve(str, 1);
+    str->s[str->n] = '\0';
 }
 
 str_t* str_new(void)
@@ -48,10 +52,8 @@ void str_clear(str_t* str)
 
 void str_reserve(str_t* str, const uint32_t sz)
 {
-    if (sz > str->size) {
-        str->size = sz;
-        str->s = (unsigned char*)tsc_realloc_or_die(str->s, str->size * sizeof(unsigned char));
-    }
+    str->size = sz;
+    str->s = (unsigned char*)tsc_realloc_or_die(str->s, str->size * sizeof(unsigned char));
 }
 
 void str_extend(str_t* str, const uint32_t ex)
@@ -61,19 +63,18 @@ void str_extend(str_t* str, const uint32_t ex)
 
 void str_trunc(str_t* str, const uint32_t tr)
 {
-    uint32_t n = str->size - tr - 1;
-    char* tmp = (char*)tsc_malloc_or_die(sizeof(char) * n);
-    memcpy(tmp, str->s, n);
-    str_clear(str);
-    str_copy_cstr(str, tmp, n);
-    free((void*)tmp);
+    str->n -= tr;
+    str->size -= tr;
+    str_reserve(str, str->size);
+    str->s[str->n] = '\0';
 }
 
 void str_append_str(str_t* str, const str_t* app)
 {
     str_extend(str, app->n);
-    memcpy(str->s + app->n, app->s, app->n);
+    memcpy(str->s + str->n, app->s, app->n);
     str->n += app->n;
+    str->s[str->n] = '\0';
 }
 
 void str_append_cstr(str_t* str, const char* cstr)
@@ -82,27 +83,31 @@ void str_append_cstr(str_t* str, const char* cstr)
     str_extend(str, len);
     memcpy(str->s + str->n, cstr, len);
     str->n += len;
+    str->s[str->n] = '\0';
 }
 
 void str_append_char(str_t* str, const char c)
 {
     str_extend(str, 1);
     str->s[str->n++] = c;
+    str->s[str->n] = '\0';
 }
 
 void str_copy_str(str_t* dest, const str_t* src)
 {
+    str_clear(dest);
     str_reserve(dest, src->n + 1);
-    if (src->s == NULL) dest->s[0] = '\0';
-    else memcpy(dest->s, src->s, src->n);
+    memcpy(dest->s, src->s, src->n);
     dest->n = src->n;
     dest->s[dest->n] = '\0';
 }
 
-void str_copy_cstr(str_t* dest, const char* src, const size_t n)
+void str_copy_cstr(str_t* str, const char* cstr)
 {
-    str_reserve(dest, n + 1);
-    memcpy(dest->s, src, n);
-    dest->s[n] = '\0';
-    dest->n = n;
+    str_clear(str);
+    uint32_t len = (uint32_t)strlen(cstr);
+    str_reserve(str, len + 1);
+    memcpy(str->s, cstr, len);
+    str->n = len;
+    str->s[str->n] = '\0';
 }

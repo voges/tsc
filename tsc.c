@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
     const char* prog_name = argv[0];
     char* p;
     if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
-    str_copy_cstr(tsc_prog_name, prog_name, strlen(prog_name));
+    str_copy_cstr(tsc_prog_name, prog_name);
 
     /* Invoke own signal handler */
     signal(SIGHUP,  handle_signal);
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
     parse_options(argc, argv);
 
     /* Input file name */
-    str_copy_cstr(tsc_in_fname, opt_input, strlen(opt_input));
+    str_copy_cstr(tsc_in_fname, opt_input);
 
     /* Check if input file is accessible */
     if (access((const char*)tsc_in_fname->s, F_OK | R_OK)) {
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
             str_append_cstr(tsc_out_fname, ".tsc");
 
         } else {
-            str_copy_cstr(tsc_out_fname, opt_output, strlen(opt_output));
+            str_copy_cstr(tsc_out_fname, opt_output);
         }
 
         /* Check if output file already exists */
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
             str_trunc(tsc_out_fname, 4); /* strip '.tsc' */
 
         } else {
-            str_copy_cstr(tsc_out_fname, opt_output, strlen(opt_output));
+            str_copy_cstr(tsc_out_fname, opt_output);
         }
 
         /* Check if output file already exists */
