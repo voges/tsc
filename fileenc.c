@@ -36,14 +36,13 @@ void fileenc_free(fileenc_t* fileenc)
 
 void fileenc_encode(fileenc_t* fileenc)
 {
-    samrecord_t* samrecord = samrecord_new();
+    samrecord_t* samrecord = fileenc->samparser->curr;
 
-    while (samparser_next(fileenc->samparser, samrecord)) {
-        samrecord = fileenc->samparser->curr;
+    while (samparser_next(fileenc->samparser)) {
+        str_t* qual = str_new();
+        str_append_cstr(qual, samrecord->str_fields[QUAL]);
         DEBUG("%s", samrecord->str_fields[QUAL]);
-        //samrecord_print(fileenc->samparser->curr);
+        DEBUG("%s, n=%d, size=%d,", qual->s, qual->n, qual->size);
+        str_free(qual);
     }
-    DEBUG("Hello");
-    samrecord_free(samrecord);
-    DEBUG("Hello");
 }

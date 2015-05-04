@@ -41,21 +41,3 @@ void samrecord_clear(samrecord_t* samrecord)
         tsc_error("Tried to work on NULL pointer. Aborting.");
     }
 }
-
-void samrecord_print(samrecord_t* samrecord)
-{
-    tsc_log("%s %d %s %d %d %s %s %d %s %d %s %s %s",
-            samrecord->str_fields[QNAME],
-            samrecord->int_fields[FLAG],
-            samrecord->str_fields[RNAME],
-            samrecord->int_fields[POS],
-            samrecord->int_fields[MAPQ],
-            samrecord->str_fields[CIGAR],
-            samrecord->str_fields[RNEXT],
-            samrecord->int_fields[PNEXT],
-            samrecord->int_fields[TLEN],
-            samrecord->str_fields[SEQ],
-            samrecord->str_fields[QUAL],
-            samrecord->str_fields[OPT]
-           );
-}
