@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 typedef struct str_t_ {
-    unsigned char* s;    /* null-terminated string */
+    char* s;             /* null-terminated string */
     uint32_t       n;    /* length of s */
     uint32_t       size; /* bytes allocated for s */
 } str_t;

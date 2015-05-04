@@ -53,7 +53,7 @@ void str_clear(str_t* str)
 void str_reserve(str_t* str, const uint32_t sz)
 {
     str->size = sz;
-    str->s = (unsigned char*)tsc_realloc_or_die(str->s, str->size * sizeof(unsigned char));
+    str->s = (char*)tsc_realloc_or_die(str->s, str->size * sizeof(char));
 }
 
 void str_extend(str_t* str, const uint32_t ex)
