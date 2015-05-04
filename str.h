@@ -7,13 +7,13 @@
 #ifndef TSC_STR_H
 #define TSC_STR_H
 
-#include <stdint.h>
-#include <stdlib.h>
-
 /*
- * 'str_t' handles strings. All functions take care of appending the
+ * Encapsulated strings. All functions take care of appending the
  * terminating NULL byte themselves.
  */
+
+#include <stdint.h>
+#include <stdlib.h>
 
 typedef struct str_t_ {
     unsigned char* s;    /* null-terminated string */
@@ -34,3 +34,4 @@ void str_copy_str(str_t* dest, const str_t* src);
 void str_copy_cstr(str_t* dest, const char* src);
 
 #endif /* TSC_STR_H */
+

@@ -111,3 +111,4 @@ void str_copy_cstr(str_t* str, const char* cstr)
     str->n = len;
     str->s[str->n] = '\0';
 }
+

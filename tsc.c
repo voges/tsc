@@ -23,9 +23,9 @@ static bool opt_flag_force = false;
 /* Initializing global vars from 'tsclib.h' */
 str_t* tsc_prog_name = NULL;
 str_t* tsc_in_fname = NULL;
-FILE* tsc_in_fd = NULL;
+FILE* tsc_in_fp = NULL;
 str_t* tsc_out_fname = NULL;
-FILE* tsc_out_fd = NULL;
+FILE* tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 
 static void print_version(void)
@@ -182,18 +182,18 @@ int main(int argc, char *argv[])
         }
 
         /* Open infile, create and open outfile */
-        tsc_in_fd = tsc_fopen_or_die((const char*)tsc_in_fname->s, "r");
-        tsc_out_fd = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
+        tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "r");
+        tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
         /* Do it! :) */
         tsc_log("Encoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
-        fileenc_t* fileenc = fileenc_new(tsc_in_fd, tsc_out_fd);
+        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
 
         /* Close files */
-        tsc_fclose_or_die(tsc_in_fd);
-        tsc_fclose_or_die(tsc_out_fd);
+        tsc_fclose_or_die(tsc_in_fp);
+        tsc_fclose_or_die(tsc_out_fp);
     } else { /* TSC_MODE_DECOMPRESS */
 
         /* Check input file extension */
@@ -217,15 +217,18 @@ int main(int argc, char *argv[])
         }
 
         /* Open infile, create and open outfile */
-        tsc_in_fd = tsc_fopen_or_die((const char*)tsc_in_fname->s, "rb");
-        tsc_out_fd = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
+        tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "rb");
+        tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
         /* Do it! :) */
         tsc_log("Decoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
-
+      /*filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
+        filedec_decode(filedec);
+        filedec_free(filedec);
+      */
         /* Close files */
-        tsc_fclose_or_die(tsc_in_fd);
-        tsc_fclose_or_die(tsc_out_fd);
+        tsc_fclose_or_die(tsc_in_fp);
+        tsc_fclose_or_die(tsc_out_fp);
     }
 
     str_free(tsc_prog_name);
@@ -234,3 +237,4 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
+

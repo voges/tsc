@@ -8,13 +8,13 @@
 #define TSC_FILEENC_H
 
 #include <stdio.h>
-//#include "fwb.h"
+#include "frwb.h"
 #include "samparser.h"
 
 typedef struct fileenc_t_ {
     FILE* ifp;
     FILE* ofp;
-    //fwriter_t* ofwriter;
+    frwb_t* frwb;
     samparser_t* samparser;
 } fileenc_t;
 
@@ -23,3 +23,4 @@ void fileenc_free(fileenc_t* fileenc);
 void fileenc_encode(fileenc_t* fileenc);
 
 #endif // TSC_FILEENC_H
+

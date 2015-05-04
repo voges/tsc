@@ -18,9 +18,9 @@
 
 extern str_t* tsc_prog_name;
 extern str_t* tsc_in_fname;
-extern FILE* tsc_in_fd;
+extern FILE* tsc_in_fp;
 extern str_t* tsc_out_fname;
-extern FILE* tsc_out_fd;
+extern FILE* tsc_out_fp;
 
 typedef enum {
     TSC_MODE_COMPRESS,
@@ -40,3 +40,4 @@ FILE* tsc_fopen_or_die(const char* fname, const char* mode);
 void tsc_fclose_or_die(FILE* fp);
 
 #endif /* TSC_TSCLIB_H */
+

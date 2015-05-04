@@ -10,13 +10,13 @@
 
 void tsc_cleanup(void)
 {
-    if (tsc_in_fd != NULL) {
-        tsc_fclose_or_die(tsc_in_fd);
+    if (tsc_in_fp != NULL) {
+        tsc_fclose_or_die(tsc_in_fp);
     }
-    if (tsc_out_fd != NULL) {
-        tsc_fclose_or_die(tsc_out_fd);
+    if (tsc_out_fp != NULL) {
+        tsc_fclose_or_die(tsc_out_fp);
     }
-    if (tsc_out_fname->s) {
+    if (tsc_out_fname->n > 0) {
         unlink((const char*)tsc_out_fname->s);
         tsc_log("Removed: %s", tsc_out_fname->s);
     }
@@ -101,3 +101,4 @@ void tsc_fclose_or_die(FILE* fp)
         exit(EXIT_FAILURE);
     }
 }
+

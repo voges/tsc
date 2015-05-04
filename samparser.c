@@ -9,7 +9,6 @@
 
 static void samparser_parse(samparser_t* samparser)
 {
-    DEBUG("Parsing line:\n%s", samparser->curr.line);
     size_t l = strlen(samparser->curr.line) - 1;
 
     while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n')) {
@@ -36,10 +35,6 @@ static void samparser_parse(samparser_t* samparser)
     if (f == 11) {
         samparser->curr.str_fields[sfc++] = c;
     }
-
-    DEBUG("Parsed:");
-    int i = 0; for (i = 0; i < 5; i++) { DEBUG("int_fields[%d] = %d", i, samparser->curr.int_fields[i]); }
-               for (i = 0; i < 7; i++) { DEBUG("str_fields[%d] = %s", i, samparser->curr.str_fields[i]); }
 }
 
 static void samparser_init(samparser_t* samparser, FILE* fp)
@@ -91,3 +86,4 @@ bool samparser_next(samparser_t* samparser)
     }
     return true;
 }
+
