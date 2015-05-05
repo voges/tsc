@@ -7,6 +7,7 @@
 #ifndef TSC_SAMPARSER_H
 #define TSC_SAMPARSER_H
 
+#include <stdbool.h>
 #include "str.h"
 #include "samrecord.h"
 

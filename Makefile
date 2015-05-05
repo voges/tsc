@@ -1,5 +1,5 @@
 EXECUTABLE       = tsc
-CC               = g++
+CC               = gcc
 CFLAGS           = -O0 -Wall
 #INCLUDES        = -I./include
 #LIBS            = -L./lib

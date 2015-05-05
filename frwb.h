@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "tsclib.h"
 
 typedef struct frwb_t_ {
