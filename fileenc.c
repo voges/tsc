@@ -55,37 +55,38 @@ static void fileenc_write_int64(fileenc_t* fileenc, int64_t integer)
 
 void fileenc_encode(fileenc_t* fileenc)
 {
+    //seqenc_t* seqenc = seqenc_new();
+    //const unsigned int block_sz = 10;
+
     /* Write SAM header */
-    fileenc_write_string(fileenc, fileenc->samparser->head->s);
+    //fileenc_write_string(fileenc, fileenc->samparser->head->s);
 
     samrecord_t* samrecord = &(fileenc->samparser->curr);
 
+
     while (samparser_next(fileenc->samparser)) {
-        fileenc_write_string(fileenc, samrecord->str_fields[QNAME]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_int64(fileenc, samrecord->int_fields[FLAG]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_string(fileenc, samrecord->str_fields[RNAME]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_int64(fileenc, samrecord->int_fields[POS]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_int64(fileenc, samrecord->int_fields[MAPQ]);
+
+        /* Start a new block */
+        /*if (line_cnt == block_sz) {
+            str_t* seq_block = str_new();
+            seqenc_get_block(seqenc, seq_block);
+            fileenc_write_block(fileenc, block);
+            line_cnt = 0;
+            seqenc_reset(seqenc);
+        }
+        */
+        char pos[6];
+        sprintf(pos, "%6d", samrecord->int_fields[POS]);
+        fileenc_write_string(fileenc, pos);
         fileenc_write_string(fileenc, "\t");
         fileenc_write_string(fileenc, samrecord->str_fields[CIGAR]);
         fileenc_write_string(fileenc, "\t");
-        fileenc_write_string(fileenc, samrecord->str_fields[RNEXT]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_int64(fileenc, samrecord->int_fields[PNEXT]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_int64(fileenc, samrecord->int_fields[TLEN]);
-        fileenc_write_string(fileenc, "\t");
         fileenc_write_string(fileenc, samrecord->str_fields[SEQ]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_string(fileenc, samrecord->str_fields[QUAL]);
-        fileenc_write_string(fileenc, "\t");
-        fileenc_write_string(fileenc, samrecord->str_fields[OPT]);
         fileenc_write_string(fileenc, "\n");
+
+        //line_cnt++;
     }
+
 
     frwb_write_flush(fileenc->frwb);
 }
