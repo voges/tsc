@@ -10,12 +10,19 @@
 #include <stdio.h>
 #include "frwb.h"
 #include "samparser.h"
+#include "seqenc.h"
+#include "qualenc.h"
+#include "auxenc.h"
 
 typedef struct fileenc_t_ {
     FILE* ifp;
     FILE* ofp;
+    unsigned int block_sz;
     frwb_t* frwb;
     samparser_t* samparser;
+    seqenc_t* seqenc;
+    qualenc_t* qualenc;
+    auxenc_t* auxenc;
 } fileenc_t;
 
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp);
