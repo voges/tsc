@@ -8,7 +8,7 @@
 #define TSC_FILEENC_H
 
 #include <stdio.h>
-#include "frwb.h"
+#include "fwriter.h"
 #include "samparser.h"
 #include "seqenc.h"
 #include "qualenc.h"
@@ -18,7 +18,7 @@ typedef struct fileenc_t_ {
     FILE* ifp;
     FILE* ofp;
     unsigned int block_sz;
-    frwb_t* frwb;
+    fwriter_t* fwriter;
     samparser_t* samparser;
     seqenc_t* seqenc;
     qualenc_t* qualenc;

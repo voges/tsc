@@ -18,10 +18,10 @@ fileenc_t* fileenc_new(FILE* ifp, FILE* ofp)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc_or_die(sizeof(fileenc_t));
     fileenc->block_sz = 100;
-    fileenc->frwb = frwb_new(ofp);
+    fileenc->fwriter = fwriter_new(ofp);
     fileenc->samparser = samparser_new(ifp);
     fileenc->seqenc = seqenc_new(fileenc->block_sz);
-    fileenc->qualenc = qualenc_new(fileenc->block_sz);
+    fileenc->qualenc = qualenc_new(fileenc->block_sz, 10);
     fileenc->auxenc = auxenc_new(fileenc->block_sz);
     fileenc_init(fileenc, ifp, ofp);
     return fileenc;
@@ -30,7 +30,7 @@ fileenc_t* fileenc_new(FILE* ifp, FILE* ofp)
 void fileenc_free(fileenc_t* fileenc)
 {
     if (fileenc != NULL) {
-        frwb_free(fileenc->frwb);
+        fwriter_free(fileenc->fwriter);
         samparser_free(fileenc->samparser);
         seqenc_free(fileenc->seqenc);
         qualenc_free(fileenc->qualenc);
@@ -47,18 +47,20 @@ static void fileenc_write_string(fileenc_t* fileenc, const char* string)
     size_t nbytes = strlen(string);
     unsigned int i = 0;
     for (i = 0; i < nbytes; i++) {
-        frwb_write_byte(fileenc->frwb, *string++);
+        fwriter_write_byte(fileenc->fwriter, *string++);
     }
 }
 
+/*
 static void fileenc_write_int64(fileenc_t* fileenc, int64_t integer)
 {
     size_t nbytes = sizeof(integer);
     unsigned int i = 0;
     for (i = 0; i < nbytes; i++) {
-        frwb_write_byte(fileenc->frwb, (integer >> i*8) & 0xFF);
+        fwriter_write_byte(fileenc->fwriter, (integer >> i*8) & 0xFF);
     }
 }
+*/
 
 void fileenc_encode(fileenc_t* fileenc)
 {
@@ -66,7 +68,7 @@ void fileenc_encode(fileenc_t* fileenc)
     unsigned int line_cnt = 0;
 
     /* Write SAM header */
-    //fileenc_write_string(fileenc, fileenc->samparser->head->s);
+    fileenc_write_string(fileenc, fileenc->samparser->head->s);
 
     samrecord_t* samrecord = &(fileenc->samparser->curr);
 
@@ -78,12 +80,13 @@ void fileenc_encode(fileenc_t* fileenc)
     while (samparser_next(fileenc->samparser)) {
 
         if (line_cnt == fileenc->block_sz - 1) {
-            DEBUG("Writing block ...");
+            block_cnt++;
+            DEBUG("Writing block %d ...", block_cnt);
             str_t* out = str_new();
             seqenc_output_records(fileenc->seqenc, out);
             fileenc_write_string(fileenc, out->s);
-            //qualenc_output_records(fileenc->qualenc, fileenc->frwb);
-            //auxenc_output_records(fileenc->auxenc, fileenc->frwb);
+            //qualenc_output_records(fileenc->qualenc, fileenc->fwriter);
+            //auxenc_output_records(fileenc->auxenc, fileenc->fwriter);
             str_free(out);
             line_cnt = 0;
         }
@@ -95,6 +98,6 @@ void fileenc_encode(fileenc_t* fileenc)
 
     }
 
-    frwb_write_flush(fileenc->frwb);
+    fwriter_write_flush(fileenc->fwriter);
 }
 
