@@ -1,5 +1,6 @@
 /*****************************************************************************
- * Copyright (c) 2015 Jan Voges <jvoges@tnt.uni-hannover.de>                 *
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
  *                                                                           *
  * This file is part of tsc.                                                 *
  *****************************************************************************/
@@ -26,6 +27,7 @@ str_t* tsc_in_fname = NULL;
 FILE* tsc_in_fp = NULL;
 str_t* tsc_out_fname = NULL;
 FILE* tsc_out_fp = NULL;
+unsigned int tsc_block_sz = 1000;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 
 static void print_version(void)
@@ -35,7 +37,8 @@ static void print_version(void)
 
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015 by Jan Voges <jvoges@tnt.uni-hannover.de>\n");
+    printf("Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)\n");
+    printf("Contact: Jan Voges <jvoges@tnt.uni-hannover.de>\n");
 }
 
 static void print_help(void)
@@ -49,6 +52,7 @@ static void print_help(void)
     printf("  -h, --help       Print this help\n");
     printf("  -d  --decompress Decompress\n");
     printf("  -o, --output     Specify output file\n");
+    printf("  -b, --blocksz    Block size\n");
     printf("  -f  --force      Force overwriting of output file\n");
     printf("  -v  --version    Display program version\n");
     printf("\n");
@@ -62,12 +66,13 @@ static void parse_options(int argc, char *argv[])
         { "help",       no_argument,       NULL, 'h'},
         { "decompress", no_argument,       NULL, 'd'},
         { "output",     required_argument, NULL, 'o'},
+        { "blocksz",    required_argument, NULL, 'b'},
         { "force",      no_argument,       NULL, 'f'},
         { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "hdo:fv";
+    const char *short_options = "hdo:b:fv";
 
     do {
         int opt_idx = 0;
@@ -84,6 +89,12 @@ static void parse_options(int argc, char *argv[])
                 break;
             case 'o':
                 opt_output = optarg;
+                break;
+            case 'b':
+                if (atoi(optarg) <= 0)
+                    tsc_error("Block size must be greater than zero.");
+                else
+                    tsc_block_sz = (unsigned int)atoi(optarg);
                 break;
             case 'f':
                 opt_flag_force = true;
@@ -170,7 +181,6 @@ int main(int argc, char *argv[])
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_append_cstr(tsc_out_fname, ".tsc");
-
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
@@ -187,7 +197,7 @@ int main(int argc, char *argv[])
 
         /* Do it! :) */
         tsc_log("Encoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
-        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp);
+        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
 
@@ -205,7 +215,6 @@ int main(int argc, char *argv[])
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4); /* strip '.tsc' */
-
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
         }

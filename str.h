@@ -1,5 +1,6 @@
 /*****************************************************************************
- * Copyright (c) 2015 Jan Voges <jvoges@tnt.uni-hannover.de>                 *
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
  *                                                                           *
  * This file is part of tsc.                                                 *
  *****************************************************************************/
@@ -9,11 +10,10 @@
 
 /*
  * Encapsulated strings. All functions take care of appending the
- * terminating NULL byte themselves.
+ * terminating '\0' themselves.
  */
 
 #include <stdint.h>
-#include <stdlib.h>
 
 typedef struct str_t_ {
     char* s;             /* null-terminated string */

@@ -1,5 +1,6 @@
 /*****************************************************************************
- * Copyright (c) 2015 Jan Voges <jvoges@tnt.uni-hannover.de>                 *
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
  *                                                                           *
  * This file is part of tsc.                                                 *
  *****************************************************************************/
@@ -11,6 +12,7 @@
 static void seqenc_init(seqenc_t* seqenc)
 {
     seqenc->buf_pos = 0;
+    seqenc->block_nb = 0;
 }
 
 seqenc_t* seqenc_new(unsigned int block_sz)
@@ -49,38 +51,33 @@ void seqenc_free(seqenc_t* seqenc)
 
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char *cigar, const char *seq)
 {
-    seqenc->pos_buf[seqenc->buf_pos] = pos;
-    DEBUG("pos=%d", pos);
-    str_append_cstr(seqenc->cigar_buf[seqenc->buf_pos], cigar);
-
-    if (seqenc->buf_pos > 1) {
-        uint64_t pos_off = seqenc->pos_buf[seqenc->buf_pos] - seqenc->pos_buf[seqenc->buf_pos - 1];
+    if (seqenc->buf_pos < seqenc->block_sz) {
         seqenc->pos_buf[seqenc->buf_pos] = pos;
-        seq += strlen(seq) - pos_off;
-        DEBUG("pos_off=%d, seq=%s", pos_off,seq);
-        str_append_cstr(seqenc->seq_buf[seqenc->buf_pos], seq);
-        str_append_cstr(seqenc->seq_buf[seqenc->buf_pos], "\n");
+        str_copy_cstr(seqenc->cigar_buf[seqenc->buf_pos], cigar);
+        str_copy_cstr(seqenc->seq_buf[seqenc->buf_pos], seq);
+        seqenc->buf_pos++;
     } else {
-        str_append_cstr(seqenc->seq_buf[seqenc->buf_pos], seq);
-        str_append_cstr(seqenc->seq_buf[seqenc->buf_pos], "\n");
+        tsc_error("Block buffer overflow.");
     }
-
-    seqenc->buf_pos++;
 }
 
-void seqenc_output_records(seqenc_t* seqenc, str_t* out)
+void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter)
 {
-    DEBUG("Flushing buffer, outputting records.");
+    DEBUG("Writing block ...");
+
+    /* Write block header */
+    fwriter_write_cstr(fwriter, "NUC");              /*< this is a nucleotide block     */
+    fwriter_write_uint64(fwriter, seqenc->block_nb); /*< total number of bytes in block */
 
     unsigned int i = 0;
-    for (i = 0; i < seqenc->block_sz; i++) {
-        str_append_str(out, seqenc->seq_buf[i]);
-        str_append_cstr(out, "\n");
-        seqenc->pos_buf[i] = 0;
-        str_clear(seqenc->cigar_buf[i]);
-        str_clear(seqenc->seq_buf[i]);
+    for (i = 0; i < seqenc->buf_pos; i++) {
+        fwriter_write_uint64(fwriter, seqenc->pos_buf[i]);
+        fwriter_write_cstr(fwriter, "\t");
+        fwriter_write_cstr(fwriter, seqenc->cigar_buf[i]->s);
+        fwriter_write_cstr(fwriter, "\t");
+        fwriter_write_cstr(fwriter, seqenc->seq_buf[i]->s);
+        fwriter_write_cstr(fwriter, "\n");
     }
-
     seqenc->buf_pos = 0;
 }
 

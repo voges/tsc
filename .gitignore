@@ -1,3 +1,5 @@
 *~
 *.[oa]
-./test_files/*
+tsc
+doxygen/*
+

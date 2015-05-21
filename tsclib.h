@@ -1,5 +1,6 @@
 /*****************************************************************************
- * Copyright (c) 2015 Jan Voges <jvoges@tnt.uni-hannover.de>                 *
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
  *                                                                           *
  * This file is part of tsc.                                                 *
  *****************************************************************************/
@@ -8,6 +9,7 @@
 #define TSC_TSCLIB_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include "str.h"
 
 #define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
@@ -21,6 +23,7 @@ extern str_t* tsc_in_fname;
 extern FILE* tsc_in_fp;
 extern str_t* tsc_out_fname;
 extern FILE* tsc_out_fp;
+extern unsigned int tsc_block_sz;
 
 typedef enum {
     TSC_MODE_COMPRESS,

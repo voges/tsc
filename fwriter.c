@@ -1,5 +1,6 @@
 /*****************************************************************************
- * Copyright (c) 2015 Jan Voges <jvoges@tnt.uni-hannover.de>                 *
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
  *                                                                           *
  * This file is part of tsc.                                                 *
  *****************************************************************************/
@@ -32,7 +33,7 @@ void fwriter_free(fwriter_t* fwriter)
     }
 }
 
-bool fwriter_write_byte(fwriter_t* fwriter, const char byte)
+void fwriter_write_byte(fwriter_t* fwriter, const char byte)
 {
     fwriter->bytebuf[fwriter->bytebuf_cnt++] = byte;
 
@@ -42,11 +43,26 @@ bool fwriter_write_byte(fwriter_t* fwriter, const char byte)
         fwriter->bytebuf_cnt = 0;
         size_t n = fwrite(fwriter->bytebuf, 1, sizeof(fwriter->bytebuf), fwriter->fp);
         if (n < sizeof(fwriter->bytebuf)) {
-            tsc_warning("Could only write %d/%d bytes!", n, sizeof(fwriter->bytebuf));
+            tsc_error("Could only write %d/%d bytes!", n, sizeof(fwriter->bytebuf));
         }
     }
+}
 
-    return true;
+void fwriter_write_uint64(fwriter_t* fwriter, uint64_t dword)
+{
+    unsigned int i = 7;
+    do {
+        fwriter_write_byte(fwriter, (dword >> (8 * i--)) & 0xF);
+    } while (i > 0);
+}
+
+void fwriter_write_cstr(fwriter_t* fwriter, const char* cstr)
+{
+    size_t nbytes = strlen(cstr);
+    unsigned int i = 0;
+    for (i = 0; i < nbytes; i++) {
+        fwriter_write_byte(fwriter, *cstr++);
+    }
 }
 
 void fwriter_write_flush(fwriter_t* fwriter)
