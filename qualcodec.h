@@ -5,13 +5,18 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#ifndef TSC_QUALENC_H
-#define TSC_QUALENC_H
+#ifndef TSC_QUALCODEC_H
+#define TSC_QUALCODEC_H
 
 #include "cbufstr.h"
 #include <stdio.h>
+#include "fwriter.h"
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 typedef struct qualenc_t_ {
+    uint64_t block_nb;
     unsigned int block_sz;
     unsigned int window_sz;
     cbufstr_t* qual_buf;
@@ -21,7 +26,17 @@ typedef struct qualenc_t_ {
 qualenc_t* qualenc_new(const unsigned int block_sz, const unsigned int window_sz);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
-void qualenc_output_records(qualenc_t* qualenc, FILE* fp);
+void qualenc_write_block(qualenc_t* qualenc, fwriter_t* fwriter);
 
-#endif // TSC_QUALENC_H
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+typedef struct qualdec_t_ {
+
+} qualdec_t;
+
+qualdec_t* qualdec_new(void);
+void qualdec_free(qualdec_t* qualdec);
+
+#endif /* TSC_QUALCODEC_H */
 

@@ -8,19 +8,7 @@
 #ifndef TSC_AUXENC_H
 #define TSC_AUXENC_H
 
-#include "str.h"
-#include <stdio.h>
+unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size, unsigned int *out_size);
+unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size, unsigned int *out_size);
 
-typedef struct auxenc_t_ {
-    unsigned int block_sz;
-    str_t** aux_buf;
-    unsigned int buf_pos;
-} auxenc_t;
-
-auxenc_t* auxenc_new(unsigned int block_sz);
-void auxenc_free(auxenc_t* auxenc);
-void auxenc_add_record(auxenc_t* auxenc, const char* aux);
-void auxenc_output_records(auxenc_t* auxenc, FILE* fp);
-
-#endif // TSC_AUXENC_H
-
+#endif /* TSC_ACCODEC_H */

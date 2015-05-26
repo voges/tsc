@@ -19,6 +19,7 @@
 #define GB MB * 1024LL
 
 extern str_t* tsc_prog_name;
+extern str_t* tsc_version;
 extern str_t* tsc_in_fname;
 extern FILE* tsc_in_fp;
 extern str_t* tsc_out_fname;

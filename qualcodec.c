@@ -5,9 +5,12 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#include "qualenc.h"
+#include "qualcodec.h"
 #include "tsclib.h"
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 static void qualenc_init(qualenc_t* qualenc, const unsigned int block_sz, const unsigned int window_sz)
 {
     qualenc->block_sz = block_sz;
@@ -39,7 +42,36 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
     DEBUG("Added qual to buffer");
 }
 
-void qualenc_output_records(qualenc_t* qualenc, FILE* fp)
+void qualenc_write_block(qualenc_t* qualenc, fwriter_t* fwriter)
+{
+    DEBUG("Writing block ...");
+
+    /* Write block header (4 bytes) */
+    fwriter_write_cstr(fwriter, "QUAL");             /*< this is a quality block        */
+    fwriter_write_uint64(fwriter, qualenc->block_nb); /*< total number of bytes in block */
+
+
+
+    //qualenc_reset();
+}
+
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+static void qualdec_init(qualdec_t* qualdec)
+{
+
+}
+
+qualdec_t* qualdec_new(void)
+{
+    qualdec_t* qualdec = (qualdec_t*)tsc_malloc_or_die(sizeof(qualdec_t));
+
+    qualdec_init(qualdec);
+    return qualdec;
+}
+
+void qualdec_free(qualdec_t* qualdec)
 {
 
 }

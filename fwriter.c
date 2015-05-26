@@ -48,6 +48,14 @@ void fwriter_write_byte(fwriter_t* fwriter, const char byte)
     }
 }
 
+void fwriter_write_uint32(fwriter_t* fwriter, uint32_t word)
+{
+    unsigned int i = 3;
+    do {
+        fwriter_write_byte(fwriter, (word >> (8 * i--)) & 0xF);
+    } while (i > 0);
+}
+
 void fwriter_write_uint64(fwriter_t* fwriter, uint64_t dword)
 {
     unsigned int i = 7;

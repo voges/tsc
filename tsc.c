@@ -14,7 +14,7 @@
 #include <getopt.h>
 #include "tsclib.h"
 #include "version.h"
-#include "fileenc.h"
+#include "filecodec.h"
 
 /* Options/flags from getopt */
 static const char* opt_input = NULL;
@@ -23,6 +23,7 @@ static bool opt_flag_force = false;
 
 /* Initializing global vars from 'tsclib.h' */
 str_t* tsc_prog_name = NULL;
+str_t* tsc_version = NULL;
 str_t* tsc_in_fname = NULL;
 FILE* tsc_in_fp = NULL;
 str_t* tsc_out_fname = NULL;
@@ -32,7 +33,7 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 
 static void print_version(void)
 {
-    printf("%s %s\n", tsc_prog_name->s, VERSION);
+    printf("%s %s\n", tsc_prog_name->s, tsc_version->s);
 }
 
 static void print_copyright(void)
@@ -141,6 +142,8 @@ int main(int argc, char *argv[])
 {
     /* Initialize strings */
     tsc_prog_name = str_new();
+    tsc_version = str_new();
+    str_copy_cstr(tsc_version, VERSION);
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
@@ -231,10 +234,10 @@ int main(int argc, char *argv[])
 
         /* Do it! :) */
         tsc_log("Decoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
-      /*filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
+        filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);
         filedec_free(filedec);
-      */
+
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
         tsc_fclose_or_die(tsc_out_fp);

@@ -5,10 +5,14 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#include "seqenc.h"
+#include "seqcodec.h"
 #include "tsclib.h"
 #include <string.h>
+#include "accodec.h"
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 static void seqenc_init(seqenc_t* seqenc)
 {
     seqenc->buf_pos = 0;
@@ -65,9 +69,10 @@ void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter)
 {
     DEBUG("Writing block ...");
 
-    /* Write block header */
-    fwriter_write_cstr(fwriter, "NUC");              /*< this is a nucleotide block     */
-    fwriter_write_uint64(fwriter, seqenc->block_nb); /*< total number of bytes in block */
+    /* Write block header (identifier: 4 bytes, block size: 8 bytes) */
+    fwriter_write_cstr(fwriter, "SEQ");
+    fwriter_write_byte(fwriter, 0x00);
+    fwriter_write_uint64(fwriter, seqenc->block_nb);
 
     unsigned int i = 0;
     for (i = 0; i < seqenc->buf_pos; i++) {
@@ -78,6 +83,40 @@ void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter)
         fwriter_write_cstr(fwriter, seqenc->seq_buf[i]->s);
         fwriter_write_cstr(fwriter, "\n");
     }
-    seqenc->buf_pos = 0;
+
+    /* Reset encoder */
+    seqenc_init(seqenc);
+}
+
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+static void seqdec_init(seqdec_t* seqdec)
+{
+
+}
+
+seqdec_t* seqdec_new(void)
+{
+    seqdec_t* seqdec = (seqdec_t*)tsc_malloc_or_die(sizeof(seqdec_t));
+
+    seqdec_init(seqdec);
+    return seqdec;
+}
+
+void seqdec_free(seqdec_t* seqdec)
+{
+    if (seqdec != NULL) {
+
+        free((void*)seqdec);
+        seqdec = NULL;
+    } else { /* seqdec == NULL */
+        tsc_error("Tried to free NULL pointer. Aborting.");
+    }
+}
+
+void seqdec_decode_block(seqdec_t* seqenc, uint64_t block_nb)
+{
+
 }
 

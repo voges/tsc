@@ -5,9 +5,12 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#include "auxenc.h"
+#include "auxcodec.h"
 #include "tsclib.h"
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 static void auxenc_init(auxenc_t* auxenc)
 {
     auxenc->buf_pos = 0;
@@ -41,13 +44,47 @@ void auxenc_free(auxenc_t* auxenc)
     }
 }
 
-void auxenc_add_record(auxenc_t* auxenc, const char* qual)
+void auxenc_add_record(auxenc_t* auxenc,
+                       const char* qname,
+                       uint64_t flag,
+                       const char* rname,
+                       uint64_t mapq,
+                       const char* rnext,
+                       uint64_t pnext,
+                       uint64_t tlen,
+                       const char* opt)
 {
 
 }
 
-void auxenc_output_records(auxenc_t* auxenc, FILE* fp)
+void auxenc_write_block(auxenc_t* auxenc, fwriter_t* fwriter)
 {
 
+}
+
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+static void auxdec_init(auxdec_t* auxdec)
+{
+
+}
+
+auxdec_t* auxdec_new(void)
+{
+    auxdec_t* auxdec = (auxdec_t*)tsc_malloc_or_die(sizeof(auxdec_t));
+
+    auxdec_init(auxdec);
+    return auxdec;
+}
+
+void auxdec_free(auxdec_t* auxdec)
+{
+    if (auxdec != NULL) {
+        free((void*)auxdec);
+        auxdec = NULL;
+    } else { /* auxdec == NULL */
+        tsc_error("Tried to free NULL pointer. Aborting.");
+    }
 }
 

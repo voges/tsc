@@ -5,13 +5,16 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#ifndef TSC_SEQENC_H
-#define TSC_SEQENC_H
+#ifndef TSC_SEQCODEC_H
+#define TSC_SEQCODEC_H
 
 #include "str.h"
 #include "fwriter.h"
 #include <stdint.h>
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 typedef struct seqenc_t_ {
     unsigned int block_sz;
     uint64_t block_nb;
@@ -26,5 +29,20 @@ void seqenc_free(seqenc_t* seqenc);
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq);
 void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter);
 
-#endif // TSC_SEQENC_H
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+typedef struct seqdec_t_ {
+    unsigned int block_sz;
+    uint64_t* pos_buf;
+    str_t** cigar_buf;
+    str_t** seq_buf;
+    unsigned int buf_pos;
+} seqdec_t;
+
+seqdec_t* seqdec_new(void);
+void seqdec_free(seqdec_t* seqdec);
+void seqdec_decode_block(seqdec_t* seqenc, uint64_t block_nb);
+
+#endif /* TSC_SEQCODEC_H */
 

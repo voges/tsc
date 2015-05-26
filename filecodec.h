@@ -5,16 +5,20 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#ifndef TSC_FILEENC_H
-#define TSC_FILEENC_H
+#ifndef TSC_FILECODEC_H
+#define TSC_FILECODEC_H
 
 #include <stdio.h>
+#include "freader.h"
 #include "fwriter.h"
 #include "samparser.h"
-#include "seqenc.h"
-#include "qualenc.h"
-#include "auxenc.h"
+#include "seqcodec.h"
+#include "qualcodec.h"
+#include "auxcodec.h"
 
+/*****************************************************************************
+ * Encoder                                                                   *
+ *****************************************************************************/
 static const unsigned int QUALENC_WINDOW_SZ = 10;
 
 typedef struct fileenc_t_ {
@@ -32,5 +36,22 @@ fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const unsigned int block_sz);
 void fileenc_free(fileenc_t* fileenc);
 void fileenc_encode(fileenc_t* fileenc);
 
-#endif // TSC_FILEENC_H
+/*****************************************************************************
+ * Decoder                                                                   *
+ *****************************************************************************/
+typedef struct filedec_t_ {
+    FILE* ifp;
+    FILE* ofp;
+    freader_t* freader;
+    fwriter_t* fwriter;
+    seqdec_t* seqdec;
+    qualdec_t* qualdec;
+    auxdec_t* auxdec;
+} filedec_t;
+
+filedec_t* filedec_new(FILE* ifp, FILE* ofp);
+void filedec_free(filedec_t* filedec);
+void filedec_decode(filedec_t* filedec);
+
+#endif /*TSC_FILECODEC_H */
 
