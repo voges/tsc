@@ -7,6 +7,7 @@
 
 #include "seqcodec.h"
 #include "tsclib.h"
+#include "frw.h"
 #include <string.h>
 #include "accodec.h"
 
@@ -65,23 +66,23 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char *cigar, const 
     }
 }
 
-void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter)
+void seqenc_write_block(seqenc_t* seqenc, FILE* fp)
 {
     DEBUG("Writing block ...");
 
     /* Write block header (identifier: 4 bytes, block size: 8 bytes) */
-    fwriter_write_cstr(fwriter, "SEQ");
-    fwriter_write_byte(fwriter, 0x00);
-    fwriter_write_uint64(fwriter, seqenc->block_nb);
+    fwrite_cstr(fp, "SEQ");
+    fwrite_byte(fp, 0x00);
+    fwrite_uint64(fp, seqenc->block_nb);
 
     unsigned int i = 0;
     for (i = 0; i < seqenc->buf_pos; i++) {
-        fwriter_write_uint64(fwriter, seqenc->pos_buf[i]);
-        fwriter_write_cstr(fwriter, "\t");
-        fwriter_write_cstr(fwriter, seqenc->cigar_buf[i]->s);
-        fwriter_write_cstr(fwriter, "\t");
-        fwriter_write_cstr(fwriter, seqenc->seq_buf[i]->s);
-        fwriter_write_cstr(fwriter, "\n");
+        fwrite_uint64(fp, seqenc->pos_buf[i]);
+        fwrite_cstr(fp, "\t");
+        fwrite_cstr(fp, seqenc->cigar_buf[i]->s);
+        fwrite_cstr(fp, "\t");
+        fwrite_cstr(fp, seqenc->seq_buf[i]->s);
+        fwrite_cstr(fp, "\n");
     }
 
     /* Reset encoder */

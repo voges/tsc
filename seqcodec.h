@@ -9,8 +9,8 @@
 #define TSC_SEQCODEC_H
 
 #include "str.h"
-#include "fwriter.h"
 #include <stdint.h>
+#include <stdio.h>
 
 /*****************************************************************************
  * Encoder                                                                   *
@@ -27,7 +27,7 @@ typedef struct seqenc_t_ {
 seqenc_t* seqenc_new(unsigned int block_sz);
 void seqenc_free(seqenc_t* seqenc);
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq);
-void seqenc_write_block(seqenc_t* seqenc, fwriter_t* fwriter);
+void seqenc_write_block(seqenc_t* seqenc, FILE* fp);
 
 /*****************************************************************************
  * Decoder                                                                   *

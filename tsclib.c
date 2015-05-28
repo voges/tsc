@@ -19,7 +19,7 @@ void tsc_cleanup(void)
     }
     if (tsc_out_fname->n > 0) {
         unlink((const char*)tsc_out_fname->s);
-        tsc_log("Removed: %s", tsc_out_fname->s);
+        tsc_log("Removed %s", tsc_out_fname->s);
     }
 }
 

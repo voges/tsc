@@ -7,6 +7,7 @@
 
 #include "qualcodec.h"
 #include "tsclib.h"
+#include "frw.h"
 
 /*****************************************************************************
  * Encoder                                                                   *
@@ -42,13 +43,13 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
     DEBUG("Added qual to buffer");
 }
 
-void qualenc_write_block(qualenc_t* qualenc, fwriter_t* fwriter)
+void qualenc_write_block(qualenc_t* qualenc, FILE* fp)
 {
     DEBUG("Writing block ...");
 
     /* Write block header (4 bytes) */
-    fwriter_write_cstr(fwriter, "QUAL");             /*< this is a quality block        */
-    fwriter_write_uint64(fwriter, qualenc->block_nb); /*< total number of bytes in block */
+    fwrite_cstr(fp, "QUAL");             /*< this is a quality block        */
+    fwrite_uint64(fp, qualenc->block_nb); /*< total number of bytes in block */
 
 
 

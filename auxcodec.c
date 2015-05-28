@@ -57,7 +57,7 @@ void auxenc_add_record(auxenc_t* auxenc,
 
 }
 
-void auxenc_write_block(auxenc_t* auxenc, fwriter_t* fwriter)
+void auxenc_write_block(auxenc_t* auxenc, FILE* fp)
 {
 
 }

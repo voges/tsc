@@ -9,8 +9,7 @@
 #define TSC_FILECODEC_H
 
 #include <stdio.h>
-#include "freader.h"
-#include "fwriter.h"
+#include "frw.h"
 #include "samparser.h"
 #include "seqcodec.h"
 #include "qualcodec.h"
@@ -25,7 +24,6 @@ typedef struct fileenc_t_ {
     FILE* ifp;
     FILE* ofp;
     unsigned int block_sz;
-    fwriter_t* fwriter;
     samparser_t* samparser;
     seqenc_t* seqenc;
     qualenc_t* qualenc;
@@ -42,8 +40,6 @@ void fileenc_encode(fileenc_t* fileenc);
 typedef struct filedec_t_ {
     FILE* ifp;
     FILE* ofp;
-    freader_t* freader;
-    fwriter_t* fwriter;
     seqdec_t* seqdec;
     qualdec_t* qualdec;
     auxdec_t* auxdec;

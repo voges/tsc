@@ -7,6 +7,7 @@
 
 #include "filecodec.h"
 #include "tsclib.h"
+#include "frw.h"
 #include <string.h>
 #include "version.h"
 
@@ -23,7 +24,6 @@ static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const unsigne
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const unsigned int block_sz)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc_or_die(sizeof(fileenc_t));
-    fileenc->fwriter = fwriter_new(ofp);
     fileenc->samparser = samparser_new(ifp);
     fileenc->seqenc = seqenc_new(block_sz);
     fileenc->qualenc = qualenc_new(block_sz, QUALENC_WINDOW_SZ);
@@ -35,7 +35,6 @@ fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const unsigned int block_sz)
 void fileenc_free(fileenc_t* fileenc)
 {
     if (fileenc != NULL) {
-        fwriter_free(fileenc->fwriter);
         samparser_free(fileenc->samparser);
         seqenc_free(fileenc->seqenc);
         qualenc_free(fileenc->qualenc);
@@ -53,16 +52,17 @@ void fileenc_encode(fileenc_t* fileenc)
     unsigned int block_lc = 0;
 
     /* Write tsc header (8 bytes) */
-    fwriter_write_cstr(fileenc->fwriter, "TSC");
-    fwriter_write_cstr(fileenc->fwriter, tsc_version->s);
-    fwriter_write_byte(fileenc->fwriter, 0x00);
+    fwrite_cstr(fileenc->ofp, "TSC");
+    fwrite_cstr(fileenc->ofp, tsc_version->s);
+    fwrite_byte(fileenc->ofp, 0x00);
+    fwrite_byte(fileenc->ofp, 0x00);
 
-    /* Write block size used for encoding */
-    fwriter_write_uint32(fileenc->fwriter, fileenc->block_sz);
+    /* Write block size used for encoding (4 bytes) */
+    fwrite_uint32(fileenc->ofp, fileenc->block_sz);
 
     /* Write SAM header */
-    fwriter_write_uint32(fileenc->fwriter, fileenc->samparser->head->n);
-    fwriter_write_cstr(fileenc->fwriter, fileenc->samparser->head->s);
+    fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
+    fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
     /* Structure holding the SAM records */
     samrecord_t* samrecord = &(fileenc->samparser->curr);
@@ -71,9 +71,9 @@ void fileenc_encode(fileenc_t* fileenc)
     while (samparser_next(fileenc->samparser)) {
         if (block_lc >= fileenc->block_sz) {
             DEBUG("Writing block %d with %d lines.", block_cnt, block_lc);
-            seqenc_write_block(fileenc->seqenc, fileenc->fwriter);
-            qualenc_write_block(fileenc->qualenc, fileenc->fwriter);
-            auxenc_write_block(fileenc->auxenc, fileenc->fwriter);
+            seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+            qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+            auxenc_write_block(fileenc->auxenc, fileenc->ofp);
             block_cnt++;
             block_lc = 0;
         }
@@ -98,11 +98,9 @@ void fileenc_encode(fileenc_t* fileenc)
     }
 
     DEBUG("Writing last block %d with %d lines.", block_cnt, block_lc);
-    seqenc_write_block(fileenc->seqenc, fileenc->fwriter);
-    qualenc_write_block(fileenc->qualenc, fileenc->fwriter);
-    auxenc_write_block(fileenc->auxenc, fileenc->fwriter);
-
-    fwriter_write_flush(fileenc->fwriter);
+    seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+    qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+    auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 }
 
 /*****************************************************************************
@@ -117,8 +115,6 @@ static void filedec_init(filedec_t* filedec, FILE* ifp, FILE* ofp)
 filedec_t* filedec_new(FILE* ifp, FILE* ofp)
 {
     filedec_t* filedec = (filedec_t *)tsc_malloc_or_die(sizeof(filedec_t));
-    filedec->freader = freader_new(ifp);
-    filedec->fwriter = fwriter_new(ofp);
     filedec->seqdec = seqdec_new();
     filedec->qualdec = qualdec_new();
     filedec->auxdec = auxdec_new();
@@ -129,8 +125,6 @@ filedec_t* filedec_new(FILE* ifp, FILE* ofp)
 void filedec_free(filedec_t* filedec)
 {
     if (filedec != NULL) {
-        freader_free(filedec->freader);
-        fwriter_free(filedec->fwriter);
         seqdec_free(filedec->seqdec);
         qualdec_free(filedec->qualdec);
         auxdec_free(filedec->auxdec);
@@ -144,5 +138,26 @@ void filedec_free(filedec_t* filedec)
 void filedec_decode(filedec_t* filedec)
 {
     DEBUG("Decoding ...");
+
+    /* Discard tsc header (8 bytes) */
+    unsigned char tmp[8];
+    fread_buf(filedec->ifp, tmp, 8);
+    DEBUG("tmp: %s", tmp);
+
+    /* Read block size used for encoding (4 bytes) */
+    uint32_t block_sz;
+    fread_uint32(filedec->ifp, &block_sz);
+    DEBUG("block_sz: 0x%08x = %d", block_sz, block_sz);
+
+    /* Read (and write out) SAM header */
+    uint32_t header_nb = 0x00000000;
+    fread_uint32(filedec->ifp, &header_nb);
+    DEBUG("header_nb: 0x%08x = %d", header_nb, header_nb);
+    str_t* header = str_new();
+    str_reserve(header, header_nb);
+    fread_buf(filedec->ifp, (unsigned char*)header->s, header_nb);
+    DEBUG("header: %s", header->s);
+    fwrite_cstr(filedec->ofp, header->s);
+    str_free(header);
 }
 

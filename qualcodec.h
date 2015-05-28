@@ -10,7 +10,6 @@
 
 #include "cbufstr.h"
 #include <stdio.h>
-#include "fwriter.h"
 
 /*****************************************************************************
  * Encoder                                                                   *
@@ -26,7 +25,7 @@ typedef struct qualenc_t_ {
 qualenc_t* qualenc_new(const unsigned int block_sz, const unsigned int window_sz);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
-void qualenc_write_block(qualenc_t* qualenc, fwriter_t* fwriter);
+void qualenc_write_block(qualenc_t* qualenc, FILE* fp);
 
 /*****************************************************************************
  * Decoder                                                                   *

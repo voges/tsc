@@ -10,7 +10,6 @@
 
 #include "str.h"
 #include <stdio.h>
-#include "fwriter.h"
 
 /*****************************************************************************
  * Encoder                                                                   *
@@ -32,7 +31,7 @@ void auxenc_add_record(auxenc_t* auxenc,
                        uint64_t pnext,
                        uint64_t tlen,
                        const char *opt);
-void auxenc_write_block(auxenc_t* auxenc, fwriter_t* fwriter);
+void auxenc_write_block(auxenc_t* auxenc, FILE* fp);
 
 /*****************************************************************************
  * Decoder                                                                   *
