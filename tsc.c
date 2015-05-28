@@ -111,10 +111,10 @@ static void parse_options(int argc, char *argv[])
 
     /* There must be exactly one remaining CL argument (the input file). */
     if (argc - optind > 1) {
-        tsc_error("Too many input files.");
+        tsc_error("Too many input files.\n");
     }
     else if (argc - optind < 1) {
-        tsc_error("Input file missing.");
+        tsc_error("Input file missing.\n");
     }
     else {
         opt_input = argv[optind];
@@ -131,8 +131,8 @@ static const char* file_extension(const char* filename)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); /* Ignore the signal */
-    tsc_log("\nCatched signal: %d", sig);
-    tsc_log("Cleaning up ...");
+    tsc_log("\nCatched signal: %d\n", sig);
+    tsc_log("Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); /* Invoke default signal action */
     raise(sig);
@@ -170,14 +170,14 @@ int main(int argc, char *argv[])
 
     /* Check if input file is accessible */
     if (access((const char*)tsc_in_fname->s, F_OK | R_OK)) {
-        tsc_error("Cannot access input file: %s", tsc_in_fname->s);
+        tsc_error("Cannot access input file: %s\n", tsc_in_fname->s);
     }
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
 
         /* Check input file extension */
         if (strcmp(file_extension((const char*)tsc_in_fname->s), "sam")) {
-            tsc_error("Input file has wrong extension (must be .sam): %s", tsc_in_fname->s);
+            tsc_error("Input file has wrong extension (must be .sam): %s\n", tsc_in_fname->s);
         }
 
         /* If output file name is not provided, make a reasonable name for it. */
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 
         /* Check if output file already exists */
         if (!access((const char*)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
-            tsc_warning("Output file already exists (use '-f' to force overwriting): %s", tsc_out_fname->s);
+            tsc_warning("Output file already exists (use '-f' to force overwriting): %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
@@ -199,10 +199,12 @@ int main(int argc, char *argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
         /* Do it! :) */
-        tsc_log("Encoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
+        tsc_log("Encoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
+
+        tsc_abort();
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
@@ -211,7 +213,7 @@ int main(int argc, char *argv[])
 
         /* Check input file extension */
         if (strcmp(file_extension((const char*)tsc_in_fname->s), "tsc")) {
-            tsc_error("Input file has wrong extension (must be .tsc): %s", tsc_in_fname->s);
+            tsc_error("Input file has wrong extension (must be .tsc): %s\n", tsc_in_fname->s);
         }
 
         /* If output file name is not provided, make a reasonable name for it. */
@@ -224,7 +226,7 @@ int main(int argc, char *argv[])
 
         /* Check if output file already exists */
         if (!access((const char*)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
-            tsc_warning("Output file already exists (use '-f' to force overwriting): %s", tsc_out_fname->s);
+            tsc_warning("Output file already exists (use '-f' to force overwriting): %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
@@ -233,7 +235,7 @@ int main(int argc, char *argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
         /* Do it! :) */
-        tsc_log("Decoding %s -> %s ...", tsc_in_fname->s, tsc_out_fname->s);
+        tsc_log("Decoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);
         filedec_free(filedec);

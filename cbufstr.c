@@ -37,7 +37,7 @@ void cbufstr_free(cbufstr_t* cbufstr)
         free((void*)cbufstr);
         cbufstr = NULL;
     } else { /* cbufstr == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
@@ -51,7 +51,7 @@ void cbufstr_add(cbufstr_t* cbufstr, const char* s)
 str_t* cbufstr_elem(const cbufstr_t* cbufstr, unsigned int pos)
 {
     if (pos >= cbufstr->sz) {
-        tsc_error("cbufstr: Tried to access element out of range.");
+        tsc_error("cbufstr: Tried to access element out of range.\n");
         return NULL;
     }
     return cbufstr->buf[pos];

@@ -69,7 +69,7 @@ void samparser_free(samparser_t* samparser)
         free((void*)samparser);
         samparser = NULL;
     } else { /* samparser == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
@@ -78,7 +78,7 @@ bool samparser_next(samparser_t* samparser)
     /* Try to read and parse next line */
     if (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
-            tsc_error("Tried to read SAM record but found header line.");
+            tsc_error("Tried to read SAM record but found header line.\n");
         } else {
             samparser_parse(samparser);
         }

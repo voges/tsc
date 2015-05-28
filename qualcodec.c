@@ -33,7 +33,7 @@ void qualenc_free(qualenc_t* qualenc)
         free((void*)qualenc);
         qualenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 

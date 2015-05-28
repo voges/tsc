@@ -8,6 +8,15 @@
 #include "tsclib.h"
 #include <stdarg.h>
 #include <unistd.h>
+#include <stdbool.h>
+
+static bool tsc_yesno()
+{
+    int c = getchar();
+    bool yes = c == 'y' || c == 'Y';
+    while (c != '\n' && c != EOF) c = getchar();
+    return yes;
+}
 
 void tsc_cleanup(void)
 {
@@ -18,8 +27,11 @@ void tsc_cleanup(void)
         tsc_fclose_or_die(tsc_out_fp);
     }
     if (tsc_out_fname->n > 0) {
-        unlink((const char*)tsc_out_fname->s);
-        tsc_log("Removed %s", tsc_out_fname->s);
+        tsc_log("Do you want to remove %s (y|n)? ", tsc_out_fname->s);
+        if (tsc_yesno()) {
+            unlink((const char*)tsc_out_fname->s);
+            tsc_log("Removed %s\n", tsc_out_fname->s);
+        }
     }
 }
 
@@ -36,7 +48,7 @@ void tsc_error(const char* fmt, ...)
     char* msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s error: %s\n", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s error: %s", tsc_prog_name->s, msg);
     free(msg);
     tsc_abort();
 }
@@ -48,7 +60,7 @@ void tsc_warning(const char* fmt, ...)
     char* msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s warning: %s\n", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s warning: %s", tsc_prog_name->s, msg);
     free(msg);
 }
 
@@ -59,7 +71,7 @@ void tsc_log(const char* fmt, ...)
     char* msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stdout, "%s: %s\n", tsc_prog_name->s, msg);
+    fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
     free(msg);
 }
 
@@ -67,7 +79,7 @@ void* tsc_malloc_or_die(const size_t n)
 {
     void* p = malloc(n);
     if (p == NULL) {
-        tsc_error("Cannot allocate %zu bytes.", n);
+        tsc_error("Cannot allocate %zu bytes.\n", n);
     }
     return p;
 }
@@ -76,7 +88,7 @@ void* tsc_realloc_or_die(void* ptr, const size_t n)
 {
     void* p = realloc(ptr, n);
     if (p == NULL) {
-        tsc_error("Cannot allocate %zu bytes.", n);
+        tsc_error("Cannot allocate %zu bytes.\n", n);
     }
     return p;
 }
@@ -86,7 +98,7 @@ FILE* tsc_fopen_or_die(const char* fname, const char* mode)
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
         fclose(fp);
-        tsc_error("Error opening file: %s", fname);
+        tsc_error("Error opening file: %s\n", fname);
     }
     return fp;
 }
@@ -98,7 +110,7 @@ void tsc_fclose_or_die(FILE* fp)
         fp = NULL;
     }
     else {
-        tsc_error("Error closing file.");
+        tsc_error("Error closing file.\n");
         exit(EXIT_FAILURE);
     }
 }

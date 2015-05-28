@@ -42,7 +42,7 @@ void fileenc_free(fileenc_t* fileenc)
         free((void*)fileenc);
         fileenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
@@ -131,7 +131,7 @@ void filedec_free(filedec_t* filedec)
         free((void*)filedec);
         filedec = NULL;
     } else { /* filedec == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 

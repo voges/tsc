@@ -37,7 +37,7 @@ void str_free(str_t* str)
         free((void*)str);
         str = NULL;
     } else { /* str == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 

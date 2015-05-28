@@ -50,7 +50,7 @@ void seqenc_free(seqenc_t* seqenc)
         free((void*)seqenc);
         seqenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
@@ -62,7 +62,7 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char *cigar, const 
         str_copy_cstr(seqenc->seq_buf[seqenc->buf_pos], seq);
         seqenc->buf_pos++;
     } else {
-        tsc_error("Block buffer overflow.");
+        tsc_error("Block buffer overflow.\n");
     }
 }
 
@@ -112,7 +112,7 @@ void seqdec_free(seqdec_t* seqdec)
         free((void*)seqdec);
         seqdec = NULL;
     } else { /* seqdec == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 

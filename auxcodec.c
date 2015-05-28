@@ -40,7 +40,7 @@ void auxenc_free(auxenc_t* auxenc)
         free((void*)auxenc);
         auxenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
@@ -84,7 +84,7 @@ void auxdec_free(auxdec_t* auxdec)
         free((void*)auxdec);
         auxdec = NULL;
     } else { /* auxdec == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.");
+        tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
 }
 
