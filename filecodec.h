@@ -9,7 +9,6 @@
 #define TSC_FILECODEC_H
 
 #include <stdio.h>
-#include "frw.h"
 #include "samparser.h"
 #include "seqcodec.h"
 #include "qualcodec.h"
@@ -18,19 +17,17 @@
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
-static const unsigned int QUALENC_WINDOW_SZ = 10;
-
 typedef struct fileenc_t_ {
-    FILE* ifp;
-    FILE* ofp;
-    unsigned int block_sz;
+    FILE*        ifp;
+    FILE*        ofp;
+    size_t       block_sz;
     samparser_t* samparser;
-    seqenc_t* seqenc;
-    qualenc_t* qualenc;
-    auxenc_t* auxenc;
+    seqenc_t*    seqenc;
+    qualenc_t*   qualenc;
+    auxenc_t*    auxenc;
 } fileenc_t;
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const unsigned int block_sz);
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz);
 void fileenc_free(fileenc_t* fileenc);
 void fileenc_encode(fileenc_t* fileenc);
 
@@ -38,11 +35,11 @@ void fileenc_encode(fileenc_t* fileenc);
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct filedec_t_ {
-    FILE* ifp;
-    FILE* ofp;
-    seqdec_t* seqdec;
+    FILE*      ifp;
+    FILE*      ofp;
+    seqdec_t*  seqdec;
     qualdec_t* qualdec;
-    auxdec_t* auxdec;
+    auxdec_t*  auxdec;
 } filedec_t;
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp);

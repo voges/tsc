@@ -1,20 +1,24 @@
 EXEC        = tsc
 CC          = gcc
 CFLAGS      = -O0 -Wall -D _GNU_SOURCE
-#INCLUDES    = -I./include
-#LIBS        = -L./lib
-#LDFLAGS     = -l<lib#1> -lm ...
+INCLUDES    = #-I
+LIBRARIES   = #-L
+LDFLAGS     = -lm
 SOURCEDIR   = .
 SOURCES     = $(wildcard $(SOURCEDIR)/*.c)
 OBJECTS     = $(SOURCES:.c=.o)
 
-default: $(EXEC)
+.PHONY: all debug clean
 
-debug: CFLAGS += -g
+default: all
+all: $(EXEC)
+
+debug: CFLAGS += -g 
+debug: EXEC += .debug
 debug: $(EXEC)
 
 $(EXEC): $(OBJECTS) 
-	$(CC) $(CFLAGS) -o $@ $(OBJECTS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<

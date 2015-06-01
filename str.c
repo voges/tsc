@@ -50,18 +50,18 @@ void str_clear(str_t* str)
     str_init(str);
 }
 
-void str_reserve(str_t* str, const uint32_t sz)
+void str_reserve(str_t* str, const size_t sz)
 {
     str->size = sz;
     str->s = (char*)tsc_realloc_or_die(str->s, str->size * sizeof(char));
 }
 
-void str_extend(str_t* str, const uint32_t ex)
+void str_extend(str_t* str, const size_t ex)
 {
     str_reserve(str, str->size + ex);
 }
 
-void str_trunc(str_t* str, const uint32_t tr)
+void str_trunc(str_t* str, const size_t tr)
 {
     str->n -= tr;
     str->size -= tr;
@@ -79,7 +79,7 @@ void str_append_str(str_t* str, const str_t* app)
 
 void str_append_cstr(str_t* str, const char* cstr)
 {
-    uint32_t len = (uint32_t)strlen(cstr);
+    size_t len = strlen(cstr);
     str_extend(str, len);
     memcpy(str->s + str->n, cstr, len);
     str->n += len;
@@ -105,7 +105,7 @@ void str_copy_str(str_t* dest, const str_t* src)
 void str_copy_cstr(str_t* str, const char* cstr)
 {
     str_clear(str);
-    uint32_t len = (uint32_t)strlen(cstr);
+    size_t len = strlen(cstr);
     str_reserve(str, len + 1);
     memcpy(str->s, cstr, len);
     str->n = len;

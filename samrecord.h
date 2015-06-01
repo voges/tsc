@@ -37,8 +37,8 @@ enum {
 };
 
 typedef struct samrecord_t_ {
-    char line[8 * MB];
-    char* str_fields[7];
+    char    line[8 * MB];
+    char*   str_fields[7];
     int64_t int_fields[5];
 } samrecord_t;
 

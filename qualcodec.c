@@ -12,17 +12,17 @@
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
-static void qualenc_init(qualenc_t* qualenc, const unsigned int block_sz, const unsigned int window_sz)
+static void qualenc_init(qualenc_t* qualenc, const size_t block_sz, const size_t window_sz)
 {
     qualenc->block_sz = block_sz;
     qualenc->window_sz = window_sz;
 }
 
-qualenc_t* qualenc_new(const unsigned int block_sz, const unsigned int window_sz)
+qualenc_t* qualenc_new(const size_t block_sz)
 {
     qualenc_t* qualenc = (qualenc_t*)tsc_malloc_or_die(sizeof(qualenc_t));
-    qualenc->qual_buf = cbufstr_new(window_sz);
-    qualenc_init(qualenc, block_sz, window_sz);
+    qualenc->qual_buf = cbufstr_new(QUALCODEC_WINDOW_SZ);
+    qualenc_init(qualenc, block_sz, QUALCODEC_WINDOW_SZ);
     return qualenc;
 }
 
@@ -39,7 +39,7 @@ void qualenc_free(qualenc_t* qualenc)
 
 void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
-    cbufstr_add(qualenc->qual_buf, qual);
+    cbufstr_push(qualenc->qual_buf, qual);
     DEBUG("Added qual to buffer");
 }
 
@@ -49,7 +49,7 @@ void qualenc_write_block(qualenc_t* qualenc, FILE* fp)
 
     /* Write block header (4 bytes) */
     fwrite_cstr(fp, "QUAL");             /*< this is a quality block        */
-    fwrite_uint64(fp, qualenc->block_nb); /*< total number of bytes in block */
+    fwrite_uint64(fp, qualenc->block_b); /*< total number of bytes in block */
 
 
 
@@ -73,6 +73,11 @@ qualdec_t* qualdec_new(void)
 }
 
 void qualdec_free(qualdec_t* qualdec)
+{
+
+}
+
+void qualdec_decode_block(qualdec_t* qualdec, const uint64_t block_nb)
 {
 
 }

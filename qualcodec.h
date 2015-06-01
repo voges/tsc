@@ -10,19 +10,23 @@
 
 #include "cbufstr.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#define QUALCODEC_WINDOW_SZ 10
 
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct qualenc_t_ {
-    uint64_t block_nb;
-    unsigned int block_sz;
-    unsigned int window_sz;
+    uint64_t block_b;
+    size_t block_sz;
+    size_t window_sz;
     cbufstr_t* qual_buf;
     unsigned char* out_buf;
 } qualenc_t;
 
-qualenc_t* qualenc_new(const unsigned int block_sz, const unsigned int window_sz);
+qualenc_t* qualenc_new(const size_t block_sz);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
 void qualenc_write_block(qualenc_t* qualenc, FILE* fp);
@@ -36,6 +40,7 @@ typedef struct qualdec_t_ {
 
 qualdec_t* qualdec_new(void);
 void qualdec_free(qualdec_t* qualdec);
+void qualdec_decode_block(qualdec_t* qualdec, const uint64_t block_nb);
 
 #endif /* TSC_QUALCODEC_H */
 

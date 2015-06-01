@@ -16,7 +16,7 @@ static void auxenc_init(auxenc_t* auxenc)
     auxenc->buf_pos = 0;
 }
 
-auxenc_t* auxenc_new(unsigned int block_sz)
+auxenc_t* auxenc_new(const size_t block_sz)
 {
     auxenc_t* auxenc = (auxenc_t*)tsc_malloc_or_die(sizeof(auxenc_t));
     auxenc->block_sz = block_sz;
@@ -86,5 +86,10 @@ void auxdec_free(auxdec_t* auxdec)
     } else { /* auxdec == NULL */
         tsc_error("Tried to free NULL pointer. Aborting.\n");
     }
+}
+
+void auxdec_decode_block(auxdec_t* auxdec, const uint64_t block_b)
+{
+
 }
 

@@ -15,7 +15,7 @@ void fwrite_byte(FILE* fp, unsigned char byte)
         tsc_error("Could not write byte. Aborting.\n");
 }
 
-void fwrite_buf(FILE* fp, const unsigned char* buf, const unsigned int n)
+void fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
 {
     if (fwrite(buf, 1, n, fp) != n)
         tsc_error("Could not write %d bytes. Aborting.\n", n);
@@ -50,19 +50,17 @@ void fwrite_cstr(FILE* fp, const char* cstr)
     }
 }
 
-void fread_byte(FILE* fp, unsigned char* byte)
+size_t fread_byte(FILE* fp, unsigned char* byte)
 {
-    if (fread(byte, 1, 1, fp) != 1)
-        tsc_error("Could not read byte. Aborting.\n");
+    return fread(byte, 1, 1, fp);
 }
 
-void fread_buf(FILE* fp, unsigned char* buf, const unsigned int n)
+size_t fread_buf(FILE* fp, unsigned char* buf, const size_t n)
 {
-    if (fread(buf, 1, n, fp) != n)
-        tsc_error("Could not read %d bytes. Aborting.\n", n);
+    return fread(buf, 1, n, fp);
 }
 
-void fread_uint32(FILE* fp, uint32_t* dword)
+size_t fread_uint32(FILE* fp, uint32_t* dword)
 {
     unsigned char* bytes = (unsigned char*)malloc(4);
     if (fread(bytes, 1, 4, fp) != 4) {
@@ -74,9 +72,11 @@ void fread_uint32(FILE* fp, uint32_t* dword)
              (uint32_t)bytes[2] <<  8 |
              (uint32_t)bytes[3];
     free((void*)bytes);
+
+    return sizeof(uint32_t);
 }
 
-void fread_uint64(FILE* fp, uint64_t* qword)
+size_t fread_uint64(FILE* fp, uint64_t* qword)
 {
     unsigned char* bytes = (unsigned char*)malloc(8);
     if (fread(bytes, 1, 8, fp) != 8) {
@@ -92,5 +92,7 @@ void fread_uint64(FILE* fp, uint64_t* qword)
              (uint64_t)bytes[6] <<  8 |
              (uint64_t)bytes[7];
     free((void*)bytes);
+
+    return sizeof(uint64_t);
 }
 

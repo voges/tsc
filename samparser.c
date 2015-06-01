@@ -8,36 +8,6 @@
 #include "samparser.h"
 #include <string.h>
 
-static void samparser_parse(samparser_t* samparser)
-{
-    size_t l = strlen(samparser->curr.line) - 1;
-
-    while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n')) {
-        samparser->curr.line[l--] = '\0';
-    }
-
-    char* c = samparser->curr.str_fields[0] = samparser->curr.line;
-    int f = 1, sfc = 1, ifc = 0;
-
-    while (*c) {
-        if (*c == '\t') {
-            if (f == 1 || f == 3 || f == 4 || f == 7 || f == 8) {
-                samparser->curr.int_fields[ifc++] = atoi(c + 1);
-            } else {
-                samparser->curr.str_fields[sfc++] = c + 1;
-            }
-            f++;
-            *c = '\0';
-            if (f == 12) { break; }
-        }
-        c++;
-    }
-
-    if (f == 11) {
-        samparser->curr.str_fields[sfc++] = c;
-    }
-}
-
 static void samparser_init(samparser_t* samparser, FILE* fp)
 {
     samparser->fp = fp;
@@ -70,6 +40,36 @@ void samparser_free(samparser_t* samparser)
         samparser = NULL;
     } else { /* samparser == NULL */
         tsc_error("Tried to free NULL pointer. Aborting.\n");
+    }
+}
+
+static void samparser_parse(samparser_t* samparser)
+{
+    size_t l = strlen(samparser->curr.line) - 1;
+
+    while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n')) {
+        samparser->curr.line[l--] = '\0';
+    }
+
+    char* c = samparser->curr.str_fields[0] = samparser->curr.line;
+    int f = 1, sfc = 1, ifc = 0;
+
+    while (*c) {
+        if (*c == '\t') {
+            if (f == 1 || f == 3 || f == 4 || f == 7 || f == 8) {
+                samparser->curr.int_fields[ifc++] = atoi(c + 1);
+            } else {
+                samparser->curr.str_fields[sfc++] = c + 1;
+            }
+            f++;
+            *c = '\0';
+            if (f == 12) { break; }
+        }
+        c++;
+    }
+
+    if (f == 11) {
+        samparser->curr.str_fields[sfc++] = c;
     }
 }
 

@@ -54,8 +54,8 @@ static void print_help(void)
     printf("  -d  --decompress Decompress\n");
     printf("  -o, --output     Specify output file\n");
     printf("  -b, --blocksz    Block size\n");
-    printf("  -f  --force      Force overwriting of output file\n");
-    printf("  -v  --version    Display program version\n");
+    printf("  -f, --force      Force overwriting of output file\n");
+    printf("  -v, --version    Display program version\n");
     printf("\n");
 }
 
@@ -138,7 +138,7 @@ static void handle_signal(int sig)
     raise(sig);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     /* Initialize strings */
     tsc_prog_name = str_new();
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
     str_copy_cstr(tsc_prog_name, prog_name);
 
-    /* Invoke own signal handler */
+    /* Invoke signal handler */
     signal(SIGHUP,  handle_signal);
     signal(SIGQUIT, handle_signal);
     signal(SIGABRT, handle_signal);
@@ -198,13 +198,11 @@ int main(int argc, char *argv[])
         tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
-        /* Do it! :) */
+        /* Invoke encoder */
         tsc_log("Encoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
-
-        tsc_abort();
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
@@ -234,7 +232,7 @@ int main(int argc, char *argv[])
         tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
-        /* Do it! :) */
+        /* Invoker decoder */
         tsc_log("Decoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);

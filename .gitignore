@@ -1,5 +1,7 @@
 *~
-*.[oa]
+*.o
+*.a
+*.so
 tsc
 doxygen/*
 

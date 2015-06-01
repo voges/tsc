@@ -27,7 +27,7 @@ void tsc_cleanup(void)
         tsc_fclose_or_die(tsc_out_fp);
     }
     if (tsc_out_fname->n > 0) {
-        tsc_log("Do you want to remove %s (y|n)? ", tsc_out_fname->s);
+        tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {
             unlink((const char*)tsc_out_fname->s);
             tsc_log("Removed %s\n", tsc_out_fname->s);
@@ -108,8 +108,7 @@ void tsc_fclose_or_die(FILE* fp)
     if (fp != NULL) {
         fclose(fp);
         fp = NULL;
-    }
-    else {
+    } else {
         tsc_error("Error closing file.\n");
         exit(EXIT_FAILURE);
     }
