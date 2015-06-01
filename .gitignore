@@ -3,5 +3,6 @@
 *.a
 *.so
 tsc
+detsc
 doxygen/*
 

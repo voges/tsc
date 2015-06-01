@@ -130,11 +130,11 @@ static const char* file_extension(const char* filename)
 
 static void handle_signal(int sig)
 {
-    signal(sig, SIG_IGN); /* Ignore the signal */
+    signal(sig, SIG_IGN); /* ignore the signal */
     tsc_log("\nCatched signal: %d\n", sig);
     tsc_log("Cleaning up ...\n");
     tsc_cleanup();
-    signal(sig, SIG_DFL); /* Invoke default signal action */
+    signal(sig, SIG_DFL); /* invoke default signal action */
     raise(sig);
 }
 
@@ -152,6 +152,9 @@ int main(int argc, char* argv[])
     char* p;
     if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
     str_copy_cstr(tsc_prog_name, prog_name);
+
+    /* If invoked as 'detsc', switch to decompressor mode. */
+    if (!strcmp(tsc_prog_name->s, "detsc")) tsc_mode = TSC_MODE_DECOMPRESS;
 
     /* Invoke signal handler */
     signal(SIGHUP,  handle_signal);
@@ -199,10 +202,11 @@ int main(int argc, char* argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
         /* Invoke encoder */
-        tsc_log("Encoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
+        tsc_log("Compressing file: %s\n", tsc_in_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
+        tsc_log("Compressed tsc file: %s\n", tsc_out_fname->s);
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
@@ -233,10 +237,11 @@ int main(int argc, char* argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
         /* Invoker decoder */
-        tsc_log("Decoding %s -> %s ...\n", tsc_in_fname->s, tsc_out_fname->s);
+        tsc_log("Decompressing tsc file: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);
         filedec_free(filedec);
+        tsc_log("Decompressed file: %s\n", tsc_out_fname->s);
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
