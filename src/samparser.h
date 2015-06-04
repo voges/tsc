@@ -8,9 +8,9 @@
 #ifndef TSC_SAMPARSER_H
 #define TSC_SAMPARSER_H
 
-#include <stdbool.h>
-#include "str.h"
 #include "samrecord.h"
+#include "str.h"
+#include <stdbool.h>
 
 typedef struct samparser_t_ {
     FILE*       fp;

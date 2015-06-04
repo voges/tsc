@@ -5,48 +5,42 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
-#ifndef TSC_AUXCODEC_H
-#define TSC_AUXCODEC_H
+#ifndef TSC_QUALCODEC_H
+#define TSC_QUALCODEC_H
 
-#include "str.h"
+#include "cbufstr.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
+
+#define QUALCODEC_WINDOW_SZ 10
 
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
-typedef struct auxenc_t_ {
-    size_t    block_sz;
-    uint64_t  block_b;
-    str_t**   strbuf;
-    uint64_t* intbuf;
-    size_t    buf_pos;
-} auxenc_t;
+typedef struct qualenc_t_ {
+    uint64_t block_b;
+    size_t block_sz;
+    size_t window_sz;
+    cbufstr_t* qual_buf;
+    unsigned char* out_buf;
+} qualenc_t;
 
-auxenc_t* auxenc_new(const size_t block_sz);
-void auxenc_free(auxenc_t* auxenc);
-void auxenc_add_record(auxenc_t*   auxenc,
-                       const char* qname,
-                       uint64_t    flag,
-                       const char* rname,
-                       uint64_t    mapq,
-                       const char* rnext,
-                       uint64_t    pnext,
-                       uint64_t    tlen,
-                       const char* opt);
-void auxenc_write_block(auxenc_t* auxenc, FILE* fp);
+qualenc_t* qualenc_new(const size_t block_sz);
+void qualenc_free(qualenc_t* qualenc);
+void qualenc_add_record(qualenc_t* qualenc, const char* qual);
+void qualenc_write_block(qualenc_t* qualenc, FILE* fp);
 
 /*****************************************************************************
  * Decoder                                                                   *
  *****************************************************************************/
-typedef struct auxdec_t_ {
-    size_t   block_sz;
-    uint64_t block_b;
-} auxdec_t;
+typedef struct qualdec_t_ {
 
-auxdec_t* auxdec_new(void);
-void auxdec_free(auxdec_t* auxdec);
-void auxdec_decode_block(auxdec_t* auxdec, const uint64_t block_b);
+} qualdec_t;
 
-#endif // TSC_AUXCODEC_H
+qualdec_t* qualdec_new(void);
+void qualdec_free(qualdec_t* qualdec);
+void qualdec_decode_block(qualdec_t* qualdec, FILE* fp);
+
+#endif /* TSC_QUALCODEC_H */
 

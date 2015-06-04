@@ -8,8 +8,8 @@
 #ifndef TSC_FRW_H
 #define TSC_FRW_H
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 void fwrite_byte(FILE* fp, unsigned char byte);
 void fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n);

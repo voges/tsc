@@ -7,8 +7,8 @@
 
 #include "tsclib.h"
 #include <stdarg.h>
-#include <unistd.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 static bool tsc_yesno()
 {
@@ -48,7 +48,7 @@ void tsc_error(const char* fmt, ...)
     char* msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s error: %s", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s: error: %s", tsc_prog_name->s, msg);
     free(msg);
     tsc_abort();
 }
@@ -60,7 +60,7 @@ void tsc_warning(const char* fmt, ...)
     char* msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s warning: %s", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s: warning: %s", tsc_prog_name->s, msg);
     free(msg);
 }
 
@@ -98,7 +98,7 @@ FILE* tsc_fopen_or_die(const char* fname, const char* mode)
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
         fclose(fp);
-        tsc_error("Error opening file: %s\n", fname);
+        tsc_error("Failed to open file: %s\n", fname);
     }
     return fp;
 }
@@ -109,7 +109,7 @@ void tsc_fclose_or_die(FILE* fp)
         fclose(fp);
         fp = NULL;
     } else {
-        tsc_error("Error closing file.\n");
+        tsc_error("Failed to close file.\n");
         exit(EXIT_FAILURE);
     }
 }

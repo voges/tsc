@@ -6,8 +6,8 @@
  *****************************************************************************/
 
 #include "str.h"
-#include <string.h>
 #include "tsclib.h"
+#include <string.h>
 
 static void str_init(str_t* str)
 {
@@ -37,7 +37,7 @@ void str_free(str_t* str)
         free((void*)str);
         str = NULL;
     } else { /* str == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 

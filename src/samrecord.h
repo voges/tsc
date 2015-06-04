@@ -8,9 +8,9 @@
 #ifndef TSC_SAMRECORD_H
 #define TSC_SAMRECORD_H
 
-#include <stdint.h>
 #include "str.h"
 #include "tsclib.h"
+#include <stdint.h>
 
 /*
  * Structure of a SAM alignment line: The 11 mandatory fields are
@@ -19,21 +19,21 @@
  */
 
 enum {
-    QNAME, /* query template name */
-    RNAME, /* reference sequence name */
-    CIGAR, /* CIGAR string */
-    RNEXT, /* ref. name of the mate/next read */
-    SEQ,   /* segment sequence */
+    QNAME, /* query template name                     */
+    RNAME, /* reference sequence name                 */
+    CIGAR, /* CIGAR string                            */
+    RNEXT, /* ref. name of the mate/next read         */
+    SEQ,   /* segment sequence                        */
     QUAL,  /* ASCII of Phred-scaled base quality + 33 */
-    OPT    /* optional information */
+    OPT    /* optional information                    */
 };
 
 enum {
-    FLAG,  /* bitwise flag (uint16_t) */
+    FLAG,  /* bitwise flag (uint16_t)                      */
     POS,   /* 1-based leftmost mapping position (uint32_t) */
-    MAPQ,  /* mapping quality (uint8_t) */
-    PNEXT, /* position of the mate/next read (uint32_t) */
-    TLEN   /* observed template length (int64_t) */
+    MAPQ,  /* mapping quality (uint8_t)                    */
+    PNEXT, /* position of the mate/next read (uint32_t)    */
+    TLEN   /* observed template length (int64_t)           */
 };
 
 typedef struct samrecord_t_ {
@@ -43,3 +43,4 @@ typedef struct samrecord_t_ {
 } samrecord_t;
 
 #endif /* TSC_SAMRECORD_H */
+

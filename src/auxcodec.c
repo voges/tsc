@@ -91,8 +91,8 @@ void auxdec_free(auxdec_t* auxdec)
     }
 }
 
-void auxdec_decode_block(auxdec_t* auxdec, const uint64_t block_b)
+void auxdec_decode_block(auxdec_t* auxdec, FILE* fp)
 {
-    tsc_warning("Discarding aux block with %zu bytes!\n", block_b);
+    tsc_warning("Discarding aux block!\n");
 }
 

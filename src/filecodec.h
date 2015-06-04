@@ -8,11 +8,11 @@
 #ifndef TSC_FILECODEC_H
 #define TSC_FILECODEC_H
 
-#include <stdio.h>
+#include "auxcodec.h"
+#include "qualcodec.h"
 #include "samparser.h"
 #include "seqcodec.h"
-#include "qualcodec.h"
-#include "auxcodec.h"
+#include <stdio.h>
 
 /*****************************************************************************
  * Encoder                                                                   *

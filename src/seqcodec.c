@@ -6,57 +6,46 @@
  *****************************************************************************/
 
 #include "seqcodec.h"
-#include "tsclib.h"
+/*#include "accodec.h"*/
 #include "frw.h"
-#include "accodec.h"
-#include <string.h>
-#include <math.h>
+#include "tsclib.h"
 #include <float.h>
+#include <math.h>
+#include <string.h>
+
 
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
-static void seqenc_init(seqenc_t* seqenc)
+static void seqenc_init(seqenc_t* seqenc, const size_t block_sz)
 {
-    seqenc->buf_pos = 0;
-    seqenc->block_b = 0;
+    seqenc->block_sz = block_sz;
 }
 
 seqenc_t* seqenc_new(const size_t block_sz)
 {
     seqenc_t* seqenc = (seqenc_t*)tsc_malloc_or_die(sizeof(seqenc_t));
-    seqenc->block_sz = block_sz;
-    seqenc->pos_buf = (uint64_t*)tsc_malloc_or_die(sizeof(uint64_t) * block_sz);
-    seqenc->cigar_buf = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_sz);
-    seqenc->seq_buf = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_sz);
+    seqenc->pos_cbuf = cbufint64_new(SEQCODEC_WINDOW_SZ);
+    seqenc->cigar_cbuf = cbufstr_new(SEQCODEC_WINDOW_SZ);
+    seqenc->seq_cbuf = cbufstr_new(SEQCODEC_WINDOW_SZ);
     seqenc->exp_cbuf = cbufstr_new(SEQCODEC_WINDOW_SZ);
     seqenc->out = str_new();
-    unsigned int i = 0;
-    for (i = 0; i < block_sz; i++) {
-        seqenc->cigar_buf[i] = str_new();
-        seqenc->seq_buf[i] = str_new();
-    }
-    seqenc_init(seqenc);
+    seqenc_init(seqenc, block_sz);
     return seqenc;
 }
 
 void seqenc_free(seqenc_t* seqenc)
 {
     if (seqenc != NULL) {
-        unsigned int i = 0;
-        for (i = 0; i < seqenc->block_sz; i++) {
-            str_free(seqenc->cigar_buf[i]);
-            str_free(seqenc->seq_buf[i]);
-        }
-        free((void*)seqenc->pos_buf);
-        free((void*)seqenc->cigar_buf);
-        free((void*)seqenc->seq_buf);
+        cbufint64_free(seqenc->pos_cbuf);
+        cbufstr_free(seqenc->cigar_cbuf);
+        cbufstr_free(seqenc->seq_cbuf);
         cbufstr_free(seqenc->exp_cbuf);
         str_free(seqenc->out);
         free((void*)seqenc);
         seqenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
@@ -97,55 +86,68 @@ static double seqenc_entropy(str_t* seq)
 
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq)
 {    
-    if (cigar[0] != '*' && seqenc->buf_pos != 0) {
-        /* seq is mapped and is not the first sequence in the block */
+    if (cigar[0] != '*' && seqenc->block_lc > 0) {
+        /* 'seq' is mapped and this is not the first record in the current
+         * block. Encode it!
+         */
 
         double entropy = 0;
         double entropy_min = DBL_MAX;
-        size_t cbufstr_idx = 0;
-        size_t cbufstr_idx_min = 0;
-        str_t* exp = str_new();
-        str_t* ref = str_new();
-        str_t* diff = str_new();
-        str_t* diff_min = str_new();
-        size_t exp_cbuf_pos = 0;
+
+        str_t* exp = str_new();      /* expanded current sequence */
+        str_t* ref = str_new();      /* expanded reference sequence */
+        str_t* diff = str_new();     /* difference sequence */
+        str_t* diff_min = str_new(); /* best difference sequence */
 
         /* Expand current sequence */
         seqenc_expand(exp, pos, cigar, seq);
 
+        /* Push pos, cigar, seq and exp to circular buffers */
+        cbufint64_push(seqenc->pos_cbuf, pos);
+        cbufstr_push(seqenc->cigar_cbuf, cigar);
+        cbufstr_push(seqenc->seq_cbuf, seq);
+        cbufstr_push(seqenc->exp_cbuf, exp->s);
+
+        /* Compute differences from exp to every record in the buffer */
+        size_t cbuf_idx = 0;
+        size_t cbuf_sz = seqenc->pos_cbuf->sz;
+        size_t cbuf_idx_min = 0;
+
         do {
             /* Get expanded reference sequence from buffer */
-            ref = cbufstr_get(seqenc->exp_cbuf, exp_cbuf_pos++);
-            cbufstr_idx = seqenc->exp_cbuf->pos;
+            ref = cbufstr_get(seqenc->exp_cbuf, cbuf_idx++);
 
             /* Compute differences */
-            seqenc_diff(exp, ref, diff);
+            seqenc_diff(diff, exp, ref);
 
             /* Check the entropy of the difference */
             entropy = seqenc_entropy(diff);
             if (entropy < entropy_min) {
                 entropy_min = entropy;
-                cbufstr_idx_min = cbufstr_idx;
-                diff_min = diff;
+                cbuf_idx_min = cbuf_idx;
+                str_copy_str(diff_min, diff);
             }
-        } while (seqenc->exp_cbuf->pos < seqenc->exp_cbuf->sz /* && entropy_curr > threshold */);
+        } while (cbuf_idx < cbuf_sz /* && entropy_curr > threshold */);
 
-        cbufstr_push(seqenc->exp_cbuf, exp->s);
-
-        //str_append_str(seqenc->out, cbufstr_idx_min);
+        /* Append to output stream */
+        str_append_str(seqenc->out, cbuf_idx_min);
         str_append_str(seqenc->out, diff_min);
 
         str_free(exp);
         str_free(ref);
         str_free(diff);
         str_free(diff_min);
-    } else { /* seq is not mapped */
-        //str_append_cstr(seqenc->out, pos);
+
+    } else {
+        /* 'seq' is not mapped or this is the first sequence in the current
+         * block.
+         */
+        str_append_cstr(seqenc->out, pos);
         str_append_cstr(seqenc->out, cigar);
         str_append_cstr(seqenc->out, seq);
     }
 
-    /*
+    /* LEGACY - COULD BE DELETED
     if (seqenc->buf_pos < seqenc->block_sz) {
         seqenc->pos_buf[seqenc->buf_pos] = pos;
         str_copy_cstr(seqenc->cigar_buf[seqenc->buf_pos], cigar);
@@ -184,7 +186,7 @@ void seqenc_write_block(seqenc_t* seqenc, FILE* fp)
     */
 
     /* Reset encoder */
-    seqenc_init(seqenc);
+    //seqenc_init(seqenc);
 }
 
 /*****************************************************************************
@@ -214,7 +216,7 @@ void seqdec_free(seqdec_t* seqdec)
     }
 }
 
-void seqdec_decode_block(seqdec_t* seqenc, const uint64_t block_nb)
+void seqdec_decode_block(seqdec_t* seqenc, FILE* fp)
 {
 
 }

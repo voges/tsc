@@ -8,8 +8,9 @@
 #ifndef TSC_SEQCODEC_H
 #define TSC_SEQCODEC_H
 
-#include "str.h"
+#include "cbufint64.h"
 #include "cbufstr.h"
+#include "str.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -19,14 +20,13 @@
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct seqenc_t_ {
-    size_t       block_sz;
-    uint64_t     block_b;
-    uint64_t*    pos_buf;
-    str_t**      cigar_buf;
-    str_t**      seq_buf;
-    cbufstr_t*   exp_cbuf;
-    unsigned int buf_pos;
-    str_t*       out;
+    size_t       block_sz;   /* block size (no. of SAM records)            */
+    size_t       block_lc;   /* no. of records processed in the curr block */
+    cbufint64_t* pos_cbuf;   /* circular buffer for POSitions              */
+    cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs                 */
+    cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences              */
+    cbufstr_t*   exp_cbuf;   /* circular buffer for EXPanded sequences     */
+    str_t*       out;        /* output string (for the arithmetic coder)   */
 } seqenc_t;
 
 seqenc_t* seqenc_new(const size_t block_sz);
@@ -38,16 +38,16 @@ void seqenc_write_block(seqenc_t* seqenc, FILE* fp);
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct seqdec_t_ {
-    size_t       block_sz;
-    uint64_t*    pos_buf;
-    str_t**      cigar_buf;
-    str_t**      seq_buf;
-    unsigned int buf_pos;
+    size_t       block_sz;   /* block size (no. of SAM records)          */
+    cbufint64_t* pos_cbuf;   /* circular buffer for POSitions            */
+    cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs               */
+    cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences            */
+    cbufstr_t*   exp_cbuf;   /* circular buffer for EXPanded sequences   */
 } seqdec_t;
 
 seqdec_t* seqdec_new(void);
 void seqdec_free(seqdec_t* seqdec);
-void seqdec_decode_block(seqdec_t* seqenc, const uint64_t block_nb);
+void seqdec_decode_block(seqdec_t* seqenc, FILE* fp);
 
 #endif /* TSC_SEQCODEC_H */
 

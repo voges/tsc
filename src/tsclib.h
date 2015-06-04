@@ -8,9 +8,9 @@
 #ifndef TSC_TSCLIB_H
 #define TSC_TSCLIB_H
 
+#include "str.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "str.h"
 
 #define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
 

@@ -6,8 +6,8 @@
  *****************************************************************************/
 
 #include "filecodec.h"
-#include "tsclib.h"
 #include "frw.h"
+#include "tsclib.h"
 #include "version.h"
 #include <string.h>
 
@@ -42,7 +42,7 @@ void fileenc_free(fileenc_t* fileenc)
         free((void*)fileenc);
         fileenc = NULL;
     } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
@@ -91,21 +91,16 @@ void fileenc_encode(fileenc_t* fileenc)
             /*
              * Write seq, qual, and aux blocks:
              * - 4 bytes: identifier
-             * - 8 bytes: number of bytes in block
+             * - 8 bytes: number of bytes in block (written by '*_write_block()')
              * - n bytes: encoded stream
              */
-            fwrite_cstr(fileenc->ofp, "SEQ");
-            fwrite_byte(fileenc->ofp, 0x00);
-            fwrite_uint64(fileenc->ofp, fileenc->seqenc->block_b);
+            fwrite_cstr(fileenc->ofp, "SEQ-");
             seqenc_write_block(fileenc->seqenc, fileenc->ofp);
 
             fwrite_cstr(fileenc->ofp, "QUAL");
-            fwrite_uint64(fileenc->ofp, fileenc->seqenc->block_b);
             qualenc_write_block(fileenc->qualenc, fileenc->ofp);
 
-            fwrite_cstr(fileenc->ofp, "AUX");
-            fwrite_byte(fileenc->ofp, 0x00);
-            fwrite_uint64(fileenc->ofp, fileenc->auxenc->block_b);
+            fwrite_cstr(fileenc->ofp, "AUX-");
             auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 
             block_cnt++;
@@ -143,21 +138,16 @@ void fileenc_encode(fileenc_t* fileenc)
     /*
      * Write last seq, qual, and aux blocks:
      * - 4 bytes: identifier
-     * - 8 bytes: number of bytes in block
+     * - 8 bytes: number of bytes in block (written by '*_write_block()')
      * - n bytes: encoded stream
      */
-    fwrite_cstr(fileenc->ofp, "SEQ");
-    fwrite_byte(fileenc->ofp, 0x00);
-    fwrite_uint64(fileenc->ofp, fileenc->seqenc->block_b);
+    fwrite_cstr(fileenc->ofp, "SEQ-");
     seqenc_write_block(fileenc->seqenc, fileenc->ofp);
 
     fwrite_cstr(fileenc->ofp, "QUAL");
-    fwrite_uint64(fileenc->ofp, fileenc->seqenc->block_b);
     qualenc_write_block(fileenc->qualenc, fileenc->ofp);
 
-    fwrite_cstr(fileenc->ofp, "AUX");
-    fwrite_byte(fileenc->ofp, 0x00);
-    fwrite_uint64(fileenc->ofp, fileenc->auxenc->block_b);
+    fwrite_cstr(fileenc->ofp, "AUX-");
     auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 }
 
@@ -189,7 +179,7 @@ void filedec_free(filedec_t* filedec)
         free((void*)filedec);
         filedec = NULL;
     } else { /* filedec == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
@@ -228,7 +218,6 @@ void filedec_decode(filedec_t* filedec)
     uint32_t block_cnt;
     uint32_t block_lc;
     unsigned char block_id[4];
-    uint64_t block_b;
 
     while (fread_uint32(filedec->ifp, &block_cnt)) {
         /*
@@ -243,23 +232,20 @@ void filedec_decode(filedec_t* filedec)
         /*
          * Read seq, qual, and aux blocks:
          * - 4 bytes: identifier
-         * - 8 bytes: number of bytes in block
+         * - 8 bytes: number of bytes in block (read by '*_decode_block()')
          * - n bytes: encoded stream
          */
         fread_buf(filedec->ifp, block_id, 4);
-        if (strncmp((char*)block_id, "SEQ", 3)) tsc_error("Wrong block order!\n");
-        fread_uint64(filedec->ifp, &block_b);
-        seqdec_decode_block(filedec->seqdec, block_b);
+        if (strncmp((char*)block_id, "SEQ-", 4)) tsc_error("Wrong block order!\n");
+        seqdec_decode_block(filedec->seqdec, filedec->ifp);
 
         fread_buf(filedec->ifp, block_id, 4);
         if (strncmp((char*)block_id, "QUAL", 4)) tsc_error("Wrong block order!\n");
-        fread_uint64(filedec->ifp, &block_b);
-        qualdec_decode_block(filedec->qualdec, block_b);
+        qualdec_decode_block(filedec->qualdec, filedec->ifp);
 
         fread_buf(filedec->ifp, block_id, 4);
-        if (strncmp((char*)block_id, "AUX", 3)) tsc_error("Wrong block order!\n");
-        fread_uint64(filedec->ifp, &block_b);
-        auxdec_decode_block(filedec->auxdec, block_b);
+        if (strncmp((char*)block_id, "AUX-", 4)) tsc_error("Wrong block order!\n");
+        auxdec_decode_block(filedec->auxdec, filedec->ifp);
     }
 }
 

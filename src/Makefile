@@ -1,5 +1,5 @@
 EXEC        = tsc
-ALIAS       = detsc
+ALIAS       = untsc
 CC          = gcc
 CFLAGS      = -O0 -Wall -D _GNU_SOURCE
 INCLUDES    = #-I
@@ -8,7 +8,7 @@ LDFLAGS     = -lm
 SOURCEDIR   = .
 SOURCES     = $(wildcard $(SOURCEDIR)/*.c)
 OBJECTS     = $(SOURCES:.c=.o)
-LN          = ln -s
+LN_SF       = ln -sf
 
 .PHONY: default all debug clean
 
@@ -23,7 +23,7 @@ $(EXEC): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
 
 $(ALIAS):
-	-$(LN) $(EXEC) $(ALIAS)
+	-$(LN_SF) $(EXEC) $(ALIAS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<

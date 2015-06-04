@@ -77,7 +77,7 @@ void qualdec_free(qualdec_t* qualdec)
 
 }
 
-void qualdec_decode_block(qualdec_t* qualdec, const uint64_t block_nb)
+void qualdec_decode_block(qualdec_t* qualdec, FILE* fp)
 {
 
 }

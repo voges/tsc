@@ -2,7 +2,7 @@
 *.o
 *.a
 *.so
-tsc
-detsc
+src/tsc
+src/untsc
 doxygen/*
 

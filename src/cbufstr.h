@@ -11,12 +11,12 @@
 #include "str.h"
 
 typedef struct cbufstr_t_ {
-    size_t  sz;  /*< size of circular buffer                 */
-    str_t** buf; /*< array holding the strings in the buffer */
-    size_t  pos; /*< current position                        */
+    size_t  sz;  /* size of circular buffer                 */
+    str_t** buf; /* array holding the strings in the buffer */
+    size_t  pos; /* current position                        */
 } cbufstr_t;
 
-cbufstr_t* cbufstr_new(const size_t n);
+cbufstr_t* cbufstr_new(const size_t sz);
 void cbufstr_free(cbufstr_t* cbufstr);
 void cbufstr_push(cbufstr_t* cbufstr, const char* s);
 str_t* cbufstr_get(const cbufstr_t* cbufstr, const size_t pos);

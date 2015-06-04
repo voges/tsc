@@ -5,16 +5,16 @@
  * This file is part of tsc.                                                 *
  *****************************************************************************/
 
+#include "tsclib.h"
+#include "filecodec.h"
+#include "version.h"
+#include <getopt.h>
+#include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
-#include <unistd.h>
 #include <string.h>
-#include <signal.h>
-#include <getopt.h>
-#include "tsclib.h"
-#include "version.h"
-#include "filecodec.h"
+#include <unistd.h>
 
 /* Options/flags from getopt */
 static const char* opt_input = NULL;
@@ -48,7 +48,8 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage: Compress:   tsc <file.sam>\n");
-    printf("       Decompress: tsc -d <file.sam.tsc>\n\n");
+    printf("       Decompress: tsc -d <file.tsc>\n");
+    printf("                   untsc <file.tsc>\n\n");
     printf("Options:\n");
     printf("  -h, --help       Print this help\n");
     printf("  -d  --decompress Decompress\n");
@@ -93,7 +94,7 @@ static void parse_options(int argc, char *argv[])
                 break;
             case 'b':
                 if (atoi(optarg) <= 0)
-                    tsc_error("Block size must be greater than zero.");
+                    tsc_error("Block size must be greater than zero.\n");
                 else
                     tsc_block_sz = (unsigned int)atoi(optarg);
                 break;
@@ -111,7 +112,7 @@ static void parse_options(int argc, char *argv[])
 
     /* There must be exactly one remaining CL argument (the input file). */
     if (argc - optind > 1) {
-        tsc_error("Too many input files.\n");
+        tsc_error("Only one input file allowed.\n");
     }
     else if (argc - optind < 1) {
         tsc_error("Input file missing.\n");
@@ -153,8 +154,8 @@ int main(int argc, char* argv[])
     if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
     str_copy_cstr(tsc_prog_name, prog_name);
 
-    /* If invoked as 'detsc', switch to decompressor mode. */
-    if (!strcmp(tsc_prog_name->s, "detsc")) tsc_mode = TSC_MODE_DECOMPRESS;
+    /* If invoked as 'untsc', switch to decompressor mode. */
+    if (!strcmp(tsc_prog_name->s, "untsc")) tsc_mode = TSC_MODE_DECOMPRESS;
 
     /* Invoke signal handler */
     signal(SIGHUP,  handle_signal);
@@ -206,7 +207,7 @@ int main(int argc, char* argv[])
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
-        tsc_log("Compressed tsc file: %s\n", tsc_out_fname->s);
+        tsc_log("Compressed file: %s\n", tsc_out_fname->s);
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
@@ -237,7 +238,7 @@ int main(int argc, char* argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
         /* Invoker decoder */
-        tsc_log("Decompressing tsc file: %s\n", tsc_in_fname->s);
+        tsc_log("Decompressing file: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);
         filedec_free(filedec);

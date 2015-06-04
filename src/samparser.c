@@ -39,7 +39,7 @@ void samparser_free(samparser_t* samparser)
         free((void*)samparser);
         samparser = NULL;
     } else { /* samparser == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
