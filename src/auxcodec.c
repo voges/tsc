@@ -15,20 +15,13 @@
 static void auxenc_init(auxenc_t* auxenc, const size_t block_sz)
 {
     auxenc->block_sz = block_sz;
-    auxenc->block_b = 0;
-    auxenc->buf_pos = 0;
+    auxenc->block_lc = 0;
 }
 
 auxenc_t* auxenc_new(const size_t block_sz)
 {
     auxenc_t* auxenc = (auxenc_t*)tsc_malloc_or_die(sizeof(auxenc_t));
-    auxenc->strbuf = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_sz);
-    auxenc->intbuf = (uint64_t*)tsc_malloc_or_die(sizeof(uint64_t) * block_sz);
-    unsigned int i = 0;
-    for (i = 0; i < block_sz; i++) {
-        auxenc->strbuf[i] = str_new();
-        auxenc->intbuf[i] = 0;
-    }
+    auxenc->out_buf = str_new();
     auxenc_init(auxenc, block_sz);
     return auxenc;
 }
@@ -36,13 +29,11 @@ auxenc_t* auxenc_new(const size_t block_sz)
 void auxenc_free(auxenc_t* auxenc)
 {
     if (auxenc != NULL) {
-        unsigned int i = 0;
-        for (i = 0; i < auxenc->block_sz; i++) str_free(auxenc->strbuf[i]);
-        free((void*)auxenc->intbuf);
+        str_free(auxenc->out_buf);
         free((void*)auxenc);
         auxenc = NULL;
-    } else { /* fileenc == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+    } else { /* auxenc == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
@@ -56,13 +47,41 @@ void auxenc_add_record(auxenc_t*   auxenc,
                        uint64_t    tlen,
                        const char* opt)
 {
-    auxenc->buf_pos++;
+    /* TODO: Add int fields to aux_buf */
+    str_append_cstr(auxenc->out_buf, qname);
+    str_append_cstr(auxenc->out_buf, "\t");
+    str_append_cstr(auxenc->out_buf, rname);
+    str_append_cstr(auxenc->out_buf, "\t");
+    str_append_cstr(auxenc->out_buf, rnext);
+    str_append_cstr(auxenc->out_buf, "\t");
+    str_append_cstr(auxenc->out_buf, opt);
+    str_append_cstr(auxenc->out_buf, "\n");
+    auxenc->block_lc++;
 }
 
-void auxenc_write_block(auxenc_t* auxenc, FILE* fp)
+static void auxenc_reset(auxenc_t* auxenc)
 {
-    tsc_warning("Discarding aux data!\n");
-    auxenc->buf_pos = 0;
+    auxenc->block_sz = 0;
+    auxenc->block_lc = 0;
+    str_clear(auxenc->out_buf);
+}
+
+void auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
+{
+    tsc_log("Writing AUX- block: %zu bytes\n", auxenc->out_buf->n);
+
+    /*
+     * Write block:
+     * - 4 bytes: identifier
+     * - 8 bytes: number of bytes (n)
+     * - n bytes: block content
+     */
+    fwrite_cstr(ofp, "AUX-");
+    fwrite_uint64(ofp, (uint64_t)auxenc->out_buf->n);
+    fwrite_buf(ofp, (unsigned char*)auxenc->out_buf->s, auxenc->out_buf->n);
+
+    /* Reset encoder for next block */
+    auxenc_reset(auxenc);
 }
 
 /*****************************************************************************
@@ -71,7 +90,7 @@ void auxenc_write_block(auxenc_t* auxenc, FILE* fp)
 static void auxdec_init(auxdec_t* auxdec)
 {
     auxdec->block_sz = 0;
-    auxdec->block_b = 0;
+    auxdec->block_lc = 0;
 }
 
 auxdec_t* auxdec_new(void)
@@ -87,12 +106,33 @@ void auxdec_free(auxdec_t* auxdec)
         free((void*)auxdec);
         auxdec = NULL;
     } else { /* auxdec == NULL */
-        tsc_error("Tried to free NULL pointer. Aborting.\n");
+        tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-void auxdec_decode_block(auxdec_t* auxdec, FILE* fp)
+static void auxdec_reset(auxdec_t* auxdec)
 {
-    tsc_warning("Discarding aux block!\n");
+    auxdec->block_sz = 0;
+    auxdec->block_lc = 0;
+}
+
+void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** seq)
+{
+    /*
+     * Read block header:
+     * - 4 bytes: identifier (must equal "AUX-")
+     * - 8 bytes: number of bytes in block
+     */
+    unsigned char block_id[4];
+    fread_buf(ifp, block_id, 4);
+    uint64_t block_nb;
+    fread_uint64(ifp, &block_nb);
+    tsc_log("Reading AUX- block: %zu bytes\n", block_nb);
+
+    /* Decode block content with block_nb bytes */
+    /* TODO */
+
+    /* Reset decoder for next block */
+    auxdec_reset(auxdec);
 }
 

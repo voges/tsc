@@ -16,11 +16,9 @@
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct auxenc_t_ {
-    size_t    block_sz;
-    uint64_t  block_b;
-    str_t**   strbuf;
-    uint64_t* intbuf;
-    size_t    buf_pos;
+    size_t  block_sz; /* block size (no. of SAM records)            */
+    size_t  block_lc; /* no. of records processed in the curr block */
+    str_t*  out_buf;  /* buffer holding the delimited aux records   */
 } auxenc_t;
 
 auxenc_t* auxenc_new(const size_t block_sz);
@@ -34,19 +32,19 @@ void auxenc_add_record(auxenc_t*   auxenc,
                        uint64_t    pnext,
                        uint64_t    tlen,
                        const char* opt);
-void auxenc_write_block(auxenc_t* auxenc, FILE* fp);
+void auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
 /*****************************************************************************
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct auxdec_t_ {
-    size_t   block_sz;
-    uint64_t block_b;
+    size_t  block_sz; /* block size (no. of SAM records)              */
+    size_t  block_lc; /* no. of records processed in the curr block   */
 } auxdec_t;
 
 auxdec_t* auxdec_new(void);
 void auxdec_free(auxdec_t* auxdec);
-void auxdec_decode_block(auxdec_t* auxdec, FILE* fp);
+void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux);
 
 #endif // TSC_AUXCODEC_H
 

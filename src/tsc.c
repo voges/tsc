@@ -132,7 +132,7 @@ static const char* file_extension(const char* filename)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); /* ignore the signal */
-    tsc_log("\nCatched signal: %d\n", sig);
+    tsc_log("Catched signal: %d\n", sig);
     tsc_log("Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); /* invoke default signal action */

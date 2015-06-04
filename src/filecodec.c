@@ -88,19 +88,9 @@ void fileenc_encode(fileenc_t* fileenc)
             fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
             fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
 
-            /*
-             * Write seq, qual, and aux blocks:
-             * - 4 bytes: identifier
-             * - 8 bytes: number of bytes in block (written by '*_write_block()')
-             * - n bytes: encoded stream
-             */
-            fwrite_cstr(fileenc->ofp, "SEQ-");
+            /* Write seq, qual, and aux blocks */
             seqenc_write_block(fileenc->seqenc, fileenc->ofp);
-
-            fwrite_cstr(fileenc->ofp, "QUAL");
             qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-
-            fwrite_cstr(fileenc->ofp, "AUX-");
             auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 
             block_cnt++;
@@ -135,19 +125,9 @@ void fileenc_encode(fileenc_t* fileenc)
     fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
     fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
 
-    /*
-     * Write last seq, qual, and aux blocks:
-     * - 4 bytes: identifier
-     * - 8 bytes: number of bytes in block (written by '*_write_block()')
-     * - n bytes: encoded stream
-     */
-    fwrite_cstr(fileenc->ofp, "SEQ-");
+    /* Write last seq, qual, and aux blocks */
     seqenc_write_block(fileenc->seqenc, fileenc->ofp);
-
-    fwrite_cstr(fileenc->ofp, "QUAL");
     qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-
-    fwrite_cstr(fileenc->ofp, "AUX-");
     auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 }
 
@@ -217,9 +197,28 @@ void filedec_decode(filedec_t* filedec)
     /* Prepare decoding */
     uint32_t block_cnt;
     uint32_t block_lc;
-    unsigned char block_id[4];
+
+    /* Allocate memory for decoding */
+    str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+    str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+    str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+
+    unsigned int i = 0;
+    for (i = 0; i < block_lc; i++) {
+        seq[i] = str_new();
+        qual[i] = str_new();
+        aux[i] = str_new();
+    }
 
     while (fread_uint32(filedec->ifp, &block_cnt)) {
+
+        /* Clear memory to prepare for the next block */
+        for (i = 0; i < block_lc; i++) {
+            str_clear(seq[i]);
+            str_clear(qual[i]);
+            str_clear(aux[i]);
+        }
+
         /*
          * Read block header:
          * - 4 bytes: block count
@@ -229,23 +228,21 @@ void filedec_decode(filedec_t* filedec)
         fread_uint32(filedec->ifp, &block_cnt);
         fread_uint32(filedec->ifp, &block_lc);
 
-        /*
-         * Read seq, qual, and aux blocks:
-         * - 4 bytes: identifier
-         * - 8 bytes: number of bytes in block (read by '*_decode_block()')
-         * - n bytes: encoded stream
-         */
-        fread_buf(filedec->ifp, block_id, 4);
-        if (strncmp((char*)block_id, "SEQ-", 4)) tsc_error("Wrong block order!\n");
-        seqdec_decode_block(filedec->seqdec, filedec->ifp);
+        /* Decode seq, qual, and aux blocks */
+        seqdec_decode_block(filedec->seqdec, filedec->ifp, seq);
+        qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
+        auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
 
-        fread_buf(filedec->ifp, block_id, 4);
-        if (strncmp((char*)block_id, "QUAL", 4)) tsc_error("Wrong block order!\n");
-        qualdec_decode_block(filedec->qualdec, filedec->ifp);
+        /* Write seq, qual and aux in correct order to filedec->ofp */
+        /* TODO */
 
-        fread_buf(filedec->ifp, block_id, 4);
-        if (strncmp((char*)block_id, "AUX-", 4)) tsc_error("Wrong block order!\n");
-        auxdec_decode_block(filedec->auxdec, filedec->ifp);
+    }
+
+    /* Free the memory used for decoding */
+    for (i = 0; i < block_lc; i++) {
+        seq[i] = str_new();
+        qual[i] = str_new();
+        aux[i] = str_new();
     }
 }
 

@@ -37,6 +37,13 @@ void cbufstr_free(cbufstr_t* cbufstr)
     }
 }
 
+void cbufstr_clear(cbufstr_t* cbufstr)
+{
+    unsigned int i = 0;
+    for (i = 0; i < cbufstr->sz; i++) str_clear(cbufstr->buf[i]);
+    cbufstr->pos = 0;
+}
+
 void cbufstr_push(cbufstr_t* cbufstr, const char* s)
 {
     str_copy_cstr(cbufstr->buf[cbufstr->pos++], s);

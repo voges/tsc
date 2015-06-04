@@ -35,6 +35,12 @@ void cbufint64_free(cbufint64_t* cbufint64)
     }
 }
 
+void cbufint64_clear(cbufint64_t* cbufint64)
+{
+    memset(cbufint64->buf, 0x00, cbufint64->sz * sizeof(int64_t));
+    cbufint64->pos = 0;
+}
+
 void cbufint64_push(cbufint64_t* cbufint64, int64_t x)
 {
     cbufint64->buf[cbufint64->pos++] = x;

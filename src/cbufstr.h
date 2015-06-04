@@ -18,6 +18,7 @@ typedef struct cbufstr_t_ {
 
 cbufstr_t* cbufstr_new(const size_t sz);
 void cbufstr_free(cbufstr_t* cbufstr);
+void cbufstr_clear(cbufstr_t* cbufstr);
 void cbufstr_push(cbufstr_t* cbufstr, const char* s);
 str_t* cbufstr_get(const cbufstr_t* cbufstr, const size_t pos);
 
