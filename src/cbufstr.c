@@ -12,6 +12,7 @@ static void cbufstr_init(cbufstr_t* cbufstr, const size_t sz)
 {
     cbufstr->sz = sz;
     cbufstr->pos = 0;
+    cbufstr->n = 0;
 }
 
 cbufstr_t* cbufstr_new(const size_t sz)
@@ -42,18 +43,19 @@ void cbufstr_clear(cbufstr_t* cbufstr)
     unsigned int i = 0;
     for (i = 0; i < cbufstr->sz; i++) str_clear(cbufstr->buf[i]);
     cbufstr->pos = 0;
+    cbufstr->n = 0;
 }
 
 void cbufstr_push(cbufstr_t* cbufstr, const char* s)
 {
     str_copy_cstr(cbufstr->buf[cbufstr->pos++], s);
-    if (cbufstr->pos == cbufstr->sz)
-        cbufstr->pos = 0;
+    if (cbufstr->pos == cbufstr->sz) cbufstr->pos = 0;
+    if (cbufstr->n <= cbufstr->sz) cbufstr->n++;
 }
 
 str_t* cbufstr_get(const cbufstr_t* cbufstr, size_t pos)
 {
-    if (pos >= cbufstr->sz) {
+    if (pos > cbufstr->n) {
         tsc_error("Tried to access element out of range in circular buffer!\n");
     }
     return cbufstr->buf[pos];

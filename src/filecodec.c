@@ -195,38 +195,31 @@ void filedec_decode(filedec_t* filedec)
     str_free(header);
 
     /* Prepare decoding */
-    uint32_t block_cnt;
-    uint32_t block_lc;
-
-    /* Allocate memory for decoding */
-    str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
-    str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
-    str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
-
-    unsigned int i = 0;
-    for (i = 0; i < block_lc; i++) {
-        seq[i] = str_new();
-        qual[i] = str_new();
-        aux[i] = str_new();
-    }
+    uint32_t block_cnt = 0;
+    uint32_t block_lc = 0;
 
     while (fread_uint32(filedec->ifp, &block_cnt)) {
-
-        /* Clear memory to prepare for the next block */
-        for (i = 0; i < block_lc; i++) {
-            str_clear(seq[i]);
-            str_clear(qual[i]);
-            str_clear(aux[i]);
-        }
 
         /*
          * Read block header:
          * - 4 bytes: block count
          * - 4 bytes: lines in block
          */
-        tsc_log("Reading block %zu: %zu lines\n", block_cnt, block_lc);
         fread_uint32(filedec->ifp, &block_cnt);
         fread_uint32(filedec->ifp, &block_lc);
+        tsc_log("Reading block %zu: %zu lines\n", block_cnt, block_lc);
+        
+        /* Allocate memory to prepare decoding of the next block */
+        str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+        str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+        str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+        
+        unsigned int i = 0;
+        for (i = 0; i < block_lc; i++) {
+            seq[i] = str_new();
+            qual[i] = str_new();
+            aux[i] = str_new();
+        }
 
         /* Decode seq, qual, and aux blocks */
         seqdec_decode_block(filedec->seqdec, filedec->ifp, seq);
@@ -236,13 +229,15 @@ void filedec_decode(filedec_t* filedec)
         /* Write seq, qual and aux in correct order to filedec->ofp */
         /* TODO */
 
-    }
-
-    /* Free the memory used for decoding */
-    for (i = 0; i < block_lc; i++) {
-        seq[i] = str_new();
-        qual[i] = str_new();
-        aux[i] = str_new();
+        /* Free the memory used for decoding */
+        for (i = 0; i < block_lc; i++) {
+            seq[i] = str_new();
+            qual[i] = str_new();
+            aux[i] = str_new();
+        }
+        free((void*)seq);
+        free((void*)qual);
+        free((void*)aux);
     }
 }
 

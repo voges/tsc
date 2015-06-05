@@ -14,6 +14,7 @@ typedef struct cbufstr_t_ {
     size_t  sz;  /* size of circular buffer                 */
     str_t** buf; /* array holding the strings in the buffer */
     size_t  pos; /* current position                        */
+    size_t   n;  /* number of elements currently in buffer */
 } cbufstr_t;
 
 cbufstr_t* cbufstr_new(const size_t sz);

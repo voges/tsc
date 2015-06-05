@@ -52,13 +52,13 @@ void seqenc_free(seqenc_t* seqenc)
 
 static void seqenc_expand(str_t* exp, uint64_t pos, const char* cigar, const char* seq)
 {
-    DEBUG("pos cigar seq: %lu %s %s\n", pos, cigar, seq);
+    DEBUG("pos cigar seq: %llu %s %s", pos, cigar, seq);
 }
 
 static void seqenc_diff(str_t* seq, str_t* ref, str_t* diff)
 {
-    DEBUG("seq: %s\n", seq->s);
-    DEBUG("ref: %s\n", ref->s);
+    DEBUG("seq: %s", seq->s);
+    DEBUG("ref: %s", ref->s);
 }
 
 static double seqenc_entropy(str_t* seq)
@@ -115,6 +115,7 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
 
         do {
             /* Get expanded reference sequence from buffer */
+            DEBUG("%d %d %d", seqenc->exp_cbuf->pos, seqenc->exp_cbuf->sz, seqenc->exp_cbuf->n);
             ref = cbufstr_get(seqenc->exp_cbuf, cbuf_idx++);
 
             /* Compute differences */
