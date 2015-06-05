@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "filecodec.h"
 #include "frw.h"
@@ -11,9 +11,9 @@
 #include "version.h"
 #include <string.h>
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
 static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const size_t block_sz)
 {
     fileenc->ifp = ifp;
@@ -50,7 +50,7 @@ void fileenc_encode(fileenc_t* fileenc)
 {
     /*
      * Write tsc file header:
-     * - 4 bytes: 'TSC' + 0x00
+     * - 4 bytes: 'TSC-' + 0x00
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
      */
@@ -72,17 +72,17 @@ void fileenc_encode(fileenc_t* fileenc)
     fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
     /* Prepare encoding */
-    size_t block_cnt = 0;
-    size_t block_lc = 0;
+    size_t block_cnt = 0; /* block count */
+    size_t block_lc = 0;  /* block-wise line count */
     samrecord_t* samrecord = &(fileenc->samparser->curr);
 
     /* Parse SAM file line by line and invoke encoders */
     while (samparser_next(fileenc->samparser)) {
-        if (block_lc >= fileenc->block_sz) {          
+        if (block_lc >= fileenc->block_sz) {
             /*
              * Write block header:
              * - 4 bytes: block count
-             * - 4 bytes: lines in block
+             * - 4 bytes: no. of lines in block
              */
             tsc_log("Writing block %zu: %zu lines\n", block_cnt, block_lc);
             fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
@@ -119,7 +119,7 @@ void fileenc_encode(fileenc_t* fileenc)
     /*
      * Write last block header:
      * - 4 bytes: block count
-     * - 4 bytes: lines in block
+     * - 4 bytes: no. of lines in block
      */
     tsc_log("Writing last block %zu: %zu lines\n", block_cnt, block_lc);
     fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
@@ -131,9 +131,9 @@ void fileenc_encode(fileenc_t* fileenc)
     auxenc_write_block(fileenc->auxenc, fileenc->ofp);
 }
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
 static void filedec_init(filedec_t* filedec, FILE* ifp, FILE* ofp)
 {
     filedec->ifp = ifp;
@@ -171,8 +171,7 @@ void filedec_decode(filedec_t* filedec)
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
      */
-    unsigned char tmp1[4];
-    unsigned char tmp2[4];
+    unsigned char tmp1[4], tmp2[4];
     fread_buf(filedec->ifp, tmp1, 4);
     fread_buf(filedec->ifp, tmp2, 4);
     tsc_log("Format: %s %s\n", tmp1, tmp2);
@@ -199,16 +198,14 @@ void filedec_decode(filedec_t* filedec)
     uint32_t block_lc = 0;
 
     while (fread_uint32(filedec->ifp, &block_cnt)) {
-
         /*
          * Read block header:
          * - 4 bytes: block count
          * - 4 bytes: lines in block
          */
-        fread_uint32(filedec->ifp, &block_cnt);
         fread_uint32(filedec->ifp, &block_lc);
-        tsc_log("Reading block %zu: %zu lines\n", block_cnt, block_lc);
-        
+        tsc_log("Decoding block %zu: %zu lines\n", block_cnt, block_lc);
+
         /* Allocate memory to prepare decoding of the next block */
         str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
         str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
@@ -226,8 +223,13 @@ void filedec_decode(filedec_t* filedec)
         qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
 
-        /* Write seq, qual and aux in correct order to filedec->ofp */
-        /* TODO */
+        /* TODO: Write seq, qual and aux IN CORRECT ORDER to filedec->ofp */
+        tsc_log("Writing decoded block %zu: %zu lines\n", block_cnt, block_lc);
+        for (i = 0; i < block_lc; i++) {
+            fwrite_cstr(filedec->ofp, seq[i]->s);
+            fwrite_cstr(filedec->ofp, qual[i]->s);
+            fwrite_cstr(filedec->ofp, aux[i]->s);
+        }
 
         /* Free the memory used for decoding */
         for (i = 0; i < block_lc; i++) {

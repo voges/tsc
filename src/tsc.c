@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "tsclib.h"
 #include "filecodec.h"
@@ -28,7 +28,7 @@ str_t* tsc_in_fname = NULL;
 FILE* tsc_in_fp = NULL;
 str_t* tsc_out_fname = NULL;
 FILE* tsc_out_fp = NULL;
-unsigned int tsc_block_sz = 1000;
+size_t tsc_block_sz = 1000;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 
 static void print_version(void)
@@ -203,15 +203,16 @@ int main(int argc, char* argv[])
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
         /* Invoke encoder */
-        tsc_log("Compressing file: %s\n", tsc_in_fname->s);
+        tsc_log("Compressing: %s\n", tsc_in_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
-        tsc_log("Compressed file: %s\n", tsc_out_fname->s);
+        tsc_log("Finished: %s\n", tsc_out_fname->s);
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);
         tsc_fclose_or_die(tsc_out_fp);
+
     } else { /* TSC_MODE_DECOMPRESS */
 
         /* Check input file extension */
@@ -237,12 +238,12 @@ int main(int argc, char* argv[])
         tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
-        /* Invoker decoder */
-        tsc_log("Decompressing file: %s\n", tsc_in_fname->s);
+        /* Invoke decoder */
+        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         filedec_decode(filedec);
         filedec_free(filedec);
-        tsc_log("Decompressed file: %s\n", tsc_out_fname->s);
+        tsc_log("Finished: %s\n", tsc_out_fname->s);
 
         /* Close files */
         tsc_fclose_or_die(tsc_in_fp);

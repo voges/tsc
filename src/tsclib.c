@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "tsclib.h"
 #include <stdarg.h>
@@ -78,18 +78,14 @@ void tsc_log(const char* fmt, ...)
 void* tsc_malloc_or_die(const size_t n)
 {
     void* p = malloc(n);
-    if (p == NULL) {
-        tsc_error("Cannot allocate %zu bytes.\n", n);
-    }
+    if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
     return p;
 }
 
 void* tsc_realloc_or_die(void* ptr, const size_t n)
 {
     void* p = realloc(ptr, n);
-    if (p == NULL) {
-        tsc_error("Cannot allocate %zu bytes.\n", n);
-    }
+    if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
     return p;
 }
 
@@ -110,7 +106,6 @@ void tsc_fclose_or_die(FILE* fp)
         fp = NULL;
     } else {
         tsc_error("Failed to close file.\n");
-        exit(EXIT_FAILURE);
     }
 }
 

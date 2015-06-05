@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_STR_H
 #define TSC_STR_H
@@ -17,8 +17,8 @@
 
 typedef struct str_t_ {
     char*  s;    /* null-terminated string */
-    size_t n;    /* length of s */
-    size_t size; /* bytes allocated for s */
+    size_t n;    /* length of s            */
+    size_t size; /* bytes allocated for s  */
 } str_t;
 
 str_t* str_new(void);

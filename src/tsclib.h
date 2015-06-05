@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_TSCLIB_H
 #define TSC_TSCLIB_H
@@ -18,19 +18,18 @@
 #define MB KB * 1024LL
 #define GB MB * 1024LL
 
+typedef enum {
+    TSC_MODE_COMPRESS,
+    TSC_MODE_DECOMPRESS
+} tsc_mode_t;
+
 extern str_t* tsc_prog_name;
 extern str_t* tsc_version;
 extern str_t* tsc_in_fname;
 extern FILE* tsc_in_fp;
 extern str_t* tsc_out_fname;
 extern FILE* tsc_out_fp;
-extern unsigned int tsc_block_sz;
-
-typedef enum {
-    TSC_MODE_COMPRESS,
-    TSC_MODE_DECOMPRESS
-} tsc_mode_t;
-
+extern size_t tsc_block_sz;
 extern tsc_mode_t tsc_mode;
 
 void tsc_cleanup(void);

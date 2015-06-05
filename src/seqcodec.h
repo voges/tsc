@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_SEQCODEC_H
 #define TSC_SEQCODEC_H
@@ -16,9 +16,9 @@
 
 #define SEQCODEC_WINDOW_SZ 10
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
 typedef struct seqenc_t_ {
     size_t         block_sz;   /* block size (no. of SAM records)            */
     size_t         block_lc;   /* no. of records processed in the curr block */
@@ -34,9 +34,9 @@ void seqenc_free(seqenc_t* seqenc);
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq);
 void seqenc_write_block(seqenc_t* seqenc, FILE* ofp);
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
 typedef struct seqdec_t_ {
     size_t       block_sz;   /* block size (no. of SAM records)            */
     size_t       block_lc;   /* no. of records processed in the curr block */
