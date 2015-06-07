@@ -66,7 +66,7 @@ static void auxenc_reset(auxenc_t* auxenc)
     str_clear(auxenc->out_buf);
 }
 
-void auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
+size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
 {
     tsc_log("Writing AUX- block: %zu bytes\n", auxenc->out_buf->n);
 
@@ -76,12 +76,15 @@ void auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
      * - 8 bytes: number of bytes (n)
      * - n bytes: block content
      */
-    fwrite_cstr(ofp, "AUX-");
-    fwrite_uint64(ofp, (uint64_t)auxenc->out_buf->n);
-    fwrite_buf(ofp, (unsigned char*)auxenc->out_buf->s, auxenc->out_buf->n);
+    size_t nbytes = 0;
+    nbytes += fwrite_cstr(ofp, "AUX-");
+    nbytes += fwrite_uint64(ofp, (uint64_t)auxenc->out_buf->n);
+    nbytes += fwrite_buf(ofp, (unsigned char*)auxenc->out_buf->s, auxenc->out_buf->n);
 
     /* Reset encoder for next block */
     auxenc_reset(auxenc);
+    
+    return nbytes;
 }
 
 /*****************************************************************************

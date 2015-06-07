@@ -32,7 +32,7 @@ typedef struct seqenc_t_ {
 seqenc_t* seqenc_new(const size_t block_sz);
 void seqenc_free(seqenc_t* seqenc);
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq);
-void seqenc_write_block(seqenc_t* seqenc, FILE* ofp);
+size_t seqenc_write_block(seqenc_t* seqenc, FILE* ofp);
 
 /******************************************************************************
  * Decoder                                                                    *

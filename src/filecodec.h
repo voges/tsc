@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_FILECODEC_H
 #define TSC_FILECODEC_H

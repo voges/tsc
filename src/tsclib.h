@@ -12,11 +12,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __PRETTY_FUNCTION__, ##__VA_ARGS__)
+#define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 #define KB 1024LL
-#define MB KB * 1024LL
-#define GB MB * 1024LL
+#define MB (KB * KB)
+#define GB (MB * MB)
 
 typedef enum {
     TSC_MODE_COMPRESS,

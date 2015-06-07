@@ -9,25 +9,29 @@
 #include "tsclib.h"
 #include <string.h>
 
-void fwrite_byte(FILE* fp, const unsigned char byte)
+size_t fwrite_byte(FILE* fp, const unsigned char byte)
 {
     if (fwrite(&byte, 1, 1, fp) != 1) tsc_error("Could not write byte.\n");
+    return 1;
 }
 
-void fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
+size_t fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
 {
     if (fwrite(buf, 1, n, fp) != n) tsc_error("Could not write %d bytes.\n", n);
+    return n;
 }
 
-void fwrite_uint32(FILE* fp, const uint32_t dword)
+size_t fwrite_uint32(FILE* fp, const uint32_t dword)
 {
     fwrite_byte(fp, (dword >> 24) & 0xFF);
     fwrite_byte(fp, (dword >> 16) & 0xFF);
     fwrite_byte(fp, (dword >>  8) & 0xFF);
     fwrite_byte(fp, (dword      ) & 0xFF);
+    
+    return sizeof(uint32_t);
 }
 
-void fwrite_uint64(FILE* fp, const uint64_t qword)
+size_t fwrite_uint64(FILE* fp, const uint64_t qword)
 {
     fwrite_byte(fp, (qword >> 56) & 0xFF);
     fwrite_byte(fp, (qword >> 48) & 0xFF);
@@ -37,13 +41,16 @@ void fwrite_uint64(FILE* fp, const uint64_t qword)
     fwrite_byte(fp, (qword >> 16) & 0xFF);
     fwrite_byte(fp, (qword >>  8) & 0xFF);
     fwrite_byte(fp, (qword      ) & 0xFF);
+    
+    return sizeof(uint64_t);
 }
 
-void fwrite_cstr(FILE* fp, const char* cstr)
+size_t fwrite_cstr(FILE* fp, const char* cstr)
 {
     size_t nbytes = strlen(cstr);
     unsigned int i = 0;
     for (i = 0; i < nbytes; i++) fwrite_byte(fp, cstr[i]);
+    return nbytes;
 }
 
 size_t fread_byte(FILE* fp, unsigned char* byte)

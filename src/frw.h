@@ -11,11 +11,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-void fwrite_byte(FILE* fp, const unsigned char byte);
-void fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n);
-void fwrite_uint32(FILE* fp, const uint32_t dword);
-void fwrite_uint64(FILE* fp, const uint64_t qword);
-void fwrite_cstr(FILE* fp, const char* cstr);
+size_t fwrite_byte(FILE* fp, const unsigned char byte);
+size_t fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n);
+size_t fwrite_uint32(FILE* fp, const uint32_t dword);
+size_t fwrite_uint64(FILE* fp, const uint64_t qword);
+size_t fwrite_cstr(FILE* fp, const char* cstr);
 size_t fread_byte(FILE* fp, unsigned char* byte);
 size_t fread_buf(FILE* fp, unsigned char* buf, const size_t n);
 size_t fread_uint32(FILE* fp, uint32_t* dword);

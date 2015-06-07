@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-static bool tsc_yesno()
+static bool tsc_yesno(void)
 {
     int c = getchar();
     bool yes = c == 'y' || c == 'Y';

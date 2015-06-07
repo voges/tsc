@@ -32,7 +32,7 @@ void auxenc_add_record(auxenc_t*   auxenc,
                        uint64_t    pnext,
                        uint64_t    tlen,
                        const char* opt);
-void auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
+size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
 /*****************************************************************************
  * Decoder                                                                   *

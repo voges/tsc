@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_QUALCODEC_H
 #define TSC_QUALCODEC_H
@@ -15,9 +15,9 @@
 
 #define QUALCODEC_WINDOW_SZ 10
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
 typedef struct qualenc_t_ {
     size_t     block_sz;  /* block size (no. of SAM records)            */
     size_t     block_lc;  /* no. of records processed in the curr block */
@@ -28,11 +28,11 @@ typedef struct qualenc_t_ {
 qualenc_t* qualenc_new(const size_t block_sz);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
-void qualenc_write_block(qualenc_t* qualenc, FILE* ofp);
+size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp);
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
 typedef struct qualdec_t_ {
     size_t     block_sz;  /* block size (no. of SAM records)            */
     size_t     block_lc;  /* no. of records processed in the curr block */

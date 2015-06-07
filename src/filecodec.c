@@ -48,6 +48,8 @@ void fileenc_free(fileenc_t* fileenc)
 
 void fileenc_encode(fileenc_t* fileenc)
 {
+    size_t total_bc = 0;  /* total byte count */
+    
     /*
      * Write tsc file header:
      * - 4 bytes: 'TSC-' + 0x00
@@ -55,12 +57,12 @@ void fileenc_encode(fileenc_t* fileenc)
      * - 4 bytes: block size used for encoding
      */
     tsc_log("Format: %s %s\n", tsc_prog_name->s, tsc_version->s);
-    fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
-    fwrite_byte(fileenc->ofp, 0x00);
-    fwrite_cstr(fileenc->ofp, tsc_version->s);
-    fwrite_byte(fileenc->ofp, 0x00);
+    total_bc += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
+    total_bc += fwrite_byte(fileenc->ofp, 0x00);
+    total_bc += fwrite_cstr(fileenc->ofp, tsc_version->s);
+    total_bc += fwrite_byte(fileenc->ofp, 0x00);
     tsc_log("Block size: %zu\n", fileenc->block_sz);
-    fwrite_uint32(fileenc->ofp, fileenc->block_sz);
+    total_bc += fwrite_uint32(fileenc->ofp, fileenc->block_sz);
 
     /*
      * Write SAM header:
@@ -68,12 +70,13 @@ void fileenc_encode(fileenc_t* fileenc)
      * - n bytes: SAM header
      */
     tsc_log("Writing SAM header\n");
-    fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
-    fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
+    total_bc += fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
+    total_bc += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
     /* Prepare encoding */
     size_t block_cnt = 0; /* block count */
     size_t block_lc = 0;  /* block-wise line count */
+    size_t total_lc = 0;  /* total line count */
     samrecord_t* samrecord = &(fileenc->samparser->curr);
 
     /* Parse SAM file line by line and invoke encoders */
@@ -84,14 +87,18 @@ void fileenc_encode(fileenc_t* fileenc)
              * - 4 bytes: block count
              * - 4 bytes: no. of lines in block
              */
-            tsc_log("Writing block %zu: %zu lines\n", block_cnt, block_lc);
-            fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
-            fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
+            tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_lc);
+            total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
+            total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
 
             /* Write seq, qual, and aux blocks */
-            seqenc_write_block(fileenc->seqenc, fileenc->ofp);
-            qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-            auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            DEBUG("total_bc : %zu", total_bc);
+            total_bc += seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+            DEBUG("total_bc : %zu", total_bc);
+            total_bc += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+            DEBUG("total_bc : %zu", total_bc);
+            total_bc += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            DEBUG("total_bc : %zu", total_bc);
 
             block_cnt++;
             block_lc = 0;
@@ -114,6 +121,7 @@ void fileenc_encode(fileenc_t* fileenc)
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
         block_lc++;
+        total_lc++;
     }
 
     /*
@@ -121,14 +129,16 @@ void fileenc_encode(fileenc_t* fileenc)
      * - 4 bytes: block count
      * - 4 bytes: no. of lines in block
      */
-    tsc_log("Writing last block %zu: %zu lines\n", block_cnt, block_lc);
-    fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
-    fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
+    tsc_log("Writing last block %zu: %zu line(s)\n", block_cnt, block_lc);
+    total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
+    total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
 
     /* Write last seq, qual, and aux blocks */
-    seqenc_write_block(fileenc->seqenc, fileenc->ofp);
-    qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-    auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    total_bc += seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+    total_bc += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+    total_bc += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    
+    tsc_log("Wrote %zu Bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", total_bc, ((double)total_bc / GB), total_lc, block_cnt);
 }
 
 /******************************************************************************
@@ -172,11 +182,14 @@ void filedec_decode(filedec_t* filedec)
      * - 4 bytes: block size used for encoding
      */
     unsigned char tmp1[4], tmp2[4];
-    fread_buf(filedec->ifp, tmp1, 4);
-    fread_buf(filedec->ifp, tmp2, 4);
+    if (fread_buf(filedec->ifp, tmp1, 4) != 4)
+        tsc_error("Failed to read file header!\n");
+    if (fread_buf(filedec->ifp, tmp2, 4) != 4)
+        tsc_error("Failed to read file header!\n");
     tsc_log("Format: %s %s\n", tmp1, tmp2);
     uint32_t block_sz;
-    fread_uint32(filedec->ifp, &block_sz);
+    if (fread_uint32(filedec->ifp, &block_sz) != sizeof(uint32_t))
+        tsc_error("Failed to read block size!\n");
     tsc_log("Block size: %d\n", block_sz);
 
     /*
@@ -186,10 +199,12 @@ void filedec_decode(filedec_t* filedec)
      */
     tsc_log("Reading SAM header\n");
     uint32_t header_b;
-    fread_uint32(filedec->ifp, &header_b);
+    if (fread_uint32(filedec->ifp, &header_b) != sizeof(uint32_t))
+        tsc_error("Failed to read SAM header!\n");
     str_t* header = str_new();
     str_reserve(header, header_b);
-    fread_buf(filedec->ifp, (unsigned char*)header->s, header_b);
+    if (fread_buf(filedec->ifp, (unsigned char*)header->s, header_b) != header_b)
+        tsc_error("Failed to read SAM header!\n");
     fwrite_cstr(filedec->ofp, header->s);
     str_free(header);
 
@@ -197,13 +212,14 @@ void filedec_decode(filedec_t* filedec)
     uint32_t block_cnt = 0;
     uint32_t block_lc = 0;
 
-    while (fread_uint32(filedec->ifp, &block_cnt)) {
+    while (fread_uint32(filedec->ifp, &block_cnt) == sizeof(uint32_t)) {
         /*
          * Read block header:
          * - 4 bytes: block count
          * - 4 bytes: lines in block
          */
-        fread_uint32(filedec->ifp, &block_lc);
+        if (fread_uint32(filedec->ifp, &block_lc) != sizeof(uint32_t))
+            tsc_error("Failed to read number of lines in block %d!\n", block_cnt);
         tsc_log("Decoding block %zu: %zu lines\n", block_cnt, block_lc);
 
         /* Allocate memory to prepare decoding of the next block */

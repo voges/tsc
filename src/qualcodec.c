@@ -1,17 +1,17 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "qualcodec.h"
 #include "frw.h"
 #include "tsclib.h"
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
 static void qualenc_init(qualenc_t* qualenc, const size_t block_sz)
 {
     qualenc->block_sz = block_sz;
@@ -22,6 +22,7 @@ qualenc_t* qualenc_new(const size_t block_sz)
 {
     qualenc_t* qualenc = (qualenc_t*)tsc_malloc_or_die(sizeof(qualenc_t));
     qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
+    qualenc->out_buf = str_new();
     qualenc_init(qualenc, block_sz);
     return qualenc;
 }
@@ -30,6 +31,7 @@ void qualenc_free(qualenc_t* qualenc)
 {
     if (qualenc != NULL) {
         cbufstr_free(qualenc->qual_cbuf);
+        str_free(qualenc->out_buf);
         free((void*)qualenc);
         qualenc = NULL;
     } else { /* qualenc == NULL */
@@ -39,7 +41,9 @@ void qualenc_free(qualenc_t* qualenc)
 
 void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
-    cbufstr_push(qualenc->qual_cbuf, qual);
+    //cbufstr_push(qualenc->qual_cbuf, qual);
+    str_append_cstr(qualenc->out_buf, qual);
+    str_append_cstr(qualenc->out_buf, "\n");
 }
 
 static void qualenc_reset(qualenc_t* qualenc)
@@ -50,7 +54,7 @@ static void qualenc_reset(qualenc_t* qualenc)
     str_clear(qualenc->out_buf);
 }
 
-void qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
+size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 {
     tsc_log("Writing QUAL block: %zu bytes\n", qualenc->out_buf->n);
 
@@ -60,17 +64,20 @@ void qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
      * - 8 bytes: number of bytes (n)
      * - n bytes: block content
      */
-    fwrite_cstr(ofp, "QUAL");
-    fwrite_uint64(ofp, (uint64_t)qualenc->out_buf->n);
-    fwrite_buf(ofp, (unsigned char*)qualenc->out_buf->s, qualenc->out_buf->n);
+    size_t nbytes = 0;
+    nbytes += fwrite_cstr(ofp, "QUAL");
+    nbytes += fwrite_uint64(ofp, (uint64_t)qualenc->out_buf->n);
+    nbytes += fwrite_buf(ofp, (unsigned char*)qualenc->out_buf->s, qualenc->out_buf->n);
 
     /* Reset encoder for next block */
     qualenc_reset(qualenc);
+    
+    return nbytes;
 }
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
 static void qualdec_init(qualdec_t* qualdec)
 {
     qualdec->block_sz = 0;

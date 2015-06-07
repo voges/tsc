@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "cbufstr.h"
 #include "tsclib.h"
@@ -11,7 +11,7 @@
 static void cbufstr_init(cbufstr_t* cbufstr, const size_t sz)
 {
     cbufstr->sz = sz;
-    cbufstr->pos = 0;
+    cbufstr->nxt = 0;
     cbufstr->n = 0;
 }
 
@@ -42,22 +42,32 @@ void cbufstr_clear(cbufstr_t* cbufstr)
 {
     unsigned int i = 0;
     for (i = 0; i < cbufstr->sz; i++) str_clear(cbufstr->buf[i]);
-    cbufstr->pos = 0;
+    cbufstr->nxt = 0;
     cbufstr->n = 0;
 }
 
 void cbufstr_push(cbufstr_t* cbufstr, const char* s)
 {
-    str_copy_cstr(cbufstr->buf[cbufstr->pos++], s);
-    if (cbufstr->pos == cbufstr->sz) cbufstr->pos = 0;
-    if (cbufstr->n <= cbufstr->sz) cbufstr->n++;
+    str_copy_cstr(cbufstr->buf[cbufstr->nxt++], s);
+    if (cbufstr->nxt == cbufstr->sz) cbufstr->nxt = 0;
+    if (cbufstr->n < cbufstr->sz) cbufstr->n++;
+}
+
+str_t* cbufstr_top(cbufstr_t* cbufstr)
+{
+    if (cbufstr->n == 0) tsc_error("Tried to access empty buffer!\n");
+    
+    size_t nxt = cbufstr->nxt;
+    size_t last = 0;
+    if (nxt == 0) last = cbufstr->sz - 1;
+    else last = cbufstr->nxt - 1;
+    return cbufstr->buf[last];
 }
 
 str_t* cbufstr_get(const cbufstr_t* cbufstr, size_t pos)
 {
-    if (pos > cbufstr->n) {
-        tsc_error("Tried to access element out of range in circular buffer!\n");
-    }
+    if (cbufstr->n == 0) tsc_error("Tried to access empty buffer!\n");
+    if (pos > cbufstr->n - 1) tsc_error("Not enough elements in buffer!\n");
     return cbufstr->buf[pos];
 }
 

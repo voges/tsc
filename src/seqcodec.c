@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "seqcodec.h"
 /*#include "accodec.h"*/
@@ -14,9 +14,9 @@
 #include <string.h>
 
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
 static void seqenc_init(seqenc_t* seqenc, const size_t block_sz)
 {
     seqenc->block_sz = block_sz;
@@ -52,13 +52,32 @@ void seqenc_free(seqenc_t* seqenc)
 
 static void seqenc_expand(str_t* exp, uint64_t pos, const char* cigar, const char* seq)
 {
-    DEBUG("pos cigar seq: %llu %s %s", pos, cigar, seq);
+    str_copy_cstr(exp, seq);
 }
 
-static void seqenc_diff(str_t* seq, str_t* ref, str_t* diff)
+static void seqenc_diff(str_t* diff, str_t* seq, str_t* ref)
 {
-    DEBUG("seq: %s", seq->s);
-    DEBUG("ref: %s", ref->s);
+    /* Determine length of diff string */
+    size_t len = seq->n;
+    if (ref->n > len) len = ref->n;
+    
+    /* Allocate memory for diff */
+    str_clear(diff);
+    str_reserve(diff, len);
+    
+    size_t i = 0;
+    int d = 0;
+    for (i = 0; i < len; i++) {
+        if (i < seq->n && i < ref->n) {
+            d = (int)seq->s[i] - (int)ref->s[i] + ((int)'T');
+        } else {
+            if (seq->n >= ref->n)
+                d = (int)seq->s[i];
+            else
+                d = (int)ref->s[i];
+        }
+        str_append_char(diff, (char)d);
+    }
 }
 
 static double seqenc_entropy(str_t* seq)
@@ -66,8 +85,8 @@ static double seqenc_entropy(str_t* seq)
     /* Make histogram */
     unsigned int i = 0;
     unsigned int freq[256];
-    memset(freq, 0x00000000, 256);
-    for (i = 0; i < seq->size; i++) {
+    memset(freq, 0, sizeof(freq));
+    for (i = 0; i < seq->n; i++) {
         freq[(int)(seq->s[i])]++;
     }
 
@@ -75,7 +94,7 @@ static double seqenc_entropy(str_t* seq)
     double n = (double)seq->n;
     double h = 0.0;
     for (i = 0; i < 256; i++) {
-        if (freq[i] != 0) {
+        if (freq[i] > 0) {
             double prob = (double)freq[i] / n;
             h -= prob * log2(prob);
         }
@@ -86,6 +105,7 @@ static double seqenc_entropy(str_t* seq)
 
 void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq)
 {    
+    DEBUG("Adding record: %llu %s %s", pos, cigar, seq);
     if (cigar[0] != '*' && seqenc->block_lc > 0) {
         /* 'seq' is mapped and this is not the first record in the current
          * block. Encode it!
@@ -95,7 +115,6 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
         double entropy_min = DBL_MAX;
 
         str_t* exp = str_new();      /* expanded current sequence */
-        str_t* ref = str_new();      /* expanded reference sequence */
         str_t* diff = str_new();     /* difference sequence */
         str_t* diff_min = str_new(); /* best difference sequence */
 
@@ -110,35 +129,31 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
 
         /* Compute differences from exp to every record in the buffer */
         size_t cbuf_idx = 0;
-        size_t cbuf_sz = seqenc->pos_cbuf->sz;
+        size_t cbuf_n = seqenc->pos_cbuf->n;
         size_t cbuf_idx_min = 0;
 
         do {
             /* Get expanded reference sequence from buffer */
-            DEBUG("%d %d %d", seqenc->exp_cbuf->pos, seqenc->exp_cbuf->sz, seqenc->exp_cbuf->n);
-            ref = cbufstr_get(seqenc->exp_cbuf, cbuf_idx++);
+            str_t* ref = cbufstr_get(seqenc->exp_cbuf, cbuf_idx++);
 
             /* Compute differences */
             seqenc_diff(diff, exp, ref);
-
             /* Check the entropy of the difference */
             entropy = seqenc_entropy(diff);
+            DEBUG("entropy: %f", entropy);
             if (entropy < entropy_min) {
                 entropy_min = entropy;
                 cbuf_idx_min = cbuf_idx;
                 str_copy_str(diff_min, diff);
             }
-        } while (cbuf_idx < cbuf_sz /* && entropy_curr > threshold */);
+        } while (cbuf_idx < cbuf_n /* && entropy_curr > threshold */);
 
         /* Append to output stream */
-        str_append_char(seqenc->out_buf, (char)((cbuf_idx_min >> 24) & 0xFF));
-        str_append_char(seqenc->out_buf, (char)((cbuf_idx_min >> 16) & 0xFF));
-        str_append_char(seqenc->out_buf, (char)((cbuf_idx_min >>  8) & 0xFF));
-        str_append_char(seqenc->out_buf, (char)((cbuf_idx_min      ) & 0xFF));
+        /* TODO: Append cbuf_idx_min */
         str_append_str(seqenc->out_buf, diff_min);
+        str_append_cstr(seqenc->out_buf, "\n");
 
         str_free(exp);
-        str_free(ref);
         str_free(diff);
         str_free(diff_min);
 
@@ -146,27 +161,20 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
         /* 'seq' is not mapped or this is the first sequence in the current
          * block.
          */
-        str_append_char(seqenc->out_buf, (char)(0xFF));
-        str_append_char(seqenc->out_buf, (char)(0xFF));
-        str_append_char(seqenc->out_buf, (char)(0xFF));
-        str_append_char(seqenc->out_buf, (char)(0xFF));
-        //str_append_cstr(seqenc->out_buf, pos);
+        if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
+        char tmp[101]; snprintf(tmp, sizeof(tmp), "%llu", pos);
+        str_append_cstr(seqenc->out_buf, tmp);
+        str_append_cstr(seqenc->out_buf, "\t");
         str_append_cstr(seqenc->out_buf, cigar);
+        str_append_cstr(seqenc->out_buf, "\t");
         str_append_cstr(seqenc->out_buf, seq);
+        str_append_cstr(seqenc->out_buf, "\n");
+        
     }
 
+
+    DEBUG("out_buf: \n%s", seqenc->out_buf->s);
     seqenc->block_lc++;
-
-    /* LEGACY - COULD BE DELETED
-    if (seqenc->buf_pos < seqenc->block_sz) {
-        seqenc->pos_buf[seqenc->buf_pos] = pos;
-        str_copy_cstr(seqenc->cigar_buf[seqenc->buf_pos], cigar);
-        str_copy_cstr(seqenc->seq_buf[seqenc->buf_pos], seq);
-        seqenc->buf_pos++;
-    } else {
-        tsc_error("Block buffer overflow.\n");
-    }
-    */
 }
 
 static void seqenc_reset(seqenc_t* seqenc)
@@ -180,7 +188,7 @@ static void seqenc_reset(seqenc_t* seqenc)
     str_clear(seqenc->out_buf);
 }
 
-void seqenc_write_block(seqenc_t* seqenc, FILE* ofp)
+size_t seqenc_write_block(seqenc_t* seqenc, FILE* ofp)
 {
     tsc_log("Writing SEQ- block: %zu bytes\n", seqenc->out_buf->n);
 
@@ -190,17 +198,20 @@ void seqenc_write_block(seqenc_t* seqenc, FILE* ofp)
      * - 8 bytes: number of bytes (n)
      * - n bytes: block content
      */
-    fwrite_cstr(ofp, "SEQ-");
-    fwrite_uint64(ofp, (uint64_t)seqenc->out_buf->n);
-    fwrite_buf(ofp, (unsigned char*)seqenc->out_buf->s, seqenc->out_buf->n);
+    size_t nbytes = 0;
+    nbytes += fwrite_cstr(ofp, "SEQ-");
+    nbytes += fwrite_uint64(ofp, (uint64_t)seqenc->out_buf->n);
+    nbytes += fwrite_buf(ofp, (unsigned char*)seqenc->out_buf->s, seqenc->out_buf->n);
 
     /* Reset encoder for next block */
     seqenc_reset(seqenc);
+    
+    return nbytes;
 }
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
 static void seqdec_init(seqdec_t* seqdec)
 {
     seqdec->block_sz = 0;
