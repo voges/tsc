@@ -86,11 +86,32 @@ void str_append_cstr(str_t* str, const char* cstr)
     str->s[str->n] = '\0';
 }
 
+void str_append_cstrn(str_t* str, const char* cstr, size_t len)
+{
+    if (len > strlen(cstr)) tsc_error("Error appending C-string of length %d!\n", len);
+    str_extend(str, len);
+    memcpy(str->s + str->n, cstr, len);
+    str->n += len;
+    str->s[str->n] = '\0';
+}
+
 void str_append_char(str_t* str, const char c)
 {
     str_extend(str, 1);
     str->s[str->n++] = c;
     str->s[str->n] = '\0';
+}
+
+void str_append_uint64(str_t* str, uint64_t x)
+{
+    str_append_char(str, (x >> 56) & 0xFF);
+    str_append_char(str, (x >> 48) & 0xFF);
+    str_append_char(str, (x >> 40) & 0xFF);
+    str_append_char(str, (x >> 32) & 0xFF);
+    str_append_char(str, (x >> 24) & 0xFF);
+    str_append_char(str, (x >> 16) & 0xFF);
+    str_append_char(str, (x >>  8) & 0xFF);
+    str_append_char(str, (x      ) & 0xFF);
 }
 
 void str_copy_str(str_t* dest, const str_t* src)

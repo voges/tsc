@@ -20,6 +20,7 @@
 static const char* opt_input = NULL;
 static const char* opt_output = NULL;
 static bool opt_flag_force = false;
+static bool opt_flag_stats = false;
 
 /* Initializing global vars from 'tsclib.h' */
 str_t* tsc_prog_name = NULL;
@@ -56,6 +57,7 @@ static void print_help(void)
     printf("  -o, --output     Specify output file\n");
     printf("  -b, --blocksz    Block size\n");
     printf("  -f, --force      Force overwriting of output file\n");
+    printf("  -s, --stats      Print statistics\n");
     printf("  -v, --version    Display program version\n");
     printf("\n");
 }
@@ -70,43 +72,47 @@ static void parse_options(int argc, char *argv[])
         { "output",     required_argument, NULL, 'o'},
         { "blocksz",    required_argument, NULL, 'b'},
         { "force",      no_argument,       NULL, 'f'},
+        { "stats",      no_argument,       NULL, 's'},
         { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "hdo:b:fv";
+    const char *short_options = "hdo:b:fsv";
 
     do {
         int opt_idx = 0;
         opt = getopt_long(argc, argv, short_options, long_options, &opt_idx);
         switch (opt) {
-            case -1:
-                break;
-            case 'h':
-                print_help();
-                exit(EXIT_SUCCESS);
-                break;
-            case 'd':
-                tsc_mode = TSC_MODE_DECOMPRESS;
-                break;
-            case 'o':
-                opt_output = optarg;
-                break;
-            case 'b':
-                if (atoi(optarg) <= 0)
-                    tsc_error("Block size must be greater than zero.\n");
-                else
-                    tsc_block_sz = (unsigned int)atoi(optarg);
-                break;
-            case 'f':
-                opt_flag_force = true;
-                break;
-            case 'v':
-                print_version();
-                exit(EXIT_SUCCESS);
-                break;
-            default:
-                exit(EXIT_FAILURE);
+        case -1:
+            break;
+        case 'h':
+            print_help();
+            exit(EXIT_SUCCESS);
+            break;
+        case 'd':
+            tsc_mode = TSC_MODE_DECOMPRESS;
+            break;
+        case 'o':
+            opt_output = optarg;
+            break;
+        case 'b':
+            if (atoi(optarg) <= 0)
+                tsc_error("Block size must be greater than zero.\n");
+            else
+                tsc_block_sz = (unsigned int)atoi(optarg);
+            break;
+        case 'f':
+            opt_flag_force = true;
+            break;
+        case 's':
+            opt_flag_stats = true;
+            break;
+        case 'v':
+            print_version();
+            exit(EXIT_SUCCESS);
+            break;
+        default:
+            exit(EXIT_FAILURE);
         }
     } while (opt != -1);
 
@@ -205,7 +211,8 @@ int main(int argc, char* argv[])
         /* Invoke encoder */
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
-        fileenc_encode(fileenc);
+        str_t* fileenc_stats = fileenc_encode(fileenc);
+        if (opt_flag_stats) tsc_log("\n%s\n", fileenc_stats->s);
         fileenc_free(fileenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
@@ -241,7 +248,8 @@ int main(int argc, char* argv[])
         /* Invoke decoder */
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
-        filedec_decode(filedec);
+        str_t* filedec_stats = filedec_decode(filedec);
+        if (opt_flag_stats) tsc_log("\n%s", filedec_stats->s);
         filedec_free(filedec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
