@@ -25,5 +25,5 @@ void cbufint64_push(cbufint64_t* cbufint64, int64_t x);
 int64_t cbufint64_top(cbufint64_t* cbufint64);
 int64_t cbufint64_get(const cbufint64_t* cbufint64, const size_t pos);
 
-#endif // TSC_CBUFINT64_H
+#endif /* TSC_CBUFINT64_H */
 

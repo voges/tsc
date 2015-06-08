@@ -7,6 +7,7 @@
 
 #include "seqcodec.h"
 #include "accodec.h"
+#include "bbuf.h"
 #include "frw.h"
 #include "tsclib.h"
 #include <ctype.h>
@@ -219,7 +220,7 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
 
         /* Output record */
         if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
-        char tmp[101]; snprintf(tmp, sizeof(tmp), "%llu", pos);
+        char tmp[101]; snprintf(tmp, sizeof(tmp), "%jd", pos);
         str_append_cstr(seqenc->out_buf, tmp);
         str_append_cstr(seqenc->out_buf, "\t");
         str_append_cstr(seqenc->out_buf, cigar);
@@ -244,7 +245,7 @@ void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const 
     str_free(diff);
     str_free(diff_min);
 
-    //DEBUG("out_buf: \n%s", seqenc->out_buf->s);
+    /*DEBUG("out_buf: \n%s", seqenc->out_buf->s);*/
     seqenc->block_lc++;
 }
 
@@ -261,8 +262,6 @@ static void seqenc_reset(seqenc_t* seqenc)
 
 size_t seqenc_write_block(seqenc_t* seqenc, FILE* ofp)
 {
-    tsc_log("Writing SEQ- block: %zu bytes\n", seqenc->out_buf->n);
-
     /*
      * Write block:
      * - 4 bytes: identifier
@@ -279,6 +278,9 @@ size_t seqenc_write_block(seqenc_t* seqenc, FILE* ofp)
     unsigned int ac_in_sz = seqenc->out_buf->n;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
+
+    tsc_log("Writing SEQ- block: %zu bytes\n", ac_out_sz);
+
     nbytes += fwrite_uint32(ofp, ac_out_sz);
     nbytes += fwrite_buf(ofp, ac_out, ac_out_sz);
     free((void*)ac_out);
@@ -338,16 +340,25 @@ void seqdec_decode_block(seqdec_t* seqdec, FILE* ifp, str_t** seq)
     /*
      * Read block header:
      * - 4 bytes: identifier (must equal "SEQ-")
-     * - 3 bytes: number of bytes in block
+     * - 4 bytes: number of bytes in block
      */
     unsigned char block_id[4];
-    fread_buf(ifp, block_id, 4);
-    uint32_t block_nb;
-    fread_uint32(ifp, &block_nb);
-    tsc_log("Reading SEQ- block: %zu bytes\n", block_nb);
+    uint32_t block_sz;
+
+    if (fread_buf(ifp, block_id, 4) != sizeof(block_id))
+        tsc_error("Could not read block header!\n");
+    if (fread_uint32(ifp, &block_sz) != sizeof(block_sz))
+        tsc_error("Could not read number of bytes in block!\n");
+    if (strncmp("SEQ-", (const char*)block_id, 4))
+        tsc_error("Wrong block id: %s\n", block_id);
+    tsc_log("Reading %s block: %zu bytes\n", block_id, block_sz);
 
     /* Decode block content with block_nb bytes */
     /* TODO */
+    bbuf_t* buf = bbuf_new();
+    bbuf_reserve(buf, block_sz);
+    fread_buf(ifp, buf->buf, block_sz);
+    bbuf_free(buf);
 
     /* Reset decoder for next block */
     seqdec_reset(seqdec);

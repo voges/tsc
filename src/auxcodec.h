@@ -46,5 +46,5 @@ auxdec_t* auxdec_new(void);
 void auxdec_free(auxdec_t* auxdec);
 void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux);
 
-#endif // TSC_AUXCODEC_H
+#endif /* TSC_AUXCODEC_H */
 

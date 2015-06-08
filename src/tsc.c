@@ -48,17 +48,17 @@ static void print_help(void)
     print_version();
     print_copyright();
     printf("\n");
-    printf("Usage: Compress:   tsc <file.sam>\n");
-    printf("       Decompress: tsc -d <file.tsc>\n");
-    printf("                   untsc <file.tsc>\n\n");
+    printf("Usage: Compress:   tsc [options] <file.sam>\n");
+    printf("       Decompress: tsc -d [options] <file.tsc>\n");
+    printf("                   untsc [options] <file.tsc>\n\n");
     printf("Options:\n");
-    printf("  -h, --help       Print this help\n");
-    printf("  -d  --decompress Decompress\n");
-    printf("  -o, --output     Specify output file\n");
-    printf("  -b, --blocksz    Block size\n");
-    printf("  -f, --force      Force overwriting of output file\n");
-    printf("  -s, --stats      Print statistics\n");
-    printf("  -v, --version    Display program version\n");
+    printf("  -b, --blocksize   Block size (default: %zu)\n", tsc_block_sz);
+    printf("  -d  --decompress  Decompress\n");
+    printf("  -f, --force       Force overwriting of output file\n");
+    printf("  -h, --help        Print this help\n");
+    printf("  -o, --output      Specify output file\n");
+    printf("  -s, --stats       Print (de-)compression statistics\n");
+    printf("  -v, --version     Display program version\n");
     printf("\n");
 }
 
@@ -67,17 +67,17 @@ static void parse_options(int argc, char *argv[])
     int opt;
 
     static struct option long_options[] = {
-        { "help",       no_argument,       NULL, 'h'},
-        { "decompress", no_argument,       NULL, 'd'},
-        { "output",     required_argument, NULL, 'o'},
         { "blocksz",    required_argument, NULL, 'b'},
+        { "decompress", no_argument,       NULL, 'd'},
         { "force",      no_argument,       NULL, 'f'},
+        { "help",       no_argument,       NULL, 'h'},
+        { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
         { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "hdo:b:fsv";
+    const char *short_options = "b:dfho:sv";
 
     do {
         int opt_idx = 0;
@@ -85,27 +85,27 @@ static void parse_options(int argc, char *argv[])
         switch (opt) {
         case -1:
             break;
-        case 'h':
-            print_help();
-            exit(EXIT_SUCCESS);
-            break;
-        case 'd':
-            tsc_mode = TSC_MODE_DECOMPRESS;
-            break;
-        case 'o':
-            opt_output = optarg;
-            break;
         case 'b':
             if (atoi(optarg) <= 0)
                 tsc_error("Block size must be greater than zero.\n");
             else
                 tsc_block_sz = (unsigned int)atoi(optarg);
             break;
+        case 'd':
+            tsc_mode = TSC_MODE_DECOMPRESS;
+            break;
         case 'f':
             opt_flag_force = true;
             break;
+        case 'h':
+            print_help();
+            exit(EXIT_SUCCESS);
+            break;
         case 's':
             opt_flag_stats = true;
+            break;
+        case 'o':
+            opt_output = optarg;
             break;
         case 'v':
             print_version();
@@ -128,10 +128,10 @@ static void parse_options(int argc, char *argv[])
     }
 }
 
-static const char* file_extension(const char* filename)
+static const char* file_extension(const char* path)
 {
-    const char* dot = strrchr(filename, '.');
-    if (!dot || dot == filename) { return ""; }
+    const char* dot = strrchr(path, '.');
+    if (!dot || dot == path) { return ""; }
     return (dot + 1);
 }
 
@@ -147,7 +147,7 @@ static void handle_signal(int sig)
 
 int main(int argc, char* argv[])
 {
-    /* Initialize strings */
+    /* Initialize global strings */
     tsc_prog_name = str_new();
     tsc_version = str_new();
     str_copy_cstr(tsc_version, VERSION);
@@ -172,23 +172,19 @@ int main(int argc, char* argv[])
     signal(SIGXCPU, handle_signal);
     signal(SIGXFSZ, handle_signal);
 
-    /* Parse command line options */
+    /* Parse command line options and get input file name */
     parse_options(argc, argv);
-
-    /* Input file name */
     str_copy_cstr(tsc_in_fname, opt_input);
 
     /* Check if input file is accessible */
-    if (access((const char*)tsc_in_fname->s, F_OK | R_OK)) {
+    if (access((const char*)tsc_in_fname->s, F_OK | R_OK))
         tsc_error("Cannot access input file: %s\n", tsc_in_fname->s);
-    }
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
 
         /* Check input file extension */
-        if (strcmp(file_extension((const char*)tsc_in_fname->s), "sam")) {
+        if (strcmp(file_extension((const char*)tsc_in_fname->s), "sam"))
             tsc_error("Input file has wrong extension (must be .sam): %s\n", tsc_in_fname->s);
-        }
 
         /* If output file name is not provided, make a reasonable name for it. */
         if (opt_output == NULL) {
@@ -223,9 +219,8 @@ int main(int argc, char* argv[])
     } else { /* TSC_MODE_DECOMPRESS */
 
         /* Check input file extension */
-        if (strcmp(file_extension((const char*)tsc_in_fname->s), "tsc")) {
+        if (strcmp(file_extension((const char*)tsc_in_fname->s), "tsc"))
             tsc_error("Input file has wrong extension (must be .tsc): %s\n", tsc_in_fname->s);
-        }
 
         /* If output file name is not provided, make a reasonable name for it. */
         if (opt_output == NULL) {
@@ -249,7 +244,7 @@ int main(int argc, char* argv[])
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         str_t* filedec_stats = filedec_decode(filedec);
-        if (opt_flag_stats) tsc_log("\n%s", filedec_stats->s);
+        if (opt_flag_stats) tsc_log("\n%s\n", filedec_stats->s);
         filedec_free(filedec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
@@ -259,6 +254,7 @@ int main(int argc, char* argv[])
     }
 
     str_free(tsc_prog_name);
+    str_free(tsc_version);
     str_free(tsc_in_fname);
     str_free(tsc_out_fname);
 

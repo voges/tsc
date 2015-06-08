@@ -1,7 +1,7 @@
 EXEC        = tsc
 ALIAS       = untsc
 CC          = gcc
-CFLAGS      = -O0 -Wall -D _GNU_SOURCE
+CFLAGS      = -O0 -Wall -D _GNU_SOURCE #-ansi -pedantic
 INCLUDES    = #-I
 LIBRARIES   = #-L
 LDFLAGS     = -lm

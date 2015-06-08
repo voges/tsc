@@ -30,9 +30,8 @@ void str_extend(str_t* str, const size_t ex);
 void str_trunc(str_t* str, const size_t tr);
 void str_append_str(str_t* str, const str_t* app);
 void str_append_cstr(str_t* str , const char* cstr);
-void str_append_cstrn(str_t* str, const char* cstr, size_t len);
-void str_append_char(str_t* str, char c);
-void str_append_uint64(str_t* str, uint64_t x);
+void str_append_cstrn(str_t* str, const char* cstr, const size_t len);
+void str_append_char(str_t* str, const char c);
 void str_copy_str(str_t* dest, const str_t* src);
 void str_copy_cstr(str_t* dest, const char* src);
 

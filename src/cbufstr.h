@@ -24,5 +24,5 @@ void cbufstr_push(cbufstr_t* cbufstr, const char* s);
 str_t* cbufstr_top(cbufstr_t* cbufstr);
 str_t* cbufstr_get(const cbufstr_t* cbufstr, const size_t pos);
 
-#endif // TSC_CBUFSTR_H
+#endif /* TSC_CBUFSTR_H */
 

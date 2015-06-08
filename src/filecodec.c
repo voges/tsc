@@ -50,24 +50,27 @@ void fileenc_free(fileenc_t* fileenc)
 
 str_t* fileenc_encode(fileenc_t* fileenc)
 {
-    size_t total_bc = 0; /* total byte count */
-    size_t total_seq_bc = 0;
-    size_t total_qual_bc = 0;
-    size_t total_aux_bc = 0;
+    size_t total_byte_cnt      = 0; /* total no. of bytes written            */
+    size_t total_line_cnt      = 0; /* total no. of lines processed          */
+    size_t total_block_cnt     = 0; /* total no. of blocks written           */
+    size_t total_seq_byte_cnt  = 0; /* total no. of bytes written by seqenc  */
+    size_t total_qual_byte_cnt = 0; /* total no. of bytes written by qualenc */
+    size_t total_aux_byte_cnt  = 0; /* total no. of bytes written by auxenc  */
+    size_t block_line_cnt      = 0; /* block-wise line count                 */
 
     /*
      * Write tsc file header:
-     * - 4 bytes: 'TSC-' + 0x00
+     * - 4 bytes: 'tsc-' + 0x00
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
      */
     tsc_log("Format: %s %s\n", tsc_prog_name->s, tsc_version->s);
-    total_bc += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
-    total_bc += fwrite_byte(fileenc->ofp, 0x00);
-    total_bc += fwrite_cstr(fileenc->ofp, tsc_version->s);
-    total_bc += fwrite_byte(fileenc->ofp, 0x00);
+    total_byte_cnt += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
+    total_byte_cnt += fwrite_byte(fileenc->ofp, 0x00);
+    total_byte_cnt += fwrite_cstr(fileenc->ofp, tsc_version->s);
+    total_byte_cnt += fwrite_byte(fileenc->ofp, 0x00);
     tsc_log("Block size: %zu\n", fileenc->block_sz);
-    total_bc += fwrite_uint32(fileenc->ofp, fileenc->block_sz);
+    total_byte_cnt += fwrite_uint32(fileenc->ofp, fileenc->block_sz);
 
     /*
      * Write SAM header:
@@ -75,40 +78,35 @@ str_t* fileenc_encode(fileenc_t* fileenc)
      * - n bytes: SAM header
      */
     tsc_log("Writing SAM header\n");
-    total_bc += fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
-    total_bc += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
-
-    /* Prepare encoding */
-    size_t block_cnt = 0; /* block count */
-    size_t block_lc = 0;  /* block-wise line count */
-    size_t total_lc = 0;  /* total line count */
-    samrecord_t* samrecord = &(fileenc->samparser->curr);
+    total_byte_cnt += fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
+    total_byte_cnt += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
     /* Parse SAM file line by line and invoke encoders */
+    samrecord_t* samrecord = &(fileenc->samparser->curr);
     while (samparser_next(fileenc->samparser)) {
-        if (block_lc >= fileenc->block_sz) {
+        if (block_line_cnt >= fileenc->block_sz) {
             /*
              * Write block header:
              * - 4 bytes: block count
              * - 4 bytes: no. of lines in block
              */
-            tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_lc);
-            total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
-            total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
+            tsc_log("Writing block %zu: %zu line(s)\n", total_block_cnt, block_line_cnt);
+            total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)total_block_cnt);
+            total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)block_line_cnt);
 
             /* Write seq, qual, and aux blocks */
-            size_t seq_bc = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+            size_t seq_bc  = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
             size_t qual_bc = qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-            size_t aux_bc = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
-            total_bc += seq_bc;
-            total_bc += qual_bc;
-            total_bc += aux_bc;
-            total_seq_bc += seq_bc;
-            total_qual_bc += qual_bc;
-            total_aux_bc += aux_bc;
+            size_t aux_bc  = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            total_byte_cnt += seq_bc;
+            total_byte_cnt += qual_bc;
+            total_byte_cnt += aux_bc;
+            total_seq_byte_cnt  += seq_bc;
+            total_qual_byte_cnt += qual_bc;
+            total_aux_byte_cnt  += aux_bc;
 
-            block_cnt++;
-            block_lc = 0;
+            total_block_cnt++;
+            block_line_cnt = 0;
         }
 
         /* Add records to encoders */
@@ -127,8 +125,8 @@ str_t* fileenc_encode(fileenc_t* fileenc)
                           samrecord->int_fields[PNEXT],
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
-        block_lc++;
-        total_lc++;
+        block_line_cnt++;
+        total_line_cnt++;
     }
 
     /*
@@ -136,36 +134,41 @@ str_t* fileenc_encode(fileenc_t* fileenc)
      * - 4 bytes: block count
      * - 4 bytes: no. of lines in block
      */
-    tsc_log("Writing last block %zu: %zu line(s)\n", block_cnt, block_lc);
-    total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_cnt);
-    total_bc += fwrite_uint32(fileenc->ofp, (uint32_t)block_lc);
+    tsc_log("Writing last block %zu: %zu line(s)\n", total_block_cnt, block_line_cnt);
+    total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)total_block_cnt);
+    total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)block_line_cnt);
 
     /* Write last seq, qual, and aux blocks */
-    size_t seq_bc = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
+    size_t seq_bc  = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
     size_t qual_bc = qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-    size_t aux_bc = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
-    total_bc += seq_bc;
-    total_bc += qual_bc;
-    total_bc += aux_bc;
-    total_seq_bc += seq_bc;
-    total_qual_bc += qual_bc;
-    total_aux_bc += aux_bc;
+    size_t aux_bc  = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    total_byte_cnt += seq_bc;
+    total_byte_cnt += qual_bc;
+    total_byte_cnt += aux_bc;
+    total_seq_byte_cnt  += seq_bc;
+    total_qual_byte_cnt += qual_bc;
+    total_aux_byte_cnt  += aux_bc;
 
-    block_cnt++;
+    total_block_cnt++;
     
-    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", total_bc, ((double)total_bc / GB), total_lc, block_cnt);
+    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", total_byte_cnt, ((double)total_byte_cnt / GB), total_line_cnt, total_block_cnt);
 
     /* Return compression statistics */
-    char stats[4*KB];
-    snprintf(stats, sizeof(stats), "  Compression Statistics:\n"
-                                   "  -----------------------\n"
-                                   "  SAM records (lines) processed: %zu\n"
-                                   "  Number of blocks written     : %zu\n"
-                                   "  Total bytes written          : %zu\n"
-                                   "  Total SEQ- bytes written     : %zu\n"
-                                   "  Total QUAL bytes written     : %zu\n"
-                                   "  Total AUX- bytes written     : %zu\n"
-    , total_lc, block_cnt, total_bc, total_seq_bc, total_qual_bc, total_aux_bc);
+    char stats[4 * KB]; /* this should be enough space */
+    snprintf(stats, sizeof(stats), "\tCompression Statistics:\n"
+                                   "\t-----------------------\n"
+                                   "\tTotal bytes written          : %zu\n"
+                                   "\tSAM records (lines) processed: %zu\n"
+                                   "\tNumber of blocks written     : %zu\n"
+                                   "\tTotal SEQ- bytes written     : %zu\n"
+                                   "\tTotal QUAL bytes written     : %zu\n"
+                                   "\tTotal AUX- bytes written     : %zu\n",
+             total_byte_cnt,
+             total_line_cnt,
+             total_block_cnt,
+             total_seq_byte_cnt,
+             total_qual_byte_cnt,
+             total_aux_byte_cnt);
     str_append_cstr(fileenc->stats, stats);
 
     return fileenc->stats;
@@ -207,21 +210,30 @@ void filedec_free(filedec_t* filedec)
 
 str_t* filedec_decode(filedec_t* filedec)
 {
+    size_t total_byte_cnt  = 0; /* total no. of bytes written   */
+    size_t total_line_cnt  = 0; /* total no. of lines processed */
+    size_t total_block_cnt = 0; /* total no. of blocks written  */
+
     /*
      * Read tsc file header:
-     * - 4 bytes: 'TSC' + 0x00
+     * - 4 bytes: 'tsc' + 0x00
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
      */
-    unsigned char tmp1[4], tmp2[4];
-    if (fread_buf(filedec->ifp, tmp1, 4) != 4)
-        tsc_error("Failed to read file header!\n");
-    if (fread_buf(filedec->ifp, tmp2, 4) != 4)
-        tsc_error("Failed to read file header!\n");
-    tsc_log("Format: %s %s\n", tmp1, tmp2);
+    unsigned char prog_name[4];
+    unsigned char version[4];
     uint32_t block_sz;
+
+    if (fread_buf(filedec->ifp, prog_name, 4) != 4)
+        tsc_error("Failed to read program name!\n");
+    if (fread_buf(filedec->ifp, version, 4) != 4)
+        tsc_error("Failed to read version!\n");
+    if (strncmp((const char*)version, (const char*)tsc_version->s, 3))
+        tsc_error("File was compressed with another version: %s\n", version);
     if (fread_uint32(filedec->ifp, &block_sz) != sizeof(uint32_t))
         tsc_error("Failed to read block size!\n");
+
+    tsc_log("Format: %s %s\n", prog_name, version);
     tsc_log("Block size: %d\n", block_sz);
 
     /*
@@ -230,37 +242,36 @@ str_t* filedec_decode(filedec_t* filedec)
      * - n bytes: SAM header
      */
     tsc_log("Reading SAM header\n");
-    uint32_t header_bc;
-    if (fread_uint32(filedec->ifp, &header_bc) != sizeof(uint32_t))
+    uint32_t header_sz;
+    if (fread_uint32(filedec->ifp, &header_sz) != sizeof(uint32_t))
         tsc_error("Failed to read SAM header size!\n");
     str_t* header = str_new();
-    str_reserve(header, header_bc);
-    if (fread_buf(filedec->ifp, (unsigned char*)header->s, header_bc) != header_bc)
+    str_reserve(header, header_sz);
+    if (fread_buf(filedec->ifp, (unsigned char*)header->s, header_sz) != header_sz)
         tsc_error("Failed to read SAM header!\n");
-    fwrite_cstr(filedec->ofp, header->s);
+    total_byte_cnt += fwrite_cstr(filedec->ofp, header->s);
     str_free(header);
 
-    /* Prepare decoding */
     uint32_t block_cnt = 0;
-    uint32_t block_lc = 0;
+    uint32_t block_line_cnt = 0;
 
     while (fread_uint32(filedec->ifp, &block_cnt) == sizeof(uint32_t)) {
         /*
          * Read block header:
          * - 4 bytes: block count
-         * - 4 bytes: lines in block
+         * - 4 bytes: no. of lines in block
          */
-        if (fread_uint32(filedec->ifp, &block_lc) != sizeof(uint32_t))
+        if (fread_uint32(filedec->ifp, &block_line_cnt) != sizeof(uint32_t))
             tsc_error("Failed to read number of lines in block %d!\n", block_cnt);
-        tsc_log("Decoding block %zu: %zu lines\n", block_cnt, block_lc);
+        tsc_log("Decoding block %zu: %zu lines\n", block_cnt, block_line_cnt);
 
         /* Allocate memory to prepare decoding of the next block */
-        str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
-        str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
-        str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_lc);
+        str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
+        str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
+        str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
         
         size_t i = 0;
-        for (i = 0; i < block_lc; i++) {
+        for (i = 0; i < block_line_cnt; i++) {
             seq[i] = str_new();
             qual[i] = str_new();
             aux[i] = str_new();
@@ -272,15 +283,15 @@ str_t* filedec_decode(filedec_t* filedec)
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
 
         /* TODO: Write seq, qual and aux IN CORRECT ORDER to filedec->ofp */
-        tsc_log("Writing decoded block %zu: %zu lines\n", block_cnt, block_lc);
-        for (i = 0; i < block_lc; i++) {
-            fwrite_cstr(filedec->ofp, seq[i]->s);
-            fwrite_cstr(filedec->ofp, qual[i]->s);
-            fwrite_cstr(filedec->ofp, aux[i]->s);
+        tsc_log("Writing decoded block %zu: %zu lines\n", total_block_cnt, block_line_cnt);
+        for (i = 0; i < block_line_cnt; i++) {
+            total_byte_cnt += fwrite_cstr(filedec->ofp, seq[i]->s);
+            total_byte_cnt += fwrite_cstr(filedec->ofp, qual[i]->s);
+            total_byte_cnt += fwrite_cstr(filedec->ofp, aux[i]->s);
         }
 
         /* Free the memory used for decoding */
-        for (i = 0; i < block_lc; i++) {
+        for (i = 0; i < block_line_cnt; i++) {
             str_free(seq[i]);
             str_free(qual[i]);
             str_free(aux[i]);
@@ -288,12 +299,21 @@ str_t* filedec_decode(filedec_t* filedec)
         free((void*)seq);
         free((void*)qual);
         free((void*)aux);
+
+        total_line_cnt += block_line_cnt;
+        total_block_cnt++;
     }
 
     /* Return decompression statistics */
     char stats[4*KB];
-    snprintf(stats, sizeof(stats), "  Decompression Statistics:\n");
-    snprintf(stats, sizeof(stats), "  -------------------------\n");
+    snprintf(stats, sizeof(stats), "\tDecompression Statistics:\n"
+                                   "\t-------------------------\n"
+                                   "\tTotal bytes written          : %zu\n"
+                                   "\tSAM records (lines) processed: %zu\n"
+                                   "\tNumber of blocks decoded     : %zu\n",
+                 total_byte_cnt,
+                 total_line_cnt,
+                 total_block_cnt);
     str_append_cstr(filedec->stats, stats);
 
     return filedec->stats;

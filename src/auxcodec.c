@@ -6,6 +6,7 @@
  *****************************************************************************/
 
 #include "auxcodec.h"
+#include "bbuf.h"
 #include "tsclib.h"
 #include "frw.h"
 
@@ -73,12 +74,12 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     /*
      * Write block:
      * - 4 bytes: identifier
-     * - 8 bytes: number of bytes (n)
+     * - 4 bytes: number of bytes (n)
      * - n bytes: block content
      */
     size_t nbytes = 0;
     nbytes += fwrite_cstr(ofp, "AUX-");
-    nbytes += fwrite_uint64(ofp, (uint64_t)auxenc->out_buf->n);
+    nbytes += fwrite_uint32(ofp, (uint32_t)auxenc->out_buf->n);
     nbytes += fwrite_buf(ofp, (unsigned char*)auxenc->out_buf->s, auxenc->out_buf->n);
 
     /* Reset encoder for next block */
@@ -124,16 +125,25 @@ void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** seq)
     /*
      * Read block header:
      * - 4 bytes: identifier (must equal "AUX-")
-     * - 8 bytes: number of bytes in block
+     * - 4 bytes: number of bytes in block
      */
     unsigned char block_id[4];
-    fread_buf(ifp, block_id, 4);
-    uint64_t block_nb;
-    fread_uint64(ifp, &block_nb);
-    tsc_log("Reading AUX- block: %zu bytes\n", block_nb);
+    uint32_t block_sz;
+
+    if (fread_buf(ifp, block_id, 4) != sizeof(block_id))
+        tsc_error("Could not read block header!\n");
+    if (fread_uint32(ifp, &block_sz) != sizeof(block_sz))
+        tsc_error("Could not read number of bytes in block!\n");
+    if (strncmp("AUX-", (const char*)block_id, 4))
+        tsc_error("Wrong block id: %s\n", block_id);
+    tsc_log("Reading %s block: %zu bytes\n", block_id, block_sz);
 
     /* Decode block content with block_nb bytes */
     /* TODO */
+    bbuf_t* buf = bbuf_new();
+    bbuf_reserve(buf, block_sz);
+    fread_buf(ifp, buf->buf, block_sz);
+    bbuf_free(buf);
 
     /* Reset decoder for next block */
     auxdec_reset(auxdec);
