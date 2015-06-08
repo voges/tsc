@@ -226,6 +226,8 @@ int main(int argc, char* argv[])
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4); /* strip '.tsc' */
+            if (strcmp(file_extension((const char*)tsc_out_fname->s), "sam"))
+                str_append_cstr(tsc_out_fname, ".sam");
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
