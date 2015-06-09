@@ -59,8 +59,7 @@ static void qualenc_reset(qualenc_t* qualenc)
 
 size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 {
-    /*
-     * Write block:
+    /* Write block:
      * - 4 bytes: identifier
      * - 4 bytes: number of bytes (n)
      * - n bytes: block content
@@ -83,7 +82,7 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 
     tsc_log("Wrote QUAL block: %zu bytes\n", nbytes);
 
-    /* Reset encoder for next block */
+    /* Reset encoder for next block. */
     qualenc_reset(qualenc);
     
     return nbytes;
@@ -126,8 +125,7 @@ static void qualdec_reset(qualdec_t* qualdec)
 
 void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
 {
-    /*
-     * Read block header:
+    /* Read block header:
      * - 4 bytes: identifier (must equal "QUAL")
      * - 4 bytes: number of bytes in block
      */
@@ -142,27 +140,27 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
         tsc_error("Wrong block id: %s\n", block_id);
     tsc_log("Reading %s block: %zu bytes\n", block_id, block_sz);
 
-    /* Decode block content with block_nb bytes */
+    /* Decode block content with block_nb bytes. */
     /* TODO */
     bbuf_t* buf = bbuf_new();
     bbuf_reserve(buf, block_sz);
-    fread_buf(ifp, buf->buf, block_sz);
+    fread_buf(ifp, buf->bytes, block_sz);
 
-    unsigned char* ac_in = (unsigned char*)buf->buf;
+    unsigned char* ac_in = (unsigned char*)buf->bytes;
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
 
     DEBUG("ac_out_sz: %d", ac_out_sz);
     str_clear(qual[0]);
-    str_append_cstrn(qual[0], ac_out, ac_out_sz);
+    str_append_cstrn(qual[0], (const char*)ac_out, ac_out_sz);
     DEBUG("%s", qual[0]->s);
 
     free((void*)ac_out);
 
     bbuf_free(buf);
 
-    /* Reset decoder for next block */
+    /* Reset decoder for next block. */
     qualdec_reset(qualdec);
 }
 

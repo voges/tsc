@@ -15,7 +15,7 @@ static void str_init(str_t* str)
     str->n = 0;
     str->size = 0;
 
-    /* Init string with terminating NULL byte */
+    /* Init string with terminating NULL byte. */
     str_reserve(str, 1);
     str->s[str->n] = '\0';
 }

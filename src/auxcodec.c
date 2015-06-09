@@ -9,6 +9,7 @@
 #include "bbuf.h"
 #include "tsclib.h"
 #include "frw.h"
+#include <string.h>
 
 /*****************************************************************************
  * Encoder                                                                   *
@@ -71,8 +72,7 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
 {
     tsc_log("Writing AUX- block: %zu bytes\n", auxenc->out_buf->n);
 
-    /*
-     * Write block:
+    /* Write block:
      * - 4 bytes: identifier
      * - 4 bytes: number of bytes (n)
      * - n bytes: block content
@@ -82,7 +82,7 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     nbytes += fwrite_uint32(ofp, (uint32_t)auxenc->out_buf->n);
     nbytes += fwrite_buf(ofp, (unsigned char*)auxenc->out_buf->s, auxenc->out_buf->n);
 
-    /* Reset encoder for next block */
+    /* Reset encoder for next block. */
     auxenc_reset(auxenc);
     
     return nbytes;
@@ -120,10 +120,9 @@ static void auxdec_reset(auxdec_t* auxdec)
     auxdec->block_lc = 0;
 }
 
-void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** seq)
+void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux)
 {
-    /*
-     * Read block header:
+    /* Read block header:
      * - 4 bytes: identifier (must equal "AUX-")
      * - 4 bytes: number of bytes in block
      */
@@ -142,7 +141,7 @@ void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** seq)
     /* TODO */
     bbuf_t* buf = bbuf_new();
     bbuf_reserve(buf, block_sz);
-    fread_buf(ifp, buf->buf, block_sz);
+    fread_buf(ifp, buf->bytes, block_sz);
     bbuf_free(buf);
 
     /* Reset decoder for next block */

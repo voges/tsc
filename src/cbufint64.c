@@ -64,7 +64,7 @@ int64_t cbufint64_top(cbufint64_t* cbufint64)
 int64_t cbufint64_get(const cbufint64_t* cbufint64, size_t pos)
 {
     if (cbufint64->n == 0) tsc_error("Tried to access empty buffer!\n");
-    if (pos > cbufint64->n - 1) tsc_error("Not enough elements in buffer!\n");
+    if (pos > (cbufint64->n - 1)) tsc_error("Not enough elements in buffer!\n");
     return cbufint64->buf[pos];
 }
 

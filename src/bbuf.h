@@ -8,16 +8,14 @@
 #ifndef TSC_BBUF_H
 #define TSC_BBUF_H
 
-/*
- * Byte buffer
- */
+/* Byte buffer */
 
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct bbuf_t_ {
-    unsigned char*  buf; /* byte buffer             */
-    size_t sz;           /* bytes allocated for buf */
+    unsigned char*  bytes; /* byte buffer             */
+    size_t          sz;    /* bytes allocated for buf */
 } bbuf_t;
 
 bbuf_t* bbuf_new(void);

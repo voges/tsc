@@ -11,7 +11,7 @@
 
 static void bbuf_init(bbuf_t* bbuf)
 {
-    bbuf->buf = NULL;
+    bbuf->bytes = NULL;
     bbuf->sz = 0;
 }
 
@@ -25,9 +25,9 @@ bbuf_t* bbuf_new(void)
 void bbuf_free(bbuf_t* bbuf)
 {
     if (bbuf != NULL) {
-        if (bbuf->buf != NULL) {
-            free((void*)bbuf->buf);
-            bbuf->buf = NULL;
+        if (bbuf->bytes != NULL) {
+            free((void*)bbuf->bytes);
+            bbuf->bytes = NULL;
         }
         free((void*)bbuf);
         bbuf = NULL;
@@ -38,9 +38,9 @@ void bbuf_free(bbuf_t* bbuf)
 
 void bbuf_clear(bbuf_t* bbuf)
 {
-    if (bbuf->buf != NULL) {
-        free((void*)bbuf->buf);
-        bbuf->buf = NULL;
+    if (bbuf->bytes != NULL) {
+        free((void*)bbuf->bytes);
+        bbuf->bytes = NULL;
     }
     bbuf->sz = 0;
 }
@@ -48,7 +48,7 @@ void bbuf_clear(bbuf_t* bbuf)
 void bbuf_reserve(bbuf_t* bbuf, const size_t sz)
 {
     bbuf->sz = sz;
-    bbuf->buf = (unsigned char*)tsc_realloc_or_die(bbuf->buf, bbuf->sz);
+    bbuf->bytes = (unsigned char*)tsc_realloc_or_die(bbuf->bytes, bbuf->sz);
 }
 
 void bbuf_extend(bbuf_t* bbuf, const size_t ex)
@@ -65,14 +65,14 @@ void bbuf_trunc(bbuf_t* bbuf, const size_t tr)
 void bbuf_append_bbuf(bbuf_t* bbuf, const bbuf_t* app)
 {
     bbuf_extend(bbuf, app->sz);
-    memcpy(bbuf->buf + bbuf->sz, app->buf, app->sz);
+    memcpy(bbuf->bytes + bbuf->sz, app->bytes, app->sz);
     bbuf->sz += app->sz;
 }
 
 void bbuf_append_byte(bbuf_t* bbuf, const char byte)
 {
     bbuf_extend(bbuf, 1);
-    bbuf->buf[bbuf->sz++] = byte;
+    bbuf->bytes[bbuf->sz++] = byte;
 }
 
 void bbuf_append_uint64(bbuf_t* bbuf, const uint64_t x)
@@ -91,7 +91,7 @@ void bbuf_copy_bbuf(bbuf_t* dest, const bbuf_t* src)
 {
     bbuf_clear(dest);
     bbuf_reserve(dest, src->sz);
-    memcpy(dest->buf, src->buf, src->sz);
+    memcpy(dest->bytes, src->bytes, src->sz);
     dest->sz = src->sz;
 }
 

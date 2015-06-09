@@ -18,6 +18,8 @@
 #define MB (KB*KB)
 #define GB (MB*MB)
 
+#define TSC_BLOCK_SZ_DEFAULT 1000
+
 typedef enum {
     TSC_MODE_COMPRESS,
     TSC_MODE_DECOMPRESS
@@ -26,8 +28,8 @@ typedef enum {
 extern str_t* tsc_prog_name;
 extern str_t* tsc_version;
 extern str_t* tsc_in_fname;
-extern FILE* tsc_in_fp;
 extern str_t* tsc_out_fname;
+extern FILE* tsc_in_fp;
 extern FILE* tsc_out_fp;
 extern size_t tsc_block_sz;
 extern tsc_mode_t tsc_mode;

@@ -56,7 +56,6 @@ void cbufstr_push(cbufstr_t* cbufstr, const char* s)
 str_t* cbufstr_top(cbufstr_t* cbufstr)
 {
     if (cbufstr->n == 0) tsc_error("Tried to access empty buffer!\n");
-    
     size_t nxt = cbufstr->nxt;
     size_t last = 0;
     if (nxt == 0) last = cbufstr->sz - 1;
@@ -67,7 +66,7 @@ str_t* cbufstr_top(cbufstr_t* cbufstr)
 str_t* cbufstr_get(const cbufstr_t* cbufstr, size_t pos)
 {
     if (cbufstr->n == 0) tsc_error("Tried to access empty buffer!\n");
-    if (pos > cbufstr->n - 1) tsc_error("Not enough elements in buffer!\n");
+    if (pos > (cbufstr->n - 1)) tsc_error("Not enough elements in buffer!\n");
     return cbufstr->buf[pos];
 }
 

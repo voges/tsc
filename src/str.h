@@ -8,8 +8,7 @@
 #ifndef TSC_STR_H
 #define TSC_STR_H
 
-/*
- * Encapsulated strings. All functions take care of appending the
+/* Encapsulated strings. All functions take care of appending the
  * terminating '\0' themselves.
  */
 

@@ -26,10 +26,10 @@ static bool opt_flag_stats = false;
 str_t* tsc_prog_name = NULL;
 str_t* tsc_version = NULL;
 str_t* tsc_in_fname = NULL;
-FILE* tsc_in_fp = NULL;
 str_t* tsc_out_fname = NULL;
+FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
-size_t tsc_block_sz = 1000;
+size_t tsc_block_sz = TSC_BLOCK_SZ_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 
 static void print_version(void)
@@ -50,7 +50,8 @@ static void print_help(void)
     printf("\n");
     printf("Usage: Compress:   tsc [options] <file.sam>\n");
     printf("       Decompress: tsc -d [options] <file.tsc>\n");
-    printf("                   untsc [options] <file.tsc>\n\n");
+    printf("                   untsc [options] <file.tsc>\n");
+    printf("\n");
     printf("Options:\n");
     printf("  -b, --blocksize   Block size (default: %zu)\n", tsc_block_sz);
     printf("  -d  --decompress  Decompress\n");
@@ -67,7 +68,7 @@ static void parse_options(int argc, char *argv[])
     int opt;
 
     static struct option long_options[] = {
-        { "blocksz",    required_argument, NULL, 'b'},
+        { "blocksize",  required_argument, NULL, 'b'},
         { "decompress", no_argument,       NULL, 'd'},
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
@@ -147,14 +148,14 @@ static void handle_signal(int sig)
 
 int main(int argc, char* argv[])
 {
-    /* Initialize global strings */
+    /* Initialize global strings. */
     tsc_prog_name = str_new();
     tsc_version = str_new();
     str_copy_cstr(tsc_version, VERSION);
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
-    /* Determine program name */
+    /* Determine program name. */
     const char* prog_name = argv[0];
     char* p;
     if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
@@ -163,7 +164,7 @@ int main(int argc, char* argv[])
     /* If invoked as 'untsc', switch to decompressor mode. */
     if (!strcmp(tsc_prog_name->s, "untsc")) tsc_mode = TSC_MODE_DECOMPRESS;
 
-    /* Invoke signal handler */
+    /* Invoke signal handler. */
     signal(SIGHUP,  handle_signal);
     signal(SIGQUIT, handle_signal);
     signal(SIGABRT, handle_signal);
@@ -172,21 +173,22 @@ int main(int argc, char* argv[])
     signal(SIGXCPU, handle_signal);
     signal(SIGXFSZ, handle_signal);
 
-    /* Parse command line options and get input file name */
+    /* Parse command line options and get input file name. */
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
 
-    /* Check if input file is accessible */
+    /* Check if input file is accessible. */
     if (access((const char*)tsc_in_fname->s, F_OK | R_OK))
         tsc_error("Cannot access input file: %s\n", tsc_in_fname->s);
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
-
-        /* Check input file extension */
+        /* Check input file extension. */
         if (strcmp(file_extension((const char*)tsc_in_fname->s), "sam"))
             tsc_error("Input file has wrong extension (must be .sam): %s\n", tsc_in_fname->s);
 
-        /* If output file name is not provided, make a reasonable name for it. */
+        /* If output file name is not provided, make a reasonable name for
+         * it.
+         */
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_append_cstr(tsc_out_fname, ".tsc");
@@ -194,17 +196,17 @@ int main(int argc, char* argv[])
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        /* Check if output file already exists */
+        /* Check if output file already exists. */
         if (!access((const char*)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
             tsc_warning("Output file already exists (use '-f' to force overwriting): %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
-        /* Open infile, create and open outfile */
+        /* Open infile, create and open outfile. */
         tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "wb");
 
-        /* Invoke encoder */
+        /* Invoke file encoder. */
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         str_t* fileenc_stats = fileenc_encode(fileenc);
@@ -212,17 +214,18 @@ int main(int argc, char* argv[])
         fileenc_free(fileenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
-        /* Close files */
+        /* Close files. */
         tsc_fclose_or_die(tsc_in_fp);
         tsc_fclose_or_die(tsc_out_fp);
 
     } else { /* TSC_MODE_DECOMPRESS */
-
-        /* Check input file extension */
+        /* Check input file extension. */
         if (strcmp(file_extension((const char*)tsc_in_fname->s), "tsc"))
             tsc_error("Input file has wrong extension (must be .tsc): %s\n", tsc_in_fname->s);
 
-        /* If output file name is not provided, make a reasonable name for it. */
+        /* If output file name is not provided, make a reasonable name for
+         * it.
+         */
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4); /* strip '.tsc' */
@@ -232,17 +235,17 @@ int main(int argc, char* argv[])
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        /* Check if output file already exists */
+        /* Check if output file already exists. */
         if (!access((const char*)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
             tsc_warning("Output file already exists (use '-f' to force overwriting): %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
-        /* Open infile, create and open outfile */
+        /* Open infile, create and open outfile. */
         tsc_in_fp = tsc_fopen_or_die((const char*)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen_or_die((const char*)tsc_out_fname->s, "w");
 
-        /* Invoke decoder */
+        /* Invoke file decoder. */
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
         str_t* filedec_stats = filedec_decode(filedec);
@@ -250,7 +253,7 @@ int main(int argc, char* argv[])
         filedec_free(filedec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
-        /* Close files */
+        /* Close files. */
         tsc_fclose_or_die(tsc_in_fp);
         tsc_fclose_or_die(tsc_out_fp);
     }

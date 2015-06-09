@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "samparser.h"
 #include <string.h>
@@ -12,7 +12,7 @@ static void samparser_init(samparser_t* samparser, FILE* fp)
 {
     samparser->fp = fp;
 
-    /* Read the SAM header */
+    /* Read the SAM header. */
     while (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
             str_append_cstr(samparser->head, samparser->curr.line);
@@ -68,20 +68,17 @@ static void samparser_parse(samparser_t* samparser)
         c++;
     }
 
-    if (f == 11) {
-        samparser->curr.str_fields[sfc++] = c;
-    }
+    if (f == 11) samparser->curr.str_fields[sfc++] = c;
 }
 
 bool samparser_next(samparser_t* samparser)
 {
-    /* Try to read and parse next line */
+    /* Try to read and parse next line. */
     if (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
-        if (*(samparser->curr.line) == '@') {
+        if (*(samparser->curr.line) == '@')
             tsc_error("Tried to read SAM record but found header line.\n");
-        } else {
+        else
             samparser_parse(samparser);
-        }
     } else {
         return false;
     }

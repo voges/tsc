@@ -1,9 +1,9 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #ifndef TSC_SAMPARSER_H
 #define TSC_SAMPARSER_H
@@ -13,9 +13,9 @@
 #include <stdbool.h>
 
 typedef struct samparser_t_ {
-    FILE*       fp;
-    str_t*      head;
-    samrecord_t curr;
+    FILE*       fp;   /* infile pointer     */
+    str_t*      head; /* SAM header         */
+    samrecord_t curr; /* current SAM record */
 } samparser_t;
 
 samparser_t* samparser_new(FILE* fp);

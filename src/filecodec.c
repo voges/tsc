@@ -50,16 +50,15 @@ void fileenc_free(fileenc_t* fileenc)
 
 str_t* fileenc_encode(fileenc_t* fileenc)
 {
+    /* Statistics. */
     size_t total_byte_cnt      = 0; /* total no. of bytes written            */
     size_t total_line_cnt      = 0; /* total no. of lines processed          */
     size_t total_block_cnt     = 0; /* total no. of blocks written           */
     size_t total_seq_byte_cnt  = 0; /* total no. of bytes written by seqenc  */
     size_t total_qual_byte_cnt = 0; /* total no. of bytes written by qualenc */
     size_t total_aux_byte_cnt  = 0; /* total no. of bytes written by auxenc  */
-    size_t block_line_cnt      = 0; /* block-wise line count                 */
 
-    /*
-     * Write tsc file header:
+    /* Write tsc file header:
      * - 4 bytes: 'tsc-' + 0x00
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
@@ -72,8 +71,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
     tsc_log("Block size: %zu\n", fileenc->block_sz);
     total_byte_cnt += fwrite_uint32(fileenc->ofp, fileenc->block_sz);
 
-    /*
-     * Write SAM header:
+    /* Write SAM header:
      * - 4 bytes: number of bytes in header
      * - n bytes: SAM header
      */
@@ -81,12 +79,13 @@ str_t* fileenc_encode(fileenc_t* fileenc)
     total_byte_cnt += fwrite_uint32(fileenc->ofp, fileenc->samparser->head->n);
     total_byte_cnt += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
-    /* Parse SAM file line by line and invoke encoders */
+    /* Parse SAM file line by line and invoke encoders. */
+    size_t block_line_cnt = 0; /* block-wise line count */
     samrecord_t* samrecord = &(fileenc->samparser->curr);
+
     while (samparser_next(fileenc->samparser)) {
         if (block_line_cnt >= fileenc->block_sz) {
-            /*
-             * Write block header:
+            /* Write block header:
              * - 4 bytes: block count
              * - 4 bytes: no. of lines in block
              */
@@ -94,7 +93,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
             total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)total_block_cnt);
             total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)block_line_cnt);
 
-            /* Write seq, qual, and aux blocks */
+            /* Write seq, qual, and aux blocks. */
             size_t seq_bc  = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
             size_t qual_bc = qualenc_write_block(fileenc->qualenc, fileenc->ofp);
             size_t aux_bc  = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
@@ -109,7 +108,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
             block_line_cnt = 0;
         }
 
-        /* Add records to encoders */
+        /* Add records to encoders. */
         seqenc_add_record(fileenc->seqenc,
                           samrecord->int_fields[POS],
                           samrecord->str_fields[CIGAR],
@@ -129,8 +128,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
         total_line_cnt++;
     }
 
-    /*
-     * Write last block header:
+    /* Write last block header:
      * - 4 bytes: block count
      * - 4 bytes: no. of lines in block
      */
@@ -138,7 +136,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
     total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)total_block_cnt);
     total_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)block_line_cnt);
 
-    /* Write last seq, qual, and aux blocks */
+    /* Write last seq, qual, and aux blocks. */
     size_t seq_bc  = seqenc_write_block(fileenc->seqenc, fileenc->ofp);
     size_t qual_bc = qualenc_write_block(fileenc->qualenc, fileenc->ofp);
     size_t aux_bc  = auxenc_write_block(fileenc->auxenc, fileenc->ofp);
@@ -153,7 +151,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
     
     tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", total_byte_cnt, ((double)total_byte_cnt / GB), total_line_cnt, total_block_cnt);
 
-    /* Return compression statistics */
+    /* Return compression statistics. */
     char stats[4 * KB]; /* this should be enough space */
     snprintf(stats, sizeof(stats), "\tCompression Statistics:\n"
                                    "\t-----------------------\n"
@@ -210,12 +208,12 @@ void filedec_free(filedec_t* filedec)
 
 str_t* filedec_decode(filedec_t* filedec)
 {
+    /* Statistics. */
     size_t total_byte_cnt  = 0; /* total no. of bytes written   */
     size_t total_line_cnt  = 0; /* total no. of lines processed */
     size_t total_block_cnt = 0; /* total no. of blocks written  */
 
-    /*
-     * Read tsc file header:
+    /* Read tsc file header:
      * - 4 bytes: 'tsc' + 0x00
      * - 4 bytes: version + 0x00
      * - 4 bytes: block size used for encoding
@@ -236,8 +234,7 @@ str_t* filedec_decode(filedec_t* filedec)
     tsc_log("Format: %s %s\n", prog_name, version);
     tsc_log("Block size: %d\n", block_sz);
 
-    /*
-     * Read SAM header:
+    /* Read SAM header:
      * - 4 bytes: number of bytes in header
      * - n bytes: SAM header
      */
@@ -256,8 +253,7 @@ str_t* filedec_decode(filedec_t* filedec)
     uint32_t block_line_cnt = 0;
 
     while (fread_uint32(filedec->ifp, &block_cnt) == sizeof(uint32_t)) {
-        /*
-         * Read block header:
+        /* Read block header:
          * - 4 bytes: block count
          * - 4 bytes: no. of lines in block
          */
@@ -265,7 +261,7 @@ str_t* filedec_decode(filedec_t* filedec)
             tsc_error("Failed to read number of lines in block %d!\n", block_cnt);
         tsc_log("Decoding block %zu: %zu lines\n", block_cnt, block_line_cnt);
 
-        /* Allocate memory to prepare decoding of the next block */
+        /* Allocate memory to prepare decoding of the next block. */
         str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
         str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
         str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
@@ -277,7 +273,7 @@ str_t* filedec_decode(filedec_t* filedec)
             aux[i] = str_new();
         }
 
-        /* Decode seq, qual, and aux blocks */
+        /* Decode seq, qual, and aux blocks. */
         seqdec_decode_block(filedec->seqdec, filedec->ifp, seq);
         qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
@@ -290,7 +286,7 @@ str_t* filedec_decode(filedec_t* filedec)
             total_byte_cnt += fwrite_cstr(filedec->ofp, aux[i]->s);
         }
 
-        /* Free the memory used for decoding */
+        /* Free the memory used for decoding. */
         for (i = 0; i < block_line_cnt; i++) {
             str_free(seq[i]);
             str_free(qual[i]);
@@ -304,7 +300,7 @@ str_t* filedec_decode(filedec_t* filedec)
         total_block_cnt++;
     }
 
-    /* Return decompression statistics */
+    /* Return decompression statistics. */
     char stats[4*KB];
     snprintf(stats, sizeof(stats), "\tDecompression Statistics:\n"
                                    "\t-------------------------\n"
