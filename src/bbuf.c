@@ -87,11 +87,10 @@ void bbuf_append_uint64(bbuf_t* bbuf, const uint64_t x)
     bbuf_append_byte(bbuf, (x      ) & 0xFF);
 }
 
-void bbuf_copy_bbuf(bbuf_t* dest, const bbuf_t* src)
+void bbuf_append_buf(bbuf_t* bbuf, const unsigned char* app, const size_t n)
 {
-    bbuf_clear(dest);
-    bbuf_reserve(dest, src->sz);
-    memcpy(dest->bytes, src->bytes, src->sz);
-    dest->sz = src->sz;
+    bbuf_extend(bbuf, n);
+    memcpy(bbuf->bytes + bbuf->sz, app, n);
+    bbuf->sz += n;
 }
 

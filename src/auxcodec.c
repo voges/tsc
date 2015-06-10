@@ -14,17 +14,16 @@
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
-static void auxenc_init(auxenc_t* auxenc, const size_t block_sz)
+static void auxenc_init(auxenc_t* auxenc)
 {
-    auxenc->block_sz = block_sz;
     auxenc->block_lc = 0;
 }
 
-auxenc_t* auxenc_new(const size_t block_sz)
+auxenc_t* auxenc_new(void)
 {
     auxenc_t* auxenc = (auxenc_t*)tsc_malloc_or_die(sizeof(auxenc_t));
     auxenc->out_buf = str_new();
-    auxenc_init(auxenc, block_sz);
+    auxenc_init(auxenc);
     return auxenc;
 }
 
@@ -63,7 +62,6 @@ void auxenc_add_record(auxenc_t*   auxenc,
 
 static void auxenc_reset(auxenc_t* auxenc)
 {
-    auxenc->block_sz = 0;
     auxenc->block_lc = 0;
     str_clear(auxenc->out_buf);
 }
@@ -93,7 +91,6 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
  *****************************************************************************/
 static void auxdec_init(auxdec_t* auxdec)
 {
-    auxdec->block_sz = 0;
     auxdec->block_lc = 0;
 }
 
@@ -116,7 +113,6 @@ void auxdec_free(auxdec_t* auxdec)
 
 static void auxdec_reset(auxdec_t* auxdec)
 {
-    auxdec->block_sz = 0;
     auxdec->block_lc = 0;
 }
 

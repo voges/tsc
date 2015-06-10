@@ -88,7 +88,7 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'b':
             if (atoi(optarg) <= 0)
-                tsc_error("Block size must be greater than zero.\n");
+                tsc_error("Block size must be greather than zero: %d\n", atoi(optarg));
             else
                 tsc_block_sz = (unsigned int)atoi(optarg);
             break;

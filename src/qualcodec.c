@@ -15,18 +15,17 @@
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
-static void qualenc_init(qualenc_t* qualenc, const size_t block_sz)
+static void qualenc_init(qualenc_t* qualenc)
 {
-    qualenc->block_sz = block_sz;
     qualenc->block_lc = 0;
 }
 
-qualenc_t* qualenc_new(const size_t block_sz)
+qualenc_t* qualenc_new(void)
 {
     qualenc_t* qualenc = (qualenc_t*)tsc_malloc_or_die(sizeof(qualenc_t));
     qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
     qualenc->out_buf = str_new();
-    qualenc_init(qualenc, block_sz);
+    qualenc_init(qualenc);
     return qualenc;
 }
 
@@ -51,7 +50,6 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 
 static void qualenc_reset(qualenc_t* qualenc)
 {
-    qualenc->block_sz = 0;
     qualenc->block_lc = 0;
     cbufstr_clear(qualenc->qual_cbuf);
     str_clear(qualenc->out_buf);
@@ -93,7 +91,6 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
  ******************************************************************************/
 static void qualdec_init(qualdec_t* qualdec)
 {
-    qualdec->block_sz = 0;
     qualdec->block_lc = 0;
 }
 
@@ -118,7 +115,6 @@ void qualdec_free(qualdec_t* qualdec)
 
 static void qualdec_reset(qualdec_t* qualdec)
 {
-    qualdec->block_sz = 0;
     qualdec->block_lc = 0;
     cbufstr_clear(qualdec->qual_cbuf);
 }

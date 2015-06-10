@@ -27,7 +27,7 @@ void bbuf_trunc(bbuf_t* bbuf, const size_t tr);
 void bbuf_append_bbuf(bbuf_t* bbuf, const bbuf_t* app);
 void bbuf_append_byte(bbuf_t* bbuf, char c);
 void bbuf_append_uint64(bbuf_t* bbuf, const uint64_t x);
-void bbuf_copy_cbbuf(bbuf_t* dest, const char* src);
+void bbuf_append_buf(bbuf_t* bbuf, const unsigned char* app, const size_t n);
 
 #endif /* TSC_BBUF_H */
 

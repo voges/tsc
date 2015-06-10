@@ -15,8 +15,8 @@
 #define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 #define KB 1024LL
-#define MB (KB*KB)
-#define GB (MB*MB)
+#define MB (KB * 1024LL)
+#define GB (MB * 1024LL)
 
 #define TSC_BLOCK_SZ_DEFAULT 1000
 

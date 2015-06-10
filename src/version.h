@@ -8,7 +8,7 @@
 #ifndef TSC_VERSION_H
 #define TSC_VERSION_H
 
-#define VERSION "1.0"
+#define VERSION "01.00" /* this must be exactly five (5) characters */
 
 #endif /* TSC_VERSION_H */
 

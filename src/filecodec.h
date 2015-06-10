@@ -11,7 +11,7 @@
 #include "auxcodec.h"
 #include "qualcodec.h"
 #include "samparser.h"
-#include "seqcodec.h"
+#include "nuccodec.h"
 #include "str.h"
 #include <stdio.h>
 
@@ -21,9 +21,9 @@
 typedef struct fileenc_t_ {
     FILE*        ifp;
     FILE*        ofp;
-    size_t       block_sz;
+    uint64_t     block_sz;
     samparser_t* samparser;
-    seqenc_t*    seqenc;
+    nucenc_t*    nucenc;
     qualenc_t*   qualenc;
     auxenc_t*    auxenc;
     str_t*       stats;
@@ -39,7 +39,7 @@ str_t* fileenc_encode(fileenc_t* fileenc);
 typedef struct filedec_t_ {
     FILE*      ifp;
     FILE*      ofp;
-    seqdec_t*  seqdec;
+    nucdec_t*  nucdec;
     qualdec_t* qualdec;
     auxdec_t*  auxdec;
     str_t*     stats;

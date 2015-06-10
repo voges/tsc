@@ -16,12 +16,11 @@
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct auxenc_t_ {
-    size_t  block_sz; /* block size (no. of SAM records)            */
     size_t  block_lc; /* no. of records processed in the curr block */
     str_t*  out_buf;  /* buffer holding the delimited aux records   */
 } auxenc_t;
 
-auxenc_t* auxenc_new(const size_t block_sz);
+auxenc_t* auxenc_new(void);
 void auxenc_free(auxenc_t* auxenc);
 void auxenc_add_record(auxenc_t*   auxenc,
                        const char* qname,
@@ -38,7 +37,6 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct auxdec_t_ {
-    size_t  block_sz; /* block size (no. of SAM records)              */
     size_t  block_lc; /* no. of records processed in the curr block   */
 } auxdec_t;
 

@@ -5,8 +5,8 @@
  * This file is part of tsc.                                                  *
  ******************************************************************************/
 
-#ifndef TSC_SEQCODEC_H
-#define TSC_SEQCODEC_H
+#ifndef TSC_NUCCODEC_H
+#define TSC_NUCCODEC_H
 
 #include "cbufint64.h"
 #include "cbufstr.h"
@@ -14,41 +14,39 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define SEQCODEC_WINDOW_SZ 10
+#define NUCCODEC_WINDOW_SZ 10
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
-typedef struct seqenc_t_ {
-    size_t         block_sz;   /* block size (no. of SAM records)            */
-    size_t         block_lc;   /* no. of records processed in the curr block */
+typedef struct nucenc_t_ {
+    uint32_t       block_lc;   /* no. of records processed in the curr block */
     cbufint64_t*   pos_cbuf;   /* circular buffer for POSitions              */
     cbufstr_t*     cigar_cbuf; /* circular buffer for CIGARs                 */
     cbufstr_t*     seq_cbuf;   /* circular buffer for SEQuences              */
     cbufstr_t*     exp_cbuf;   /* circular buffer for EXPanded sequences     */
     str_t*         out_buf;    /* output string (for the arithmetic coder)   */
-} seqenc_t;
+} nucenc_t;
 
-seqenc_t* seqenc_new(const size_t block_sz);
-void seqenc_free(seqenc_t* seqenc);
-void seqenc_add_record(seqenc_t* seqenc, uint64_t pos, const char* cigar, const char* seq);
-size_t seqenc_write_block(seqenc_t* seqenc, FILE* ofp);
+nucenc_t* nucenc_new(void);
+void nucenc_free(nucenc_t* nucenc);
+void nucenc_add_record(nucenc_t* nucenc, uint64_t pos, const char* cigar, const char* seq);
+size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp);
 
 /******************************************************************************
  * Decoder                                                                    *
  ******************************************************************************/
-typedef struct seqdec_t_ {
-    size_t       block_sz;   /* block size (no. of SAM records)            */
-    size_t       block_lc;   /* no. of records processed in the curr block */
+typedef struct nucdec_t_ {
+    uint32_t     block_lc;   /* no. of records processed in the curr block */
     cbufint64_t* pos_cbuf;   /* circular buffer for POSitions              */
     cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs                 */
     cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences              */
     cbufstr_t*   exp_cbuf;   /* circular buffer for EXPanded sequences     */
-} seqdec_t;
+} nucdec_t;
 
-seqdec_t* seqdec_new(void);
-void seqdec_free(seqdec_t* seqdec);
-void seqdec_decode_block(seqdec_t* seqdec, FILE* ifp, str_t** seq);
+nucdec_t* nucdec_new(void);
+void nucdec_free(nucdec_t* nucdec);
+void nucdec_decode_block(nucdec_t* nucdec, FILE* ifp, uint64_t* pos, str_t** cigar, str_t** seq);
 
-#endif /* TSC_SEQCODEC_H */
+#endif /* TSC_NUCCODEC_H */
 
