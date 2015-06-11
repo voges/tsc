@@ -280,12 +280,13 @@ str_t* filedec_decode(filedec_t* filedec)
         /* Write NUC, QUAL and AUX in correct order to outfile. */
         tsc_log("Writing decoded block %"PRIu32": %zu lines\n", block_cnt, block_line_cnt);
         for (i = 0; i < block_line_cnt; i++) {
+
+            //DEBUG("%s", aux[i]->s);
             /* !!!DUMMIES!!!*/
             pos[i] = i;
             str_append_cstr(cigar[i], "10M");
             str_append_cstr(seq[i], "ACGT");
-            str_clear(qual[i]); str_append_cstr(qual[i], "qual");
-            str_append_cstr(aux[i], "qname\tflag\trname\tmapq\trnext\tpnext\ttlen\topt");
+            //str_clear(qual[i]); str_append_cstr(qual[i], "qual");
             /* !!!DUMMIES!!!*/
 
             enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,

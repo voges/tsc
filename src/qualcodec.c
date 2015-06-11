@@ -58,32 +58,47 @@ static void qualenc_reset(qualenc_t* qualenc)
 size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 {
     /* Write block:
-     * - 4 bytes: identifier
-     * - 4 bytes: number of bytes (n)
-     * - n bytes: block content
+     * - unsigned char[8]: "QUAL----"
+     * - uint32_t        : no. of lines in block
+     * - uint32_t        : block size
+     * - unsigned char[] : data
      */
-    size_t nbytes = 0;
-    nbytes += fwrite_cstr(ofp, "QUAL");
-    //nbytes += fwrite_uint32(ofp, (uint32_t)qualenc->out_buf->n);
-    //nbytes += fwrite_buf(ofp, (unsigned char*)qualenc->out_buf->s, qualenc->out_buf->n);
+    size_t header_byte_cnt = 0;
+    size_t data_byte_cnt = 0;
+    size_t byte_cnt = 0;
 
-    tsc_log("Compressing QUAL block (%zu bytes) with arithmetic coder\n", qualenc->out_buf->n);
+    header_byte_cnt += fwrite_cstr(ofp, "QUAL----");
+    header_byte_cnt += fwrite_uint32(ofp, qualenc->block_lc);
 
+    /* Compress block with AC. */
     unsigned char* ac_in = (unsigned char*)qualenc->out_buf->s;
     unsigned int ac_in_sz = qualenc->out_buf->n;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
+    if (tsc_verbose) tsc_log("Compressed QUAL block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
 
-    nbytes += fwrite_uint32(ofp, ac_out_sz);
-    nbytes += fwrite_buf(ofp, ac_out, ac_out_sz);
+    /* Write compressed block to ofp. */
+    header_byte_cnt += fwrite_uint32(ofp, ac_out_sz);
+    data_byte_cnt += fwrite_buf(ofp, ac_out, ac_out_sz);
     free((void*)ac_out);
+    byte_cnt = header_byte_cnt + data_byte_cnt;
 
-    tsc_log("Wrote QUAL block: %zu bytes\n", nbytes);
+    /* Log this if in verbose mode. */
+    if (tsc_verbose)
+        tsc_log("\tWrote QUAL block:\n"
+                "\t  lines : %12zu\n"
+                "\t  header: %12zu bytes\n"
+                "\t  data  : %12zu bytes\n"
+                "\t  total : %12zu bytes\n",
+                (size_t)qualenc->block_lc,
+                header_byte_cnt,
+                data_byte_cnt,
+                byte_cnt);
 
     /* Reset encoder for next block. */
     qualenc_reset(qualenc);
-    
-    return nbytes;
+
+    return byte_cnt;
 }
 
 /******************************************************************************
@@ -121,40 +136,69 @@ static void qualdec_reset(qualdec_t* qualdec)
 
 void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
 {
-    /* Read block header:
-     * - 4 bytes: identifier (must equal "QUAL")
-     * - 4 bytes: number of bytes in block
+    /* Read block:
+     * - unsigned char[8]: "QUAL----"
+     * - uint32_t        : no. of lines in block
+     * - uint32_t        : block size
+     * - unsigned char[] : data
      */
-    unsigned char block_id[4];
+    size_t header_byte_cnt = 0;
+    size_t data_byte_cnt = 0;
+    size_t byte_cnt = 0;
+
+    /* Read and check block header. */
+    unsigned char block_id[8];
     uint32_t block_sz;
 
-    if (fread_buf(ifp, block_id, 4) != sizeof(block_id))
-        tsc_error("Could not read block header!\n");
+    if (fread_buf(ifp, block_id, sizeof(block_id)) != sizeof(block_id))
+        tsc_error("Could not read block ID!\n");
+    if (fread_uint32(ifp, &(qualdec->block_lc)) != sizeof(qualdec->block_lc))
+        tsc_error("Could not read no. of lines in block!\n");
     if (fread_uint32(ifp, &block_sz) != sizeof(block_sz))
-        tsc_error("Could not read number of bytes in block!\n");
-    if (strncmp("QUAL", (const char*)block_id, 4))
-        tsc_error("Wrong block id: %s\n", block_id);
-    tsc_log("Reading %s block: %zu bytes\n", block_id, block_sz);
+        tsc_error("Could not read block size!\n");
+    if (strncmp("QUAL----", (const char*)block_id, sizeof(block_id)))
+        tsc_error("Wrong block ID: %s\n", block_id);
 
-    /* Decode block content with block_nb bytes. */
-    /* TODO */
-    bbuf_t* buf = bbuf_new();
-    bbuf_reserve(buf, block_sz);
-    fread_buf(ifp, buf->bytes, block_sz);
+    header_byte_cnt += sizeof(block_id) + sizeof(qualdec->block_lc) + sizeof(block_sz);
+    data_byte_cnt += block_sz;
+    byte_cnt = header_byte_cnt + data_byte_cnt;
 
-    unsigned char* ac_in = (unsigned char*)buf->bytes;
+    /* Log this if in verbose mode. */
+    if (tsc_verbose)
+        tsc_log("\tReading QUAL block:\n"
+                "\t  lines : %12zu\n"
+                "\t  header: %12zu bytes\n"
+                "\t  data  : %12zu bytes\n"
+                "\t  total : %12zu bytes\n",
+                (size_t)qualdec->block_lc,
+                header_byte_cnt,
+                data_byte_cnt,
+                byte_cnt);
+
+    /* Read block. */
+    bbuf_t* bbuf = bbuf_new();
+    bbuf_reserve(bbuf, block_sz);
+    fread_buf(ifp, bbuf->bytes, block_sz);
+
+    /* Uncompress block with AC. */
+    unsigned char* ac_in = bbuf->bytes;
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
+    if (tsc_verbose) tsc_log("Decompressed QUAL block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    bbuf_free(bbuf);
 
-    DEBUG("ac_out_sz: %d", ac_out_sz);
-    str_clear(qual[0]);
-    str_append_cstrn(qual[0], (const char*)ac_out, ac_out_sz);
-    DEBUG("%s", qual[0]->s);
+    /* Decode block. */
+    size_t i = 0;
+    size_t line = 0;
+    for (i = 0; i < ac_out_sz; i++) {
+        if (ac_out[i] != '\n')
+            str_append_char(qual[line], (const char)ac_out[i]);
+        else
+            line++;
+    }
 
     free((void*)ac_out);
-
-    bbuf_free(buf);
 
     /* Reset decoder for next block. */
     qualdec_reset(qualdec);

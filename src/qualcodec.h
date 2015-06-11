@@ -19,7 +19,7 @@
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct qualenc_t_ {
-    size_t     block_lc;  /* no. of records processed in the curr block */
+    uint32_t   block_lc;  /* no. of records processed in the curr block */
     cbufstr_t* qual_cbuf; /* circular buffer for QUALity scores         */
     str_t*     out_buf;   /* output string (for the arithmetic coder)   */
 } qualenc_t;
@@ -33,7 +33,7 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp);
  * Decoder                                                                    *
  ******************************************************************************/
 typedef struct qualdec_t_ {
-    size_t     block_lc;  /* no. of records processed in the curr block */
+    uint32_t   block_lc;  /* no. of records processed in the curr block */
     cbufstr_t* qual_cbuf; /* circular buffer for QUALity scores         */
 } qualdec_t;
 

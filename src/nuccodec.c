@@ -96,7 +96,7 @@ static void nucenc_expand(str_t* exp, uint64_t pos, const char* cigar, const cha
 
         op_len = 0;
     }
-    DEBUG("exp: %s", exp->s);
+    //DEBUG("exp: %s", exp->s);
 }
 
 static void nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, uint64_t ref_pos)
@@ -124,10 +124,10 @@ static void nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, u
     }
     while (i < exp->n) str_append_char(diff, exp->s[i++]);
 
-    DEBUG("pos_off: %"PRIu64"", pos_off);
-    DEBUG("ref:  %s", ref->s);
-    DEBUG("exp:  %s", exp->s);
-    DEBUG("diff: %s", diff->s);
+    //DEBUG("pos_off: %"PRIu64"", pos_off);
+    //DEBUG("ref:  %s", ref->s);
+    //DEBUG("exp:  %s", exp->s);
+    //DEBUG("diff: %s", diff->s);
 }
 
 static double nucenc_entropy(str_t* seq)
@@ -151,7 +151,10 @@ static double nucenc_entropy(str_t* seq)
     return h;
 }
 
-void nucenc_add_record(nucenc_t* nucenc, uint64_t pos, const char* cigar, const char* seq)
+void nucenc_add_record(nucenc_t*      nucenc,
+                       const uint64_t pos,
+                       const char*    cigar,
+                       const char*    seq)
 {    
     /* Allocate memory for encoding. */
     str_t* exp = str_new();      /* expanded current sequence */
@@ -273,17 +276,25 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int ac_in_sz = nucenc->out_buf->n;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    tsc_log("Compressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    if (tsc_verbose) tsc_log("Compressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
 
     /* Write compressed block to ofp. */
     header_byte_cnt += fwrite_uint32(ofp, ac_out_sz);
     data_byte_cnt += fwrite_buf(ofp, ac_out, ac_out_sz);
     free((void*)ac_out);
-
-    /* Log this. */
     byte_cnt = header_byte_cnt + data_byte_cnt;
-    tsc_log("Wrote NUC block: %zu bytes (header) + %zu bytes (data) = %zu bytes\n",
-            header_byte_cnt, data_byte_cnt, byte_cnt);
+
+    /* Log this if in verbose mode. */
+    if (tsc_verbose)
+        tsc_log("\tWrote NUC block:\n"
+                "\t  lines : %12zu\n"
+                "\t  header: %12zu bytes\n"
+                "\t  data  : %12zu bytes\n"
+                "\t  total : %12zu bytes\n",
+                (size_t)nucenc->block_lc,
+                header_byte_cnt,
+                data_byte_cnt,
+                byte_cnt);
 
     /* Reset encoder for next block. */
     nucenc_reset(nucenc);
@@ -333,7 +344,11 @@ static void nucdec_reset(nucdec_t* nucdec)
     cbufstr_clear(nucdec->exp_cbuf);
 }
 
-void nucdec_decode_block(nucdec_t* nucdec, FILE* ifp, uint64_t* pos, str_t** cigar, str_t** seq)
+void nucdec_decode_block(nucdec_t* nucdec,
+                         FILE*     ifp,
+                         uint64_t* pos,
+                         str_t**   cigar,
+                         str_t**   seq)
 {
     /* Read block:
      * - unsigned char[8]: "NUC-----"
@@ -341,6 +356,11 @@ void nucdec_decode_block(nucdec_t* nucdec, FILE* ifp, uint64_t* pos, str_t** cig
      * - uint32_t        : block size
      * - unsigned char[] : data
      */
+    size_t header_byte_cnt = 0;
+    size_t data_byte_cnt = 0;
+    size_t byte_cnt = 0;
+
+    /* Read and check block header. */
     unsigned char block_id[8];
     uint32_t block_sz;
 
@@ -352,7 +372,22 @@ void nucdec_decode_block(nucdec_t* nucdec, FILE* ifp, uint64_t* pos, str_t** cig
         tsc_error("Could not read block size!\n");
     if (strncmp("NUC-----", (const char*)block_id, sizeof(block_id)))
         tsc_error("Wrong block ID: %s\n", block_id);
-    tsc_log("Reading NUC block: %"PRIu32" bytes in %"PRIu32" lines\n", block_sz, nucdec->block_lc);
+
+    header_byte_cnt += sizeof(block_id) + sizeof(nucdec->block_lc) + sizeof(block_sz);
+    data_byte_cnt += block_sz;
+    byte_cnt = header_byte_cnt + data_byte_cnt;
+
+    /* Log this if in verbose mode. */
+    if (tsc_verbose)
+        tsc_log("\tReading NUC block:\n"
+                "\t  lines : %12zu\n"
+                "\t  header: %12zu bytes\n"
+                "\t  data  : %12zu bytes\n"
+                "\t  total : %12zu bytes\n",
+                (size_t)nucdec->block_lc,
+                header_byte_cnt,
+                data_byte_cnt,
+                byte_cnt);
 
     /* Read block. */
     bbuf_t* bbuf = bbuf_new();
@@ -364,11 +399,10 @@ void nucdec_decode_block(nucdec_t* nucdec, FILE* ifp, uint64_t* pos, str_t** cig
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    tsc_log("Decompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    if (tsc_verbose) tsc_log("Decompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
     bbuf_free(bbuf);
 
     /* TODO: Decode block */
-
 
     free((void*)ac_out);
 

@@ -9,27 +9,27 @@
 #define TSC_AUXCODEC_H
 
 #include "str.h"
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*****************************************************************************
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct auxenc_t_ {
-    size_t  block_lc; /* no. of records processed in the curr block */
-    str_t*  out_buf;  /* buffer holding the delimited aux records   */
+    uint32_t block_lc; /* no. of records processed in the curr block */
+    str_t*   out_buf;  /* output string (for the arithmetic coder)   */
 } auxenc_t;
 
 auxenc_t* auxenc_new(void);
 void auxenc_free(auxenc_t* auxenc);
 void auxenc_add_record(auxenc_t*   auxenc,
-                       const char* qname,
-                       uint64_t    flag,
-                       const char* rname,
-                       uint64_t    mapq,
-                       const char* rnext,
-                       uint64_t    pnext,
-                       uint64_t    tlen,
+                       const char*    qname,
+                       const uint64_t flag,
+                       const char*    rname,
+                       const uint64_t mapq,
+                       const char*    rnext,
+                       const uint64_t pnext,
+                       const uint64_t tlen,
                        const char* opt);
 size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
@@ -37,7 +37,7 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct auxdec_t_ {
-    size_t  block_lc; /* no. of records processed in the curr block   */
+    uint32_t block_lc; /* no. of records processed in the curr block */
 } auxdec_t;
 
 auxdec_t* auxdec_new(void);

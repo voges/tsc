@@ -21,6 +21,7 @@ static const char* opt_input = NULL;
 static const char* opt_output = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
+static bool opt_flag_verbose = false;
 
 /* Initializing global vars from 'tsclib.h' */
 str_t* tsc_prog_name = NULL;
@@ -31,6 +32,7 @@ FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
 size_t tsc_block_sz = TSC_BLOCK_SZ_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
+bool tsc_verbose = false;
 
 static void print_version(void)
 {
@@ -59,7 +61,8 @@ static void print_help(void)
     printf("  -h, --help        Print this help\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -v, --version     Display program version\n");
+    printf("  -v, --verbose     Print detailed compression information\n");
+    printf("  -V, --version     Display program version\n");
     printf("\n");
 }
 
@@ -74,11 +77,12 @@ static void parse_options(int argc, char *argv[])
         { "help",       no_argument,       NULL, 'h'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
-        { "version",    no_argument,       NULL, 'v'},
+        { "verbose",    no_argument,       NULL, 'v'},
+        { "version",    no_argument,       NULL, 'V'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfho:sv";
+    const char *short_options = "b:dfho:svV";
 
     do {
         int opt_idx = 0;
@@ -109,6 +113,9 @@ static void parse_options(int argc, char *argv[])
             opt_output = optarg;
             break;
         case 'v':
+            opt_flag_verbose = true;
+            break;
+        case 'V':
             print_version();
             exit(EXIT_SUCCESS);
             break;
@@ -148,7 +155,7 @@ static void handle_signal(int sig)
 
 int main(int argc, char* argv[])
 {
-    /* Initialize global strings. */
+    /* Initialize global variables. */
     tsc_prog_name = str_new();
     tsc_version = str_new();
     str_copy_cstr(tsc_version, VERSION);
@@ -173,9 +180,10 @@ int main(int argc, char* argv[])
     signal(SIGXCPU, handle_signal);
     signal(SIGXFSZ, handle_signal);
 
-    /* Parse command line options and get input file name. */
+    /* Parse command line options, get input file name and set verbose flag. */
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
+    if (opt_flag_verbose) tsc_verbose = true;
 
     /* Check if input file is accessible. */
     if (access((const char*)tsc_in_fname->s, F_OK | R_OK))
