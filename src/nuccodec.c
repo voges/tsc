@@ -54,6 +54,8 @@ void nucenc_free(nucenc_t* nucenc)
 
 static void nucenc_expand(str_t* exp, uint64_t pos, const char* cigar, const char* seq)
 {
+    //DEBUG("pos: %"PRIu64" cigar: %s", pos, cigar);
+    //DEBUG("seq: \t%s", seq);
     str_clear(exp);
 
     size_t cigar_idx = 0;
@@ -87,25 +89,30 @@ static void nucenc_expand(str_t* exp, uint64_t pos, const char* cigar, const cha
             break;
         }
         case 'H':
-        case 'P':
-            str_append_cstrn(exp, &seq[seq_idx], op_len);
-            seq_idx += op_len;
+        case 'P': {
+            size_t i = 0;
+            for (i = 0; i < op_len; i++) { str_append_char(exp, '-'); }
             break;
+        }
         default: tsc_error("Bad CIGAR string: %s\n", cigar);
         }
 
         op_len = 0;
     }
-    //DEBUG("exp: %s", exp->s);
+
+    //DEBUG("exp: \t%s", exp->s);
 }
 
-static void nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, uint64_t ref_pos)
+static bool nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, uint64_t ref_pos)
 {
     /* Compute position offset. */
     uint64_t pos_off = exp_pos - ref_pos;
 
     /* Determine length of match. */
-    if (pos_off > ref->n) tsc_error("Position offset too large: %d\n", pos_off);
+    if (pos_off > ref->n) {
+        tsc_warning("Position offset too large: %d\n", pos_off);
+        return false;
+    }
     uint64_t match_len = ref->n - pos_off;
     if (exp->n + pos_off < match_len) match_len = exp->n + pos_off;
     
@@ -124,10 +131,16 @@ static void nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, u
     }
     while (i < exp->n) str_append_char(diff, exp->s[i++]);
 
-    //DEBUG("pos_off: %"PRIu64"", pos_off);
-    //DEBUG("ref:  %s", ref->s);
-    //DEBUG("exp:  %s", exp->s);
-    //DEBUG("diff: %s", diff->s);
+    /*printf("pos_off: %"PRIu64"\n", pos_off);
+    printf("ref:  %s\n", ref->s);
+    printf("exp:  ");
+    int k = 0; for (k = 0; k < pos_off; k++) printf(" ");
+    printf("%s\n", exp->s);
+    printf("diff: ");
+    for (k = 0; k < pos_off; k++) printf(" ");
+    printf("%s\n", diff->s);*/
+
+    return true;
 }
 
 static double nucenc_entropy(str_t* seq)
@@ -166,6 +179,7 @@ void nucenc_add_record(nucenc_t*      nucenc,
          * record in the current block. Encode it!
          */
 
+        bool diff_ok = false;
         double entropy = 0;
         double entropy_min = DBL_MAX;
 
@@ -183,21 +197,34 @@ void nucenc_add_record(nucenc_t*      nucenc,
             uint64_t ref_pos = cbufint64_get(nucenc->pos_cbuf, cbuf_idx);
             cbuf_idx++;
 
-            /* Compute difference.s */
-            nucenc_diff(diff, exp, pos, ref, ref_pos);
+            /* Compute difference */
+            if (!nucenc_diff(diff, exp, pos, ref, ref_pos)) continue;
+            else diff_ok = true;
 
             /* Check the entropy of the difference. */
-            entropy = nucenc_entropy(diff);
-            if (entropy < entropy_min) {
-                entropy_min = entropy;
-                //cbuf_idx_min = cbuf_idx;
-                str_copy_str(diff_min, diff);
+            if (diff_ok) {
+                entropy = nucenc_entropy(diff);
+                if (entropy < entropy_min) {
+                    entropy_min = entropy;
+                    //cbuf_idx_min = cbuf_idx;
+                    str_copy_str(diff_min, diff);
+                }
             }
         } while (cbuf_idx < cbuf_n /* && entropy_curr > threshold */);
 
         /* Append to output stream. */
         /* TODO: Append cbuf_idx_min */
-        str_append_str(nucenc->out_buf, diff_min);
+        if (diff_ok) {
+            str_append_str(nucenc->out_buf, diff_min);
+        } else {
+            if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
+            char tmp[101]; snprintf(tmp, sizeof(tmp), "%jd", pos);
+            str_append_cstr(nucenc->out_buf, tmp);
+            str_append_cstr(nucenc->out_buf, "\t");
+            str_append_cstr(nucenc->out_buf, cigar);
+            str_append_cstr(nucenc->out_buf, "\t");
+            str_append_cstr(nucenc->out_buf, seq);
+        }
         str_append_cstr(nucenc->out_buf, "\n");
 
         /* Push POS, CIGAR, SEQ and EXP to circular buffers. */
@@ -399,10 +426,19 @@ void nucdec_decode_block(nucdec_t* nucdec,
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Decompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    if (tsc_verbose) tsc_log("Uncompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
     bbuf_free(bbuf);
 
-    /* TODO: Decode block */
+    /* Decode block. */
+    size_t i = 0;
+    size_t line = 0;
+    for (i = 0; i < ac_out_sz; i++) {
+        if (ac_out[i] != '\n')
+            str_append_char(seq[line], (const char)ac_out[i]);
+        else
+            line++;
+    }
+    /* TODO: Decode expand() and diff() */
 
     free((void*)ac_out);
 

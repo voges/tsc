@@ -19,12 +19,13 @@
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct qualenc_t_ {
-    uint32_t   block_lc;  /* no. of records processed in the curr block */
-    cbufstr_t* qual_cbuf; /* circular buffer for QUALity scores         */
-    str_t*     out_buf;   /* output string (for the arithmetic coder)   */
+    unsigned int order;     /* order of compression                       */
+    uint32_t     block_lc;  /* no. of records processed in the curr block */
+    cbufstr_t*   qual_cbuf; /* circular buffer for QUALity scores         */
+    str_t*       out_buf;   /* output string (for the arithmetic coder)   */
 } qualenc_t;
 
-qualenc_t* qualenc_new(void);
+qualenc_t* qualenc_new(const unsigned int order);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
 size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp);

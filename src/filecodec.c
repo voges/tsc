@@ -22,12 +22,12 @@ static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const uint64_
     fileenc->block_sz = block_sz;
 }
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz)
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz, const unsigned int qual_order)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc_or_die(sizeof(fileenc_t));
     fileenc->samparser = samparser_new(ifp);
     fileenc->nucenc = nucenc_new();
-    fileenc->qualenc = qualenc_new();
+    fileenc->qualenc = qualenc_new(qual_order);
     fileenc->auxenc = auxenc_new();
     fileenc->stats = str_new();
     fileenc_init(fileenc, ifp, ofp, block_sz);
@@ -77,7 +77,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
      * - uint32_t       : header size
      * - unsigned char[]: data
      */
-    tsc_log("Writing SAM header\n");
+    if (tsc_verbose) tsc_log("Writing SAM header\n");
     ff_byte_cnt += fwrite_uint32(fileenc->ofp, (uint32_t)fileenc->samparser->head->n);
     sh_byte_cnt += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
 
@@ -91,7 +91,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
              * - uint32_t: block count
              * - uint32_t: no. of lines in block
              */
-            tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_line_cnt);
+            if (tsc_verbose) tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_line_cnt);
             ff_byte_cnt += fwrite_uint32(fileenc->ofp, block_cnt);
             ff_byte_cnt += fwrite_uint32(fileenc->ofp, block_line_cnt);
 
@@ -128,7 +128,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
      * - uint32_t: block count
      * - uint32_t: no. of lines in block
      */
-    tsc_log("Writing last block %"PRIu32": %"PRIu32" line(s)\n", block_cnt, block_line_cnt);
+    if (tsc_verbose) tsc_log("Writing last block %"PRIu32": %"PRIu32" line(s)\n", block_cnt, block_line_cnt);
     ff_byte_cnt += fwrite_uint32(fileenc->ofp, block_cnt);
     ff_byte_cnt += fwrite_uint32(fileenc->ofp, block_line_cnt);
 
@@ -139,8 +139,7 @@ str_t* fileenc_encode(fileenc_t* fileenc)
 
     block_cnt++;
     byte_cnt = ff_byte_cnt + sh_byte_cnt + nuc_byte_cnt + qual_byte_cnt + aux_byte_cnt;
-    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
-            byte_cnt, ((double)byte_cnt / GB), line_cnt, block_cnt);
+    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", byte_cnt, ((double)byte_cnt / GB), line_cnt, block_cnt);
 
     /* Return compression statistics. */
     char stats[4 * KB]; /* this should be enough space */
@@ -234,7 +233,7 @@ str_t* filedec_decode(filedec_t* filedec)
      * - uint32_t       : header size
      * - unsigned char[]: data
      */
-    tsc_log("Reading SAM header\n");
+    if (tsc_verbose) tsc_log("Reading SAM header\n");
     uint32_t header_sz;
     if (fread_uint32(filedec->ifp, &header_sz) != sizeof(header_sz))
         tsc_error("Failed to read SAM header size!\n");
@@ -255,7 +254,7 @@ str_t* filedec_decode(filedec_t* filedec)
     while (fread_uint32(filedec->ifp, &block_cnt) == sizeof(block_cnt)) {
         if (fread_uint32(filedec->ifp, &block_line_cnt) != sizeof(block_line_cnt))
             tsc_error("Failed to read number of lines in block %"PRIu32"!\n", block_cnt);
-        tsc_log("Decoding block %"PRIu32": %"PRIu32" lines\n", block_cnt, block_line_cnt);
+        if (tsc_verbose) tsc_log("Decoding block %"PRIu32": %"PRIu32" lines\n", block_cnt, block_line_cnt);
 
         /* Allocate memory to prepare decoding of the next block. */
         uint64_t* pos = (uint64_t*)tsc_malloc_or_die(sizeof(uint64_t) * block_line_cnt);
@@ -278,14 +277,13 @@ str_t* filedec_decode(filedec_t* filedec)
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
 
         /* Write NUC, QUAL and AUX in correct order to outfile. */
-        tsc_log("Writing decoded block %"PRIu32": %zu lines\n", block_cnt, block_line_cnt);
+        if (tsc_verbose) tsc_log("Writing decoded block %"PRIu32": %zu lines\n", block_cnt, block_line_cnt);
         for (i = 0; i < block_line_cnt; i++) {
 
-            //DEBUG("%s", aux[i]->s);
             /* !!!DUMMIES!!!*/
             pos[i] = i;
             str_append_cstr(cigar[i], "10M");
-            str_append_cstr(seq[i], "ACGT");
+            //str_append_cstr(seq[i], "ACGT");
             //str_clear(qual[i]); str_append_cstr(qual[i], "qual");
             /* !!!DUMMIES!!!*/
 
@@ -293,17 +291,13 @@ str_t* filedec_decode(filedec_t* filedec)
                    RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
             char* sam_fields[12];
 
-            /* Get pointers to POS, CIGAR, and SEQ. */
+            /* Get pointers to POS, CIGAR, SEQ, QUAL and AUX. */
             char pos_cstr[101]; /* this should be enough space */
             snprintf(pos_cstr, sizeof(pos_cstr), "%"PRIu64, pos[i]);
             sam_fields[POS] = pos_cstr;
             sam_fields[CIGAR] = cigar[i]->s;
             sam_fields[SEQ] = seq[i]->s;
-
-            /* Get pointer to QUAL. */
             sam_fields[QUAL] = qual[i]->s;
-
-            /* Get pointers to AUX data. */
             char* aux_itr = aux[i]->s;
             sam_fields[QNAME]= aux_itr;
             aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';

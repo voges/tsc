@@ -212,7 +212,7 @@ void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux)
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Decompressed AUX block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    if (tsc_verbose) tsc_log("Uncompressed AUX block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
     bbuf_free(bbuf);
 
     /* Decode block. */
