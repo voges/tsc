@@ -6,261 +6,145 @@
  ******************************************************************************/
 
 #include "ricecodec.h"
+#include "tsclib.h"
+#include <math.h>
 
-unsigned char *rice_compress(unsigned char* in,
-                             unsigned int   in_size,
-                             unsigned int*  out_size)
-{
-
-}
-
-unsigned char *rice_uncompress(unsigned char* in,
-                               unsigned int   in_size,
-                               unsigned int*  out_size)
-{
-
-}
-
-
-
-/* Rice [en]coder
- * Demonstration code by Emil Mikulic, 2002.
- * http://purl.org/net/overload
- *
- * $Id: encode.c,v 1.2 2002/12/10 14:56:55 emikulic Exp $
- */
-
-#include <stdio.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-FILE *fp;
-unsigned char buff = 0;
+unsigned char bbuf = 0;
 int filled = 0;
+unsigned int out_idx = 0;
+unsigned int in_idx = 0;
+unsigned char* out;
 
-void put_bit(unsigned char b)
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
+static int ricecodec_len(unsigned char x, int k)
 {
-    buff = buff | ((b & 1) << filled);
-    if (filled == 7)
-    {
-        if (!fwrite(&buff, 1, 1, fp))
-        {
-            printf("\nerror writing to file!\n");
-            exit(1);
-        }
+    int m = 1 << k;
+    int q = x / m;
+    return (q + 1 + k);
+}
 
-        buff = 0;
+static void ricecodec_put_bit(unsigned char* out, unsigned char  b)
+{
+    bbuf = bbuf | ((b & 1) << filled);
+
+    if (filled == 7) {
+        out[out_idx++] = bbuf;
+        bbuf = 0;
         filled = 0;
-    }
-    else
-        filled++;
-}
-
-
-
-void rice_code(unsigned char x, int k)
-{
-    int m = 1 << k;
-    int q = x / m;
-    int i;
-
-    for (i=0; i<q; i++) put_bit(1);
-    put_bit(0);
-
-    for (i=k-1; i>=0; i--) put_bit( (x >> i) & 1 );
-}
-
-
-
-int rice_len(unsigned char x, int k)
-{
-    int m = 1 << k;
-    int q = x / m;
-    return q + 1 + k;
-}
-
-
-
-int main(int argv, char **argc)
-{
-    unsigned int fs, i, k, outsize, best_size = 0, best_k;
-    unsigned char *buf;
-    struct stat stat;
-
-    if (argv != 3)
-    {
-        printf("usage: %s <infile> <outfile>\n", argc[0]);
-        return 1;
-    }
-
-    fp = fopen(argc[1], "rb");
-    if (fp)
-        printf("reading from %s ", argc[1]);
-    else {
-        printf("error opening %s!\n", argc[1]);
-        return 1;
-    }
-
-    fstat(fileno(fp), &stat);
-    fs = (unsigned int)stat.st_size;
-    printf("(%d bits)\n", fs*8);
-
-    buf = (unsigned char*) malloc(fs);
-    if (!buf)
-    {
-        printf("can't allocate memory!\n");
-        return 1;
-    }
-
-    if (!fread(buf, fs, 1, fp))
-    {
-        printf("error reading from file!\n");
-        return 1;
-    }
-    fclose(fp);
-
-    /* find length */
-    for (k=0; k<8; k++)
-    {
-        printf("k = %d, ", k);
-        fflush(stdout);
-
-        outsize = 0;
-        for (i=0; i<fs; i++)
-            outsize += rice_len(buf[i], k);
-
-        printf("size = %d bits\n", outsize);
-
-        if (!best_size || outsize < best_size)
-        {
-            best_size = outsize;
-            best_k = k;
-        }
-    }
-
-    /* output */
-    fp = fopen(argc[2], "wb");
-    if (fp)
-    {
-        printf("writing to %s...", argc[2]);
-        fflush(stdout);
     } else {
-        printf("error opening %s!\n", argc[2]);
-        return 1;
+        filled++;
     }
-
-    printf("(k = %d)...", best_k);
-    put_bit((best_k >> 2) & 1);
-    put_bit((best_k >> 1) & 1);
-    put_bit((best_k     ) & 1);
-
-    for (i=0; i<fs; i++)
-        rice_code(buf[i], best_k);
-
-    /* flush */
-    i = 8 - filled;
-    while (i--) put_bit(1);
-
-    fclose(fp);
-    free(buf);
-    printf("done!\n");
-    return 0;
 }
 
-/* Rice [de]coder
- * Demonstration code by Emil Mikulic, 2002.
- * http://purl.org/net/overload
- *
- * $Id: decode.c,v 1.2 2002/12/10 14:56:22 emikulic Exp $
- */
-
-#include <stdio.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
-FILE *fin, *fout;
-unsigned char buff;
-int done = 0, filled = 0;
-
-unsigned char get_bit(void)
+void ricecodec_encode(unsigned char x, int k)
 {
-    unsigned char tmp;
+    int m = 1 << k;
+    int q = x / m;
+    int i = 0;
 
-    if (!filled)
-    {
-        if (!fread(&buff, 1, 1, fin))
-        {
-            done = 1;
-            return 0;
+    for (i = 0; i < q; i++) ricecodec_put_bit(out, 1);
+    ricecodec_put_bit(out, 0);
+
+    for (i = (k - 1); i >= 0; i--) ricecodec_put_bit(out, (x >> i) & 1);
+}
+
+unsigned char *ricecodec_compress(unsigned char* in,
+                                  unsigned int   in_size,
+                                  unsigned int*  out_size)
+{
+    bbuf = 0;
+    filled = 0;
+    out_idx = 0;
+    in_idx = 0;
+
+    /* Find best Rice parameter k. */
+    unsigned int k = 0;
+    unsigned int k_best = 0;
+    unsigned int bit_cnt = 0;
+    unsigned int bit_cnt_best = 0xFFFFFFFF;
+    for (k = 0; k < 8; k++) {
+        size_t i = 0;
+        for (i = 0; i < in_size; i++) bit_cnt += ricecodec_len(in[i], k);
+        if (bit_cnt < bit_cnt_best) {
+            bit_cnt_best = bit_cnt;
+            k_best = k;
         }
+    }
+    *out_size = ceil(bit_cnt_best / 8);
+
+    /* Allocate enough memory for 'out'. */
+    out = (unsigned char*)tsc_malloc_or_die(*out_size);
+
+    /* Output. */
+    ricecodec_put_bit(out, (k_best >> 2) & 1);
+    ricecodec_put_bit(out, (k_best >> 1) & 1);
+    ricecodec_put_bit(out, (k_best     ) & 1);
+
+    size_t i = 0;
+    for (i = 0; i < in_size; i++)
+        ricecodec_encode(in[i], k_best);
+
+    /* Flush bit buffer. */
+    i = 8 - filled;
+    while (i--) ricecodec_put_bit(out, 1);
+
+    return out;
+}
+
+/******************************************************************************
+ * Decoder                                                                    *
+ ******************************************************************************/
+unsigned char ricecodec_get_bit(unsigned char* in)
+{
+    if (!(filled)) {
+        bbuf = in[in_idx++];
         filled = 8;
     }
 
-    tmp = buff & 1;
-    buff = buff >> 1;
+    unsigned char tmp = bbuf & 1;
+    bbuf = bbuf >> 1;
     filled--;
 
     return tmp;
 }
 
-
-
-int main(int argv, char **argc)
+unsigned char *ricecodec_uncompress(unsigned char* in,
+                                    unsigned int   in_size,
+                                    unsigned int*  out_size)
 {
-    unsigned int k;
-    unsigned char *buf;
+    bbuf = 0;
+    filled = 0;
+    out_idx = 0;
+    in_idx = 0;
 
-    if (argv != 3)
-    {
-        printf("usage: %s <infile> <outfile>\n", argc[0]);
-        return 1;
-    }
+    *out_size = 0;
 
-    fin = fopen(argc[1], "rb");
-    if (fin)
-        printf("reading from %s... ", argc[1]);
-    else {
-        printf("error opening %s!\n", argc[1]);
-        return 1;
-    }
+    /* Allocate enough memory for 'out'. */
+    out = (unsigned char*)tsc_malloc_or_die(100 * in_size);
 
-    k = (get_bit() << 2) | (get_bit() << 1) | get_bit();
-    if (done)
-    {
-        printf("couldn't read three bits!\n");
-        return 1;
-    }
-    printf("k = %d\n", k);
+    unsigned int k = (ricecodec_get_bit(in) << 2) |
+                     (ricecodec_get_bit(in) << 1) |
+                     (ricecodec_get_bit(in)     );
 
-    fout = fopen(argc[2], "wb");
-    if (fout)
-    {
-        printf("writing to %s\n", argc[2]);
-        fflush(stdout);
-    } else {
-        printf("error opening %s!\n", argc[2]);
-        return 1;
-    }
-
-    while (1)
-    {
+    while (1) {
         int m = 1 << k, q = 0, x, i;
 
-        while (get_bit()) q++;
+        while (ricecodec_get_bit(in)) q++;
         x = m * q;
 
-        for (i=k-1; i>=0; i--) x = x | (get_bit() << i);
+        for (i = (k - 1); i >= 0; i--)
+            x = x | (ricecodec_get_bit(in) << i);
 
-        if (done) break;
-        if (!fwrite(&x, 1, 1, fout))
-        {
-            printf("error writing to file!\n");
-            return 1;
-        }
+        if (in_idx == in_size) break;
+
+        out[out_idx++] = x;
+        (*out_size)++;
     }
 
-    fclose(fin);
-    fclose(fout);
-    printf("done!\n");
-    return 0;
+    out = (unsigned char*)tsc_realloc_or_die(out, *out_size);
+
+    return out;
 }
+

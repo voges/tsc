@@ -8,6 +8,7 @@
 #ifndef TSC_QUALCODEC_H
 #define TSC_QUALCODEC_H
 
+#include "cbufint64.h"
 #include "cbufstr.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -23,6 +24,13 @@ typedef struct qualenc_t_ {
     uint32_t     block_lc;  /* no. of records processed in the curr block */
     cbufstr_t*   qual_cbuf; /* circular buffer for QUALity scores         */
     str_t*       out_buf;   /* output string (for the arithmetic coder)   */
+
+    /* These are only needed for o2 compression ("line context"). */
+    cbufint64_t* qual_cbuf_len;
+    cbufint64_t* qual_cbuf_mu;
+    cbufint64_t* qual_cbuf_var;
+    unsigned int freq[256 * 256][256]; /* 16 MiB */
+    char         pred[256];
 } qualenc_t;
 
 qualenc_t* qualenc_new(const unsigned int order);

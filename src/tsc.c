@@ -64,8 +64,13 @@ static void print_help(void)
     printf("  -q, --qualorder   Order of quality score compression (default: %zu)\n", (size_t)tsc_qual_order);
     printf("                      0 Order-0 AC\n");
     printf("                      1 Order-1 AC\n");
-    printf("                      2 String matching + order-0 AC\n");
-    printf("                      3 String matching + order-1 AC\n");
+    printf("                      2 Rice coder\n");
+    printf("                      3 String matching + order-0 AC\n");
+    printf("                      4 String matching + order-1 AC\n");
+    printf("                      5 String matching + Rice coder\n");
+    printf("                      6 Line context + order-0 AC\n");
+    printf("                      7 Line context + order-1 AC\n");
+    printf("                      8 Line context + Rice coder\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
     printf("  -v, --verbose     Print detailed compression information\n");
     printf("  -V, --version     Display program version\n");
@@ -117,8 +122,8 @@ static void parse_options(int argc, char *argv[])
             opt_output = optarg;
             break;
         case 'q':
-            if (atoi(optarg) < 0 || atoi(optarg) > 3)
-                tsc_error("Quality score compression order must be 0-3: %d\n", atoi(optarg));
+            if (atoi(optarg) < 0 || atoi(optarg) > 8)
+                tsc_error("Quality score compression order must be 0-8: %d\n", atoi(optarg));
             else
                 tsc_qual_order = (unsigned int)atoi(optarg);
             break;
