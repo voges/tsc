@@ -32,7 +32,6 @@ FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
 size_t tsc_block_sz = TSC_BLOCK_SZ_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
-unsigned int tsc_qual_order = 0;
 bool tsc_verbose = false;
 
 static void print_version(void)
@@ -61,16 +60,6 @@ static void print_help(void)
     printf("  -f, --force       Force overwriting of output file\n");
     printf("  -h, --help        Print this help\n");
     printf("  -o, --output      Specify output file\n");
-    printf("  -q, --qualorder   Order of quality score compression (default: %zu)\n", (size_t)tsc_qual_order);
-    printf("                      0 Order-0 AC\n");
-    printf("                      1 Order-1 AC\n");
-    printf("                      2 Rice coder\n");
-    printf("                      3 String matching + order-0 AC\n");
-    printf("                      4 String matching + order-1 AC\n");
-    printf("                      5 String matching + Rice coder\n");
-    printf("                      6 Line context + order-0 AC\n");
-    printf("                      7 Line context + order-1 AC\n");
-    printf("                      8 Line context + Rice coder\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
     printf("  -v, --verbose     Print detailed compression information\n");
     printf("  -V, --version     Display program version\n");
@@ -87,14 +76,13 @@ static void parse_options(int argc, char *argv[])
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
         { "output",     required_argument, NULL, 'o'},
-        { "qualorder",  required_argument, NULL, 'q'},
         { "stats",      no_argument,       NULL, 's'},
         { "verbose",    no_argument,       NULL, 'v'},
         { "version",    no_argument,       NULL, 'V'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfho:q:svV";
+    const char *short_options = "b:dfho:svV";
 
     do {
         int opt_idx = 0;
@@ -120,12 +108,6 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'o':
             opt_output = optarg;
-            break;
-        case 'q':
-            if (atoi(optarg) < 0 || atoi(optarg) > 8)
-                tsc_error("Quality score compression order must be 0-8: %d\n", atoi(optarg));
-            else
-                tsc_qual_order = (unsigned int)atoi(optarg);
             break;
         case 's':
             opt_flag_stats = true;
@@ -234,7 +216,7 @@ int main(int argc, char* argv[])
 
         /* Invoke file encoder. */
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz, tsc_qual_order);
+        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
         str_t* fileenc_stats = fileenc_encode(fileenc);
         if (opt_flag_stats) tsc_log("\n%s\n", fileenc_stats->s);
         fileenc_free(fileenc);

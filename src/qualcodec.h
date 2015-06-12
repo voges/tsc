@@ -10,17 +10,22 @@
 
 #include "cbufint64.h"
 #include "cbufstr.h"
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define QUALCODEC_WINDOW_SZ 10
+#define QUALCODEC_WINDOW_SZ 100
+#define QUALCODEC_MAX 126
+#define QUALCODEC_MIN 33
+#define QUALCODEC_RANGE (QUALCODEC_MAX-QUALCODEC_MIN)
+#define QUALCODEC_TABLE_SZ (QUALCODEC_RANGE*QUALCODEC_RANGE*QUALCODEC_RANGE)
+#define QUALCODEC_MEM_SZ 3
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct qualenc_t_ {
-    unsigned int order;     /* order of compression                       */
     uint32_t     block_lc;  /* no. of records processed in the curr block */
     cbufstr_t*   qual_cbuf; /* circular buffer for QUALity scores         */
     str_t*       out_buf;   /* output string (for the arithmetic coder)   */
@@ -29,11 +34,11 @@ typedef struct qualenc_t_ {
     cbufint64_t* qual_cbuf_len;
     cbufint64_t* qual_cbuf_mu;
     cbufint64_t* qual_cbuf_var;
-    unsigned int freq[256 * 256][256]; /* 16 MiB */
-    char         pred[256];
+    unsigned int freq[QUALCODEC_TABLE_SZ][QUALCODEC_RANGE]; /* 300 MiB */
+    char         pred[QUALCODEC_TABLE_SZ];
 } qualenc_t;
 
-qualenc_t* qualenc_new(const unsigned int order);
+qualenc_t* qualenc_new(void);
 void qualenc_free(qualenc_t* qualenc);
 void qualenc_add_record(qualenc_t* qualenc, const char* qual);
 size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp);

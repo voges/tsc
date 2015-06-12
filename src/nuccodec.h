@@ -14,13 +14,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define NUCCODEC_WINDOW_SZ 10
+#define NUCCODEC_WINDOW_SZ 100
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct nucenc_t_ {
     uint32_t     block_lc;   /* no. of records processed in the curr block */
+    uint32_t     block_ln;   /* no. of records where diff() didn't succeed */
     cbufint64_t* pos_cbuf;   /* circular buffer for POSitions              */
     cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs                 */
     cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences              */

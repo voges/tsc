@@ -23,6 +23,7 @@
 static void nucenc_init(nucenc_t* nucenc)
 {
     nucenc->block_lc = 0;
+    nucenc->block_ln = 0;
 }
 
 nucenc_t* nucenc_new(void)
@@ -110,7 +111,7 @@ static bool nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, u
 
     /* Determine length of match. */
     if (pos_off > ref->n) {
-        tsc_warning("Position offset too large: %d\n", pos_off);
+        //tsc_warning("Position offset too large: %d\n", pos_off);
         return false;
     }
     uint64_t match_len = ref->n - pos_off;
@@ -198,7 +199,10 @@ void nucenc_add_record(nucenc_t*      nucenc,
             cbuf_idx++;
 
             /* Compute difference */
-            if (!nucenc_diff(diff, exp, pos, ref, ref_pos)) continue;
+            if (!nucenc_diff(diff, exp, pos, ref, ref_pos)) {
+                nucenc->block_ln++;
+                continue;
+            }
             else diff_ok = true;
 
             /* Check the entropy of the difference. */
@@ -218,7 +222,7 @@ void nucenc_add_record(nucenc_t*      nucenc,
             str_append_str(nucenc->out_buf, diff_min);
         } else {
             if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
-            char tmp[101]; snprintf(tmp, sizeof(tmp), "%jd", pos);
+            char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
             str_append_cstr(nucenc->out_buf, tmp);
             str_append_cstr(nucenc->out_buf, "\t");
             str_append_cstr(nucenc->out_buf, cigar);
@@ -244,7 +248,7 @@ void nucenc_add_record(nucenc_t*      nucenc,
 
         /* Output record. */
         if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
-        char tmp[101]; snprintf(tmp, sizeof(tmp), "%jd", pos);
+        char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
         str_append_cstr(nucenc->out_buf, tmp);
         str_append_cstr(nucenc->out_buf, "\t");
         str_append_cstr(nucenc->out_buf, cigar);
@@ -276,6 +280,7 @@ void nucenc_add_record(nucenc_t*      nucenc,
 static void nucenc_reset(nucenc_t* nucenc)
 {
     nucenc->block_lc = 0;
+    nucenc->block_ln = 0;
     cbufint64_clear(nucenc->pos_cbuf);
     cbufstr_clear(nucenc->cigar_cbuf);
     cbufstr_clear(nucenc->seq_cbuf);
@@ -303,6 +308,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int ac_in_sz = nucenc->out_buf->n;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
+    //unsigned char* ac_out = arith_compress_O1(ac_in, ac_in_sz, &ac_out_sz);
     if (tsc_verbose) tsc_log("Compressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
 
     /* Write compressed block to ofp. */
@@ -314,11 +320,11 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     /* Log this if in verbose mode. */
     if (tsc_verbose)
         tsc_log("\tWrote NUC block:\n"
-                "\t  lines : %12zu\n"
+                "\t  lines : %12zu (%zu unmapped)\n"
                 "\t  header: %12zu bytes\n"
                 "\t  data  : %12zu bytes\n"
                 "\t  total : %12zu bytes\n",
-                (size_t)nucenc->block_lc,
+                (size_t)nucenc->block_lc, (size_t)nucenc->block_ln,
                 header_byte_cnt,
                 data_byte_cnt,
                 byte_cnt);
@@ -426,6 +432,7 @@ void nucdec_decode_block(nucdec_t* nucdec,
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
+    //unsigned char* ac_out = arith_uncompress_O1(ac_in, ac_in_sz, &ac_out_sz);
     if (tsc_verbose) tsc_log("Uncompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
     bbuf_free(bbuf);
 

@@ -29,7 +29,7 @@ typedef struct fileenc_t_ {
     str_t*       stats;
 } fileenc_t;
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz, const unsigned int qual_order);
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz);
 void fileenc_free(fileenc_t* fileenc);
 str_t* fileenc_encode(fileenc_t* fileenc);
 

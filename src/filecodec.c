@@ -22,12 +22,12 @@ static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const uint64_
     fileenc->block_sz = block_sz;
 }
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz, const unsigned int qual_order)
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc_or_die(sizeof(fileenc_t));
     fileenc->samparser = samparser_new(ifp);
     fileenc->nucenc = nucenc_new();
-    fileenc->qualenc = qualenc_new(qual_order);
+    fileenc->qualenc = qualenc_new();
     fileenc->auxenc = auxenc_new();
     fileenc->stats = str_new();
     fileenc_init(fileenc, ifp, ofp, block_sz);
