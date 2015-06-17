@@ -6,4 +6,5 @@ src/tsc
 src/untsc
 doxygen/*
 .directory
+*tmp
 
