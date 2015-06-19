@@ -26,7 +26,7 @@ static void samparser_init(samparser_t* samparser, FILE* fp)
 
 samparser_t* samparser_new(FILE* fp)
 {
-    samparser_t* samparser = (samparser_t*)tsc_malloc_or_die(sizeof(samparser_t));
+    samparser_t* samparser = (samparser_t*)tsc_malloc(sizeof(samparser_t));
     samparser->head = str_new();
     samparser_init(samparser, fp);
     return samparser;

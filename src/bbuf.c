@@ -17,7 +17,7 @@ static void bbuf_init(bbuf_t* bbuf)
 
 bbuf_t* bbuf_new(void)
 {
-    bbuf_t* bbuf = (bbuf_t*)tsc_malloc_or_die(sizeof(bbuf_t));
+    bbuf_t* bbuf = (bbuf_t*)tsc_malloc(sizeof(bbuf_t));
     bbuf_init(bbuf);
     return bbuf;
 }
@@ -48,7 +48,7 @@ void bbuf_clear(bbuf_t* bbuf)
 void bbuf_reserve(bbuf_t* bbuf, const size_t sz)
 {
     bbuf->sz = sz;
-    bbuf->bytes = (unsigned char*)tsc_realloc_or_die(bbuf->bytes, bbuf->sz);
+    bbuf->bytes = (unsigned char*)tsc_realloc(bbuf->bytes, bbuf->sz);
 }
 
 void bbuf_extend(bbuf_t* bbuf, const size_t ex)

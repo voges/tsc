@@ -23,7 +23,7 @@ static void auxenc_init(auxenc_t* auxenc)
 
 auxenc_t* auxenc_new(void)
 {
-    auxenc_t* auxenc = (auxenc_t*)tsc_malloc_or_die(sizeof(auxenc_t));
+    auxenc_t* auxenc = (auxenc_t*)tsc_malloc(sizeof(auxenc_t));
     auxenc->out_buf = str_new();
     auxenc_init(auxenc);
     return auxenc;
@@ -141,7 +141,7 @@ static void auxdec_init(auxdec_t* auxdec)
 
 auxdec_t* auxdec_new(void)
 {
-    auxdec_t* auxdec = (auxdec_t*)tsc_malloc_or_die(sizeof(auxdec_t));
+    auxdec_t* auxdec = (auxdec_t*)tsc_malloc(sizeof(auxdec_t));
     auxdec_init(auxdec);
     return auxdec;
 }

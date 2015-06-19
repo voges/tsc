@@ -75,7 +75,7 @@ unsigned char *ricecodec_compress(unsigned char* in,
     *out_size = ceil(bit_cnt_best / 8);
 
     /* Allocate enough memory for 'out'. */
-    out = (unsigned char*)tsc_malloc_or_die(*out_size);
+    out = (unsigned char*)tsc_malloc(*out_size);
 
     /* Output. */
     ricecodec_put_bit(out, (k_best >> 2) & 1);
@@ -122,7 +122,7 @@ unsigned char *ricecodec_uncompress(unsigned char* in,
     *out_size = 0;
 
     /* Allocate enough memory for 'out'. */
-    out = (unsigned char*)tsc_malloc_or_die(100 * in_size);
+    out = (unsigned char*)tsc_malloc(100 * in_size);
 
     unsigned int k = (ricecodec_get_bit(in) << 2) |
                      (ricecodec_get_bit(in) << 1) |
@@ -143,7 +143,7 @@ unsigned char *ricecodec_uncompress(unsigned char* in,
         (*out_size)++;
     }
 
-    out = (unsigned char*)tsc_realloc_or_die(out, *out_size);
+    out = (unsigned char*)tsc_realloc(out, *out_size);
 
     return out;
 }

@@ -1,5 +1,5 @@
 EXEC        = tsc
-ALIAS       = untsc
+ALIAS       = detsc
 CC          = gcc
 CFLAGS      = -O0 -Wall -D _GNU_SOURCE #-ansi -pedantic
 INCLUDES    = #-I
@@ -16,7 +16,7 @@ default: all
 
 all: $(EXEC) $(ALIAS)
 
-debug: CFLAGS += -g
+debug: CFLAGS += -g -DDBG
 debug: clean all
 
 $(EXEC): $(OBJECTS) 

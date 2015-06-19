@@ -17,8 +17,8 @@ static void cbufstr_init(cbufstr_t* cbufstr, const size_t sz)
 
 cbufstr_t* cbufstr_new(const size_t sz)
 {
-    cbufstr_t* cbufstr = (cbufstr_t*)tsc_malloc_or_die(sizeof(cbufstr_t));
-    cbufstr->buf = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * sz);
+    cbufstr_t* cbufstr = (cbufstr_t*)tsc_malloc(sizeof(cbufstr_t));
+    cbufstr->buf = (str_t**)tsc_malloc(sizeof(str_t*) * sz);
     unsigned int i = 0;
     for (i = 0; i < sz; i++) cbufstr->buf[i] = str_new();
     cbufstr_init(cbufstr, sz);

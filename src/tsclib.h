@@ -13,13 +13,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG(c,...) fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+/* Safe debug macro. */
+#if DBG
+    #define DEBUG(c,...)\
+        do {\
+            fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, \
+                    __FUNCTION__, ##__VA_ARGS__);\
+        } while (false)
+#else
+    #define DEBUG(c,...) do { } while (false)
+#endif
 
 #define KB 1024LL
 #define MB (KB * 1024LL)
 #define GB (MB * 1024LL)
 
-#define TSC_BLOCK_SZ_DEFAULT 100000
+#define TSC_BLOCK_SZ_DEFAULT 100000LL
 
 typedef enum {
     TSC_MODE_COMPRESS,
@@ -41,10 +50,10 @@ void tsc_abort(void);
 void tsc_error(const char* fmt, ...);
 void tsc_warning(const char* fmt, ...);
 void tsc_log(const char* fmt, ...);
-void* tsc_malloc_or_die(const size_t n);
-void* tsc_realloc_or_die(void* ptr, const size_t n);
-FILE* tsc_fopen_or_die(const char* fname, const char* mode);
-void tsc_fclose_or_die(FILE* fp);
+void* tsc_malloc(const size_t n);
+void* tsc_realloc(void* ptr, const size_t n);
+FILE* tsc_fopen(const char* fname, const char* mode);
+void tsc_fclose(FILE* fp);
 
 #endif /* TSC_TSCLIB_H */
 

@@ -18,8 +18,8 @@ static void cbufint64_init(cbufint64_t* cbufint64, const size_t sz)
 
 cbufint64_t* cbufint64_new(const size_t sz)
 {
-    cbufint64_t* cbufint64 = (cbufint64_t*)tsc_malloc_or_die(sizeof(cbufint64_t));
-    cbufint64->buf = (int64_t*)tsc_malloc_or_die(sizeof(int64_t) * sz);
+    cbufint64_t* cbufint64 = (cbufint64_t*)tsc_malloc(sizeof(cbufint64_t));
+    cbufint64->buf = (int64_t*)tsc_malloc(sizeof(int64_t) * sz);
     memset(cbufint64->buf, 0x00, sz * sizeof(int64_t));
     cbufint64_init(cbufint64, sz);
     return cbufint64;

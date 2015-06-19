@@ -24,7 +24,7 @@ static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const uint64_
 
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const uint64_t block_sz)
 {
-    fileenc_t* fileenc = (fileenc_t *)tsc_malloc_or_die(sizeof(fileenc_t));
+    fileenc_t* fileenc = (fileenc_t *)tsc_malloc(sizeof(fileenc_t));
     fileenc->samparser = samparser_new(ifp);
     fileenc->nucenc = nucenc_new();
     fileenc->qualenc = qualenc_new();
@@ -178,7 +178,7 @@ static void filedec_init(filedec_t* filedec, FILE* ifp, FILE* ofp)
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp)
 {
-    filedec_t* filedec = (filedec_t *)tsc_malloc_or_die(sizeof(filedec_t));
+    filedec_t* filedec = (filedec_t *)tsc_malloc(sizeof(filedec_t));
     filedec->nucdec = nucdec_new();
     filedec->qualdec = qualdec_new();
     filedec->auxdec = auxdec_new();
@@ -257,11 +257,11 @@ str_t* filedec_decode(filedec_t* filedec)
         if (tsc_verbose) tsc_log("Decoding block %"PRIu32": %"PRIu32" lines\n", block_cnt, block_line_cnt);
 
         /* Allocate memory to prepare decoding of the next block. */
-        uint64_t* pos = (uint64_t*)tsc_malloc_or_die(sizeof(uint64_t) * block_line_cnt);
-        str_t** cigar = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
-        str_t** seq = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
-        str_t** qual = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
-        str_t** aux = (str_t**)tsc_malloc_or_die(sizeof(str_t*) * block_line_cnt);
+        uint64_t* pos = (uint64_t*)tsc_malloc(sizeof(uint64_t) * block_line_cnt);
+        str_t** cigar = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
+        str_t** seq = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
+        str_t** qual = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
+        str_t** aux = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
 
         size_t i = 0;
         for (i = 0; i < block_line_cnt; i++) {

@@ -28,7 +28,7 @@ static void nucenc_init(nucenc_t* nucenc)
 
 nucenc_t* nucenc_new(void)
 {
-    nucenc_t* nucenc = (nucenc_t*)tsc_malloc_or_die(sizeof(nucenc_t));
+    nucenc_t* nucenc = (nucenc_t*)tsc_malloc(sizeof(nucenc_t));
     nucenc->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
     nucenc->cigar_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucenc->seq_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
@@ -345,7 +345,7 @@ static void nucdec_init(nucdec_t* nucdec)
 
 nucdec_t* nucdec_new(void)
 {
-    nucdec_t* nucdec = (nucdec_t*)tsc_malloc_or_die(sizeof(nucdec_t));
+    nucdec_t* nucdec = (nucdec_t*)tsc_malloc(sizeof(nucdec_t));
     nucdec->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
     nucdec->cigar_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucdec->seq_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);

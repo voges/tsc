@@ -21,10 +21,10 @@ static bool tsc_yesno(void)
 void tsc_cleanup(void)
 {
     if (tsc_in_fp != NULL) {
-        tsc_fclose_or_die(tsc_in_fp);
+        tsc_fclose(tsc_in_fp);
     }
     if (tsc_out_fp != NULL) {
-        tsc_fclose_or_die(tsc_out_fp);
+        tsc_fclose(tsc_out_fp);
     }
     if (tsc_out_fname->n > 0) {
         tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
@@ -75,21 +75,21 @@ void tsc_log(const char* fmt, ...)
     free(msg);
 }
 
-void* tsc_malloc_or_die(const size_t n)
+void* tsc_malloc(const size_t n)
 {
     void* p = malloc(n);
     if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
     return p;
 }
 
-void* tsc_realloc_or_die(void* ptr, const size_t n)
+void* tsc_realloc(void* ptr, const size_t n)
 {
     void* p = realloc(ptr, n);
     if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
     return p;
 }
 
-FILE* tsc_fopen_or_die(const char* fname, const char* mode)
+FILE* tsc_fopen(const char* fname, const char* mode)
 {
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
@@ -99,7 +99,7 @@ FILE* tsc_fopen_or_die(const char* fname, const char* mode)
     return fp;
 }
 
-void tsc_fclose_or_die(FILE* fp)
+void tsc_fclose(FILE* fp)
 {
     if (fp != NULL) {
         fclose(fp);

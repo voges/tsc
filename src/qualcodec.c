@@ -39,7 +39,7 @@ static void qualenc_init(qualenc_t* qualenc)
 
 qualenc_t* qualenc_new(void)
 {
-    qualenc_t* qualenc = (qualenc_t*)tsc_malloc_or_die(sizeof(qualenc_t));
+    qualenc_t* qualenc = (qualenc_t*)tsc_malloc(sizeof(qualenc_t));
     qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
     qualenc->out_buf = str_new();
     qualenc->qual_cbuf_len = cbufint64_new(QUALCODEC_WINDOW_SZ);
@@ -181,7 +181,7 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
 
     /* Assuming 33 <= QUAL <= 126 */
     DEBUG("%s", qual);
-    char* q = (char*)tsc_malloc_or_die(strlen(qual));
+    char* q = (char*)tsc_malloc(strlen(qual));
     size_t itr = 0;
     for (itr = 0; itr < strlen(qual); itr++) {
         if (qual[itr] < QUALCODEC_MIN || qual[itr] > QUALCODEC_MAX)
@@ -358,7 +358,7 @@ static void qualdec_init(qualdec_t* qualdec)
 
 qualdec_t* qualdec_new(void)
 {
-    qualdec_t* qualdec = (qualdec_t*)tsc_malloc_or_die(sizeof(qualdec_t));
+    qualdec_t* qualdec = (qualdec_t*)tsc_malloc(sizeof(qualdec_t));
     qualdec->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
     qualdec_init(qualdec);
     return qualdec;
