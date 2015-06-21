@@ -13,7 +13,7 @@
 #include <stdbool.h>
 
 typedef struct samparser_t_ {
-    FILE*       fp;   /* infile pointer     */
+    FILE*       fp;   /* file pointer       */
     str_t*      head; /* SAM header         */
     samrecord_t curr; /* current SAM record */
 } samparser_t;

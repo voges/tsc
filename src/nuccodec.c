@@ -165,10 +165,10 @@ static double nucenc_entropy(str_t* seq)
     return h;
 }
 
-void nucenc_add_record(nucenc_t*      nucenc,
-                       const uint64_t pos,
-                       const char*    cigar,
-                       const char*    seq)
+static void nucenc_add_record_O1(nucenc_t*      nucenc,
+                                 const uint64_t pos,
+                                 const char*    cigar,
+                                 const char*    seq)
 {    
     /* Allocate memory for encoding. */
     str_t* exp = str_new();      /* expanded current sequence */
@@ -275,6 +275,36 @@ void nucenc_add_record(nucenc_t*      nucenc,
 
     /*DEBUG("out_buf: \n%s", nucenc->out_buf->s);*/
     nucenc->block_lc++;
+}
+
+static void nucenc_add_record_O0(nucenc_t*      nucenc,
+                                 const uint64_t pos,
+                                 const char*    cigar,
+                                 const char*    seq)
+{
+    /* This is just a fall trough to code blocks only with an entropy coder
+     * and without prediction.
+     */
+    str_append_cstr(nucenc->out_buf, "P"); /* mark this line as plain text */
+    if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
+    char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
+    str_append_cstr(nucenc->out_buf, tmp);
+    str_append_cstr(nucenc->out_buf, "\t");
+    str_append_cstr(nucenc->out_buf, cigar);
+    str_append_cstr(nucenc->out_buf, "\t");
+    str_append_cstr(nucenc->out_buf, seq);
+    str_append_cstr(nucenc->out_buf, "\n");
+    
+    nucenc->block_lc++;
+}
+
+void nucenc_add_record(nucenc_t*      nucenc,
+                       const uint64_t pos,
+                       const char*    cigar,
+                       const char*    seq)
+{
+    nucenc_add_record_O0(nucenc, pos, cigar, seq);
+    /*nucenc_add_record_O1(nucenc, pos, cigar, seq);*/
 }
 
 static void nucenc_reset(nucenc_t* nucenc)
@@ -437,13 +467,47 @@ void nucdec_decode_block(nucdec_t* nucdec,
     bbuf_free(bbuf);
 
     /* Decode block. */
+    typedef enum {
+        NUCDEC_MODE_PLAIN,
+        NUCDEC_MODE_CIPHER
+    } nucdec_mode_t;
+    
+    nucdec_mode_t nucdec_mode = NUCDEC_MODE_PLAIN;
     size_t i = 0;
     size_t line = 0;
+    size_t field = 0; /* 0: pos, 1: cigar, 2: seq */
+    bool new_line = true;
     for (i = 0; i < ac_out_sz; i++) {
-        if (ac_out[i] != '\n')
-            str_append_char(seq[line], (const char)ac_out[i]);
-        else
+        if (ac_out[i] == '\n') {
             line++;
+            field = 0;
+            new_line = true;
+            continue;
+        }
+        
+        if (new_line && ac_out[i] == 'P') { /* plain text */
+            nucdec_mode = NUCDEC_MODE_PLAIN;
+            continue;
+        } else { /* coded line */
+            nucdec_mode = NUCDEC_MODE_CIPHER;
+            continue;
+        }
+        
+        if (nucdec_mode == NUCDEC_MODE_PLAIN) {
+            if (ac_out[i] == '\t') {
+                field++;
+                continue;
+            }
+            
+            switch (field) {
+            case 0: pos[line] = 0;
+            case 1: str_append_char(cigar[line], (const char)ac_out[i]);
+            case 2: str_append_char(seq[line], (const char)ac_out[i]);
+            default: tsc_error("Wrong field ID during NUC decoding!\n");
+            }
+        } else { /* NUCDEC_MODE_CIPHER */
+            /* TODO */
+        }
     }
     /* TODO: Decode expand() and diff() */
 
