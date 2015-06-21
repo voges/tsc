@@ -40,8 +40,11 @@ static void ricecodec_put_bit(unsigned char* out, unsigned char  b)
 
 void ricecodec_encode(unsigned char x, int k)
 {
+    DEBUG("Encoding: %c (k = %d)\n", x, k);
     int m = 1 << k;
+    DEBUG("m = %d\n", m);
     int q = x / m;
+    DEBUG("q = %d (ones)\n", q);
     int i = 0;
 
     for (i = 0; i < q; i++) ricecodec_put_bit(out, 1);
@@ -50,7 +53,7 @@ void ricecodec_encode(unsigned char x, int k)
     for (i = (k - 1); i >= 0; i--) ricecodec_put_bit(out, (x >> i) & 1);
 }
 
-unsigned char *ricecodec_compress(unsigned char* in,
+unsigned char* ricecodec_compress(unsigned char* in,
                                   unsigned int   in_size,
                                   unsigned int*  out_size)
 {
@@ -83,8 +86,7 @@ unsigned char *ricecodec_compress(unsigned char* in,
     ricecodec_put_bit(out, (k_best     ) & 1);
 
     size_t i = 0;
-    for (i = 0; i < in_size; i++)
-        ricecodec_encode(in[i], k_best);
+    for (i = 0; i < in_size; i++) ricecodec_encode(in[i], k_best);
 
     /* Flush bit buffer. */
     i = 8 - filled;
@@ -110,7 +112,7 @@ unsigned char ricecodec_get_bit(unsigned char* in)
     return tmp;
 }
 
-unsigned char *ricecodec_uncompress(unsigned char* in,
+unsigned char* ricecodec_uncompress(unsigned char* in,
                                     unsigned int   in_size,
                                     unsigned int*  out_size)
 {

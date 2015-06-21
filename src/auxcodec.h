@@ -22,7 +22,7 @@ typedef struct auxenc_t_ {
 
 auxenc_t* auxenc_new(void);
 void auxenc_free(auxenc_t* auxenc);
-void auxenc_add_record(auxenc_t*   auxenc,
+void auxenc_add_record(auxenc_t*      auxenc,
                        const char*    qname,
                        const uint64_t flag,
                        const char*    rname,
@@ -30,7 +30,7 @@ void auxenc_add_record(auxenc_t*   auxenc,
                        const char*    rnext,
                        const uint64_t pnext,
                        const uint64_t tlen,
-                       const char* opt);
+                       const char*    opt);
 size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
 /*****************************************************************************

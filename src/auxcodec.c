@@ -105,7 +105,8 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     unsigned int ac_in_sz = auxenc->out_buf->n;
     unsigned int ac_out_sz = 0;
     unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Compressed AUX block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    if (tsc_verbose) tsc_log("Compressed AUX block with AC: %zu bytes -> "
+                             "%zu bytes\n", ac_in_sz, ac_out_sz);
 
     /* Write compressed block to ofp. */
     header_byte_cnt += fwrite_uint32(ofp, ac_out_sz);
@@ -219,7 +220,7 @@ void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux)
     size_t i = 0;
     size_t line = 0;
     for (i = 0; i < ac_out_sz; i++) {
-        if (ac_out[i] != '\n')
+        if (ac_out[i] != '\n') 
             str_append_char(aux[line], (const char)ac_out[i]);
         else
             line++;

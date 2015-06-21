@@ -319,9 +319,14 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
     unsigned int ec_in_sz = qualenc->out_buf->n;
     unsigned int ec_out_sz = 0;
     unsigned char* ec_out;
-    ec_out = arith_compress_O0(ec_in, ec_in_sz, &ec_out_sz);
+    //ec_out = arith_compress_O0(ec_in, ec_in_sz, &ec_out_sz);
     //ec_out = arith_compress_O1(ec_in, ec_in_sz, &ec_out_sz);
-    //ec_out = ricecodec_compress(ec_in, ec_in_sz, &ec_out_sz);
+    
+    // Testing Rice codec
+    size_t i = 0;
+    for (i = 0; i < ec_in_sz; i++) ec_in[i] = 0;
+    
+    ec_out = ricecodec_compress(ec_in, ec_in_sz, &ec_out_sz);
     if (tsc_verbose) tsc_log("Compressed QUAL block: %zu bytes -> %zu bytes\n", ec_in_sz, ec_out_sz);
 
     /* Write compressed block to ofp. */
@@ -440,9 +445,11 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
     bbuf_free(bbuf);
 
     /* Decode block. */
+    DEBUG("Printing decoded QUAL block.\n");
     size_t i = 0;
     size_t line = 0;
     for (i = 0; i < ec_out_sz; i++) {
+        printf("%c ", ec_out[i]);
         if (ec_out[i] != '\n')
             str_append_char(qual[line], (const char)ec_out[i]);
         else

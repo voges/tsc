@@ -15,7 +15,8 @@
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
-static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, const uint64_t block_sz)
+static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp, 
+                         const uint64_t block_sz)
 {
     fileenc->ifp = ifp;
     fileenc->ofp = ofp;
@@ -52,8 +53,8 @@ void fileenc_free(fileenc_t* fileenc)
 str_t* fileenc_encode(fileenc_t* fileenc)
 {
     /* Statistics. */
-    uint32_t block_cnt   = 0; /* total no. of blocks written                */
-    uint32_t line_cnt    = 0; /* total no. of lines processed               */
+    uint32_t block_cnt   = 0; /* block counter                              */
+    uint32_t line_cnt    = 0; /* line counter                               */
     size_t byte_cnt      = 0; /* total no. of bytes written                 */
     size_t ff_byte_cnt   = 0; /* total no. of bytes written for file format */
     size_t sh_byte_cnt   = 0; /* total no. of bytes written for SAM header  */
@@ -279,14 +280,6 @@ str_t* filedec_decode(filedec_t* filedec)
         /* Write NUC, QUAL and AUX in correct order to outfile. */
         if (tsc_verbose) tsc_log("Writing decoded block %"PRIu32": %zu lines\n", block_cnt, block_line_cnt);
         for (i = 0; i < block_line_cnt; i++) {
-
-            /* !!!DUMMIES!!!*/
-            pos[i] = i;
-            str_append_cstr(cigar[i], "10M");
-            //str_append_cstr(seq[i], "ACGT");
-            //str_clear(qual[i]); str_append_cstr(qual[i], "qual");
-            /* !!!DUMMIES!!!*/
-
             enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
                    RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
             char* sam_fields[12];
