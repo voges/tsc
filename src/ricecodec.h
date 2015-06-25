@@ -2,18 +2,18 @@
  * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
  * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
  *                                                                            *
- * This file is part of tsc.                                                  *
+ * This file is part of ricecodec.                                            *
  ******************************************************************************/
 
-#ifndef TSC_RICECODEC_H
-#define TSC_RICECODEC_H
+#ifndef RICECODEC_H
+#define RICECODEC_H
 
-unsigned char *ricecodec_compress(unsigned char* in,
+unsigned char* ricecodec_compress(unsigned char* in,
                                   unsigned int   in_size,
                                   unsigned int*  out_size);
-unsigned char *ricecodec_uncompress(unsigned char* in,
+unsigned char* ricecodec_decompress(unsigned char* in,
                                     unsigned int   in_size,
                                     unsigned int*  out_size);
 
-#endif /* TSC_RICECODEC_H */
+#endif /* RICECODEC_H */
 
