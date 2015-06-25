@@ -8,6 +8,7 @@
 #ifndef TNTLIB_COMMON_H
 #define TNTLIB_COMMON_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
