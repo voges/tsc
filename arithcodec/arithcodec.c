@@ -1,10 +1,13 @@
-/*
- * Range Coder portion derived from code by Eugene Shelwien (c) 2003.
- */
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of arithcodec.                                           *
+ ******************************************************************************/
 
 /*
  * Copyright (c) 2014 Genome Research Ltd.
- * Author(s): James Bonfield
+ * Author(s): James Bonfield, Wellcome Trust Sanger Institute
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -18,9 +21,9 @@
  *       with the distribution.
  *
  *    3. Neither the names Genome Research Ltd and Wellcome Trust Sanger
- *    Institute nor the names of its contributors may be used to endorse
- *    or promote products derived from this software without specific
- *    prior written permission.
+ *       Institute nor the names of its contributors may be used to endorse
+ *       or promote products derived from this software without specific
+ *       prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY GENOME RESEARCH LTD AND CONTRIBUTORS "AS
  * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
@@ -36,40 +39,34 @@
  */
 
 /*
- * Author: James Bonfield, Wellcome Trust Sanger Institute. 2014
- */
-
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <assert.h>
-#include <string.h>
-#include <float.h>
-#include <sys/time.h>
-
-//#define TEST_MAIN
-
-#define ABS(a) ((a)>0?(a):-(a))
-#define BLK_SIZE 1000000
-
-// Room to allow for expanded BLK_SIZE on worst case compression.
-#define BLK_SIZE2 ((int)(1.05*BLK_SIZE+10))
-
-//#define UNROLLED
-
-/*-----------------------------------------------------------------------------
- * Arithmetic coder. clr.cdr from fqz_comp. Adapted from Eugene Shelwien's
- * original from his coders6c2 archive.
+ * Range Coder portion derived from code by Eugene Shelwien's original from
+ * his coders6c2 archive (c) 2003.
+ * Range coder adopted by James Bonfield, Wellcome Trust Sanger Insitute (c)
+ * 2014.
+ * Subsequently, arithmetic coder adopted by Jan Voges, Institut fuer
+ * Informationsverarbeitung (TNT) (c) 2015.
  */
 
 /*
  * Note it is up to the calling code to ensure that no overruns on input and
  * output buffers occur.
- *
- * Call the input() and output() functions to set and query the current
- * buffer locations.
  */
+
+#include "arithcodec.h"
+#include <assert.h>
+#include <float.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#define ABS(a) ((a)>0?(a):-(a))
+#define BLK_SIZE 1000000
+/* Room to allow for expanded BLK_SIZE on worst case compression. */
+#define BLK_SIZE2 ((int)(1.05*BLK_SIZE+10))
+
+#define ARITHCODEC_UNROLLED
 
 static inline uint32_t i_log2(const uint32_t x) {
     uint32_t y;
@@ -78,12 +75,12 @@ static inline uint32_t i_log2(const uint32_t x) {
             : "r" (x)
             );
 
-    // or 31-__builtin_clz(x);
+    /*or 31-__builtin_clz(x);*/
 
     return y;
 }
 
-#define  TOP       (1<<24)
+#define TOP (1<<24)
 
 #define TF_SHIFT 16
 #define TOTFREQ (1<<TF_SHIFT)
@@ -93,57 +90,65 @@ typedef unsigned char uc;
 typedef struct {
     uint64_t low;
     uint32_t range, code;
-
     uc *in_buf;
     uc *out_buf;
-} RngCoder;
+} rangecoder_t;
 
-double RC_recip[65536];
-void RC_init(void) {
+double rangecoder_recip[65536];
+
+void rangecoder_init(void)
+{
     int i;
     for (i = 0; i < 65536; i++)
-        RC_recip[i] = (1.0+DBL_EPSILON)/i;
+        rangecoder_recip[i] = (1.0+DBL_EPSILON)/i;
 }
 
-//uint32_t RC_recip2b[65536][2];
-uint32_t RC_recip3[1<<(32-TF_SHIFT)];
-void RC_init2(void) {
+/* uint32_t rangecoder_recip2b[65536][2]; */
+uint32_t rangecoder_recip3[1<<(32-TF_SHIFT)];
+
+void rangecoder_init2(void)
+{
     int i;
     for (i = 1; i < (1<<(32-TF_SHIFT)); i++) {
-        //double d = 1.0/i;
-        //d *= ((uint64_t)1)<<32;
-        //d *= ((uint64_t)1)<<32;
-        //d += 255;
-        //RC_recip2b[i][0] = ((uint64_t)d)>>32;
-        //RC_recip2b[i][1] = (uint64_t)d;
+        /*double d = 1.0/i;
+        d *= ((uint64_t)1)<<32;
+        d *= ((uint64_t)1)<<32;
+        d += 255;
+        rangecoder_recip2b[i][0] = ((uint64_t)d)>>32;
+        rangecoder_recip2b[i][1] = (uint64_t)d;*/
 
-        RC_recip3[i] = 1+((1LL<<31) * ((1LL<<(i_log2(i)+1)) - i)) / i;
+        rangecoder_recip3[i] = 1+((1LL<<31) * ((1LL<<(i_log2(i)+1)) - i)) / i;
     }
 }
 
-
-static inline void RC_input(RngCoder *rc, char *in) {
+static inline void rangecoder_input(rangecoder_t *rc, char *in)
+{
     rc->out_buf = rc->in_buf = (uc *)in;
 }
 
-static inline void RC_output(RngCoder *rc, char *out) {
+static inline void rangecoder_output(rangecoder_t *rc, char *out)
+{
     rc->in_buf = rc->out_buf = (uc *)out;
 }
 
-static inline int RC_size_out(RngCoder *rc) {
+static inline int rangecoder_size_out(rangecoder_t *rc)
+{
     return rc->out_buf - rc->in_buf;
 }
 
-static inline int RC_size_in(RngCoder *rc) {
+static inline int rangecoder_size_in(rangecoder_t *rc)
+{
     return rc->in_buf - rc->out_buf;
 }
 
-static inline void RC_StartEncode(RngCoder *rc) { 
+static inline void rangecoder_start_encode(rangecoder_t *rc)
+{
     rc->low=0;
     rc->range=(uint32_t)-1;
 }
 
-static inline void RC_StartDecode(RngCoder *rc) { 
+static inline void rangecoder_start_decode(rangecoder_t *rc)
+{
     int i;
 
     rc->code=0;
@@ -153,7 +158,8 @@ static inline void RC_StartDecode(RngCoder *rc) {
         rc->code = (rc->code<<8) | *rc->in_buf++;
 }
 
-static inline void RC_FinishEncode(RngCoder *rc) { 
+static inline void rangecoder_finish_encode(rangecoder_t *rc)
+{
     int i;
     for (i = 0; i < 8; i++) {
         *rc->out_buf++ = rc->low>>56;
@@ -161,13 +167,16 @@ static inline void RC_FinishEncode(RngCoder *rc) {
     }
 }
 
-static inline void RC_FinishDecode(RngCoder *rc) {}
+static inline void rangecoder_finish_decode(rangecoder_t *rc) {}
 
-static inline void RC_Encode(RngCoder *rc, uint32_t cumFreq, uint32_t freq) {
+static inline void rangecoder_encode(rangecoder_t *rc,
+                                     uint32_t cumFreq,
+                                     uint32_t freq)
+{
     rc->low  += cumFreq * (rc->range >>= TF_SHIFT);
     rc->range*= freq;
 
-    //if (cumFreq + freq > TOTFREQ) abort();
+    /*if (cumFreq + freq > TOTFREQ) abort();*/
 
     if (rc->range>=TOP) return;
     do {
@@ -177,23 +186,24 @@ static inline void RC_Encode(RngCoder *rc, uint32_t cumFreq, uint32_t freq) {
     } while (rc->range<TOP);
 }
 
-static inline uint32_t RC_GetFreq(RngCoder *rc) {
+static inline uint32_t rangecoder_GetFreq(rangecoder_t *rc)
+{
     //fprintf(stderr, "%d / %d = %d\n", rc->code, (rc->range >> TF_SHIFT), rc->code / (rc->range >> TF_SHIFT));
 
     return rc->code / (rc->range >>= TF_SHIFT); // 10.57
-    //return rc->code * RC_recip[rc->range >>= TF_SHIFT]; // 10.99
+    //return rc->code * rangecoder_recip[rc->range >>= TF_SHIFT]; // 10.99
 
 #if 1
     // 9.94 elapsed
     rc->range >>= TF_SHIFT;
-    uint32_t t = (rc->code * (uint64_t)RC_recip3[rc->range]) >> 31;
+    uint32_t t = (rc->code * (uint64_t)rangecoder_recip3[rc->range]) >> 31;
 
     return (((rc->code - t)>>1) + t) >> i_log2(rc->range);
     //return (rc->code + t) >> (1+i_log2(rc->range));
 #endif
 
 #if 0
-    /* Multiply 32-bit rc->code by 64-bit RC_recip2[rc->range], which is
+    /* Multiply 32-bit rc->code by 64-bit rangecoder_recip2[rc->range], which is
      * split into two 32-bit registers r1, r2.
      *
      * Alas it's typically slower than the division, but keeping it here
@@ -201,13 +211,13 @@ static inline uint32_t RC_GetFreq(RngCoder *rc) {
      */
     rc->range >>= TF_SHIFT;
     uint64_t a  = rc->code;
-    uint64_t r1 = a * RC_recip2b[rc->range][0];
-    uint64_t r2 = a * RC_recip2b[rc->range][1];
+    uint64_t r1 = a * rangecoder_recip2b[rc->range][0];
+    uint64_t r2 = a * rangecoder_recip2b[rc->range][1];
     return (r1 + (r2>>32)) >> 32;
 #endif
 }
 
-static inline void RC_Decode(RngCoder *rc, uint32_t cumFreq, uint32_t freq) {
+static inline void rangecoder_decode(rangecoder_t *rc, uint32_t cumFreq, uint32_t freq) {
     uint32_t temp = cumFreq*rc->range;
     rc->low  += temp;
     rc->code -= temp;
@@ -220,22 +230,21 @@ static inline void RC_Decode(RngCoder *rc, uint32_t cumFreq, uint32_t freq) {
     }
 }
 
-
-#ifdef UNROLLED
-/*-----------------------------------------------------------------------------
+#ifdef ARITHCODEC_UNROLLED
+/*
  * Memory to memory compression functions.
  *
- * These are unrolled 4 or 8 way versions. The input/output is not compatible
- * with the original versions, but obviously unrolled encoder works with the
- * unrolled decoder
+ * These are ARITHCODEC_UNROLLED 4 or 8 way versions. The input/output is not compatible
+ * with the original versions, but obviously ARITHCODEC_UNROLLED encoder works with the
+ * ARITHCODEC_UNROLLED decoder
  */
-unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size,
+unsigned char *arith_compress_o0(unsigned char *in, unsigned int in_size,
                                  unsigned int *out_size) {
     unsigned char *out_buf = malloc(1.05*in_size + 257*257*3 + 21);
     unsigned char *cp;
     int F[256], C[256], T = 0, i, j, n, i_end;
     unsigned char c;
-    RngCoder rc[8];
+    rangecoder_t rc[8];
     char *blk0 = malloc(BLK_SIZE2);
     char *blk1 = malloc(BLK_SIZE2);
     char *blk2 = malloc(BLK_SIZE2);
@@ -280,15 +289,15 @@ unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size,
     *cp++ = 0;
 
 
-    RC_output(&rc[0], blk0);
-    RC_output(&rc[1], blk1);
-    RC_output(&rc[2], blk2);
-    RC_output(&rc[3], blk3);
+    rangecoder_output(&rc[0], blk0);
+    rangecoder_output(&rc[1], blk1);
+    rangecoder_output(&rc[2], blk2);
+    rangecoder_output(&rc[3], blk3);
 
-    RC_StartEncode(&rc[0]);
-    RC_StartEncode(&rc[1]);
-    RC_StartEncode(&rc[2]);
-    RC_StartEncode(&rc[3]);
+    rangecoder_start_encode(&rc[0]);
+    rangecoder_start_encode(&rc[1]);
+    rangecoder_start_encode(&rc[2]);
+    rangecoder_start_encode(&rc[3]);
 
     // Tight encoding loop
     i_end = in_size&~3;
@@ -299,49 +308,49 @@ unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size,
         c[2] = in[i+2];
         c[3] = in[i+3];
 
-        RC_Encode(&rc[0], C[c[0]], F[c[0]]);
-        RC_Encode(&rc[1], C[c[1]], F[c[1]]);
-        RC_Encode(&rc[2], C[c[2]], F[c[2]]);
-        RC_Encode(&rc[3], C[c[3]], F[c[3]]);
+        rangecoder_encode(&rc[0], C[c[0]], F[c[0]]);
+        rangecoder_encode(&rc[1], C[c[1]], F[c[1]]);
+        rangecoder_encode(&rc[2], C[c[2]], F[c[2]]);
+        rangecoder_encode(&rc[3], C[c[3]], F[c[3]]);
     }
 
     // Tidy up any remainder that isn't a multiple of 4
     for (; i < in_size; i++) {
         unsigned char c;
         c = in[i];
-        RC_Encode(&rc[0], C[c], F[c]);
+        rangecoder_encode(&rc[0], C[c], F[c]);
     }
 
     // Flush encoders and collate buffers
-    RC_FinishEncode(&rc[0]);
-    RC_FinishEncode(&rc[1]);
-    RC_FinishEncode(&rc[2]);
-    RC_FinishEncode(&rc[3]);
+    rangecoder_finish_encode(&rc[0]);
+    rangecoder_finish_encode(&rc[1]);
+    rangecoder_finish_encode(&rc[2]);
+    rangecoder_finish_encode(&rc[3]);
 
-    *cp++ = (RC_size_out(&rc[0]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >>24) & 0xff;
-    memcpy(cp, blk0, RC_size_out(&rc[0])); cp += RC_size_out(&rc[0]);
+    *cp++ = (rangecoder_size_out(&rc[0]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >>24) & 0xff;
+    memcpy(cp, blk0, rangecoder_size_out(&rc[0])); cp += rangecoder_size_out(&rc[0]);
 
-    *cp++ = (RC_size_out(&rc[1]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >>24) & 0xff;
-    memcpy(cp, blk1, RC_size_out(&rc[1])); cp += RC_size_out(&rc[1]);
+    *cp++ = (rangecoder_size_out(&rc[1]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >>24) & 0xff;
+    memcpy(cp, blk1, rangecoder_size_out(&rc[1])); cp += rangecoder_size_out(&rc[1]);
 
-    *cp++ = (RC_size_out(&rc[2]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >>24) & 0xff;
-    memcpy(cp, blk2, RC_size_out(&rc[2])); cp += RC_size_out(&rc[2]);
-    
-    *cp++ = (RC_size_out(&rc[3]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >>24) & 0xff;
-    memcpy(cp, blk3, RC_size_out(&rc[3])); cp += RC_size_out(&rc[3]);
-    
+    *cp++ = (rangecoder_size_out(&rc[2]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >>24) & 0xff;
+    memcpy(cp, blk2, rangecoder_size_out(&rc[2])); cp += rangecoder_size_out(&rc[2]);
+
+    *cp++ = (rangecoder_size_out(&rc[3]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >>24) & 0xff;
+    memcpy(cp, blk3, rangecoder_size_out(&rc[3])); cp += rangecoder_size_out(&rc[3]);
+
     *out_size = cp - out_buf;
 
     cp = out_buf;
@@ -368,12 +377,12 @@ typedef struct {
     unsigned char *R;
 } ari_decoder;
 
-unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
+unsigned char *arith_decompress_o0(unsigned char *in, unsigned int in_size,
                                    unsigned int *out_size) {
     /* Load in the static tables */
     unsigned char *cp = in + 4;
     int i, j, x, out_sz, i_end;
-    RngCoder rc[4];
+    rangecoder_t rc[4];
     unsigned int sz;
     char *out_buf;
     ari_decoder D;
@@ -407,46 +416,46 @@ unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
 
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[0], (char *)cp+4);
-    RC_StartDecode(&rc[0]);
+    rangecoder_input(&rc[0], (char *)cp+4);
+    rangecoder_start_decode(&rc[0]);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[1], (char *)cp+4);
-    RC_StartDecode(&rc[1]);
+    rangecoder_input(&rc[1], (char *)cp+4);
+    rangecoder_start_decode(&rc[1]);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[2], (char *)cp+4);
-    RC_StartDecode(&rc[2]);
+    rangecoder_input(&rc[2], (char *)cp+4);
+    rangecoder_start_decode(&rc[2]);
     cp += sz+4;
-    
+
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[3], (char *)cp+4);
-    RC_StartDecode(&rc[3]);
+    rangecoder_input(&rc[3], (char *)cp+4);
+    rangecoder_start_decode(&rc[3]);
     cp += sz+4;
 
 
-    // Tight decoding loop, unrolled 4-ways
+    // Tight decoding loop, ARITHCODEC_UNROLLED 4-ways
     i_end = out_sz&~3;
     for (i = 0; i < i_end; i+=4) {
         uint32_t freq[4];
         unsigned char c[4];
 
-        freq[0] = RC_GetFreq(&rc[0]);
-        freq[1] = RC_GetFreq(&rc[1]);
-        freq[2] = RC_GetFreq(&rc[2]);
-        freq[3] = RC_GetFreq(&rc[3]);
+        freq[0] = rangecoder_GetFreq(&rc[0]);
+        freq[1] = rangecoder_GetFreq(&rc[1]);
+        freq[2] = rangecoder_GetFreq(&rc[2]);
+        freq[3] = rangecoder_GetFreq(&rc[3]);
 
         c[0] = D.R[freq[0]];
         c[1] = D.R[freq[1]];
         c[2] = D.R[freq[2]];
         c[3] = D.R[freq[3]];
 
-        RC_Decode(&rc[0], D.fc[c[0]].C, D.fc[c[0]].F);
-        RC_Decode(&rc[1], D.fc[c[1]].C, D.fc[c[1]].F);
-        RC_Decode(&rc[2], D.fc[c[2]].C, D.fc[c[2]].F);
-        RC_Decode(&rc[3], D.fc[c[3]].C, D.fc[c[3]].F);
+        rangecoder_decode(&rc[0], D.fc[c[0]].C, D.fc[c[0]].F);
+        rangecoder_decode(&rc[1], D.fc[c[1]].C, D.fc[c[1]].F);
+        rangecoder_decode(&rc[2], D.fc[c[2]].C, D.fc[c[2]].F);
+        rangecoder_decode(&rc[3], D.fc[c[3]].C, D.fc[c[3]].F);
 
         out_buf[i+0] = c[0];
         out_buf[i+1] = c[1];
@@ -456,17 +465,17 @@ unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
 
     // Tidy up any remainder that isn't a multiple of 4
     for (; i < out_sz; i++) {
-        uint32_t freq = RC_GetFreq(&rc[0]);
+        uint32_t freq = rangecoder_GetFreq(&rc[0]);
         unsigned char c = D.R[freq];
-        RC_Decode(&rc[0], D.fc[c].C, D.fc[c].F);
+        rangecoder_decode(&rc[0], D.fc[c].C, D.fc[c].F);
         out_buf[i] = c;
     }
 
 
-    RC_FinishDecode(&rc[0]);
-    RC_FinishDecode(&rc[1]);
-    RC_FinishDecode(&rc[2]);
-    RC_FinishDecode(&rc[3]);
+    rangecoder_finish_decode(&rc[0]);
+    rangecoder_finish_decode(&rc[1]);
+    rangecoder_finish_decode(&rc[2]);
+    rangecoder_finish_decode(&rc[3]);
 
     *out_size = out_sz;
 
@@ -475,11 +484,11 @@ unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
     return (unsigned char *)out_buf;
 }
 
-unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
+unsigned char *arith_compress_o1(unsigned char *in, unsigned int in_size,
                                  unsigned int *out_size) {
     unsigned char *out_buf = malloc(1.05*in_size + 257*257*3 + 37);
     unsigned char *cp = out_buf;
-    RngCoder rc[8];
+    rangecoder_t rc[8];
     unsigned int last, i, j, i8[8], l8[8], i_end;
     int F[256][256], C[256][256], T[256];
     unsigned char c;
@@ -558,23 +567,23 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
 
 
     /* Initialise our 8 range coders with their appropriate buffers */
-    RC_output(&rc[0], blk+0*BLK_SIZE2);
-    RC_output(&rc[1], blk+1*BLK_SIZE2);
-    RC_output(&rc[2], blk+2*BLK_SIZE2);
-    RC_output(&rc[3], blk+3*BLK_SIZE2);
-    RC_output(&rc[4], blk+4*BLK_SIZE2);
-    RC_output(&rc[5], blk+5*BLK_SIZE2);
-    RC_output(&rc[6], blk+6*BLK_SIZE2);
-    RC_output(&rc[7], blk+7*BLK_SIZE2);
+    rangecoder_output(&rc[0], blk+0*BLK_SIZE2);
+    rangecoder_output(&rc[1], blk+1*BLK_SIZE2);
+    rangecoder_output(&rc[2], blk+2*BLK_SIZE2);
+    rangecoder_output(&rc[3], blk+3*BLK_SIZE2);
+    rangecoder_output(&rc[4], blk+4*BLK_SIZE2);
+    rangecoder_output(&rc[5], blk+5*BLK_SIZE2);
+    rangecoder_output(&rc[6], blk+6*BLK_SIZE2);
+    rangecoder_output(&rc[7], blk+7*BLK_SIZE2);
 
-    RC_StartEncode(&rc[0]);
-    RC_StartEncode(&rc[1]);
-    RC_StartEncode(&rc[2]);
-    RC_StartEncode(&rc[3]);
-    RC_StartEncode(&rc[4]);
-    RC_StartEncode(&rc[5]);
-    RC_StartEncode(&rc[6]);
-    RC_StartEncode(&rc[7]);
+    rangecoder_start_encode(&rc[0]);
+    rangecoder_start_encode(&rc[1]);
+    rangecoder_start_encode(&rc[2]);
+    rangecoder_start_encode(&rc[3]);
+    rangecoder_start_encode(&rc[4]);
+    rangecoder_start_encode(&rc[5]);
+    rangecoder_start_encode(&rc[6]);
+    rangecoder_start_encode(&rc[7]);
 
     i_end = (in_size>>3);
     i8[0] = 0 * i_end;
@@ -602,14 +611,14 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
         c[6] = in[i8[6]];
         c[7] = in[i8[7]];
 
-        RC_Encode(&rc[0], C[l8[0]][c[0]], F[l8[0]][c[0]]);
-        RC_Encode(&rc[1], C[l8[1]][c[1]], F[l8[1]][c[1]]);
-        RC_Encode(&rc[2], C[l8[2]][c[2]], F[l8[2]][c[2]]);
-        RC_Encode(&rc[3], C[l8[3]][c[3]], F[l8[3]][c[3]]);
-        RC_Encode(&rc[4], C[l8[4]][c[4]], F[l8[4]][c[4]]);
-        RC_Encode(&rc[5], C[l8[5]][c[5]], F[l8[5]][c[5]]);
-        RC_Encode(&rc[6], C[l8[6]][c[6]], F[l8[6]][c[6]]);
-        RC_Encode(&rc[7], C[l8[7]][c[7]], F[l8[7]][c[7]]);
+        rangecoder_encode(&rc[0], C[l8[0]][c[0]], F[l8[0]][c[0]]);
+        rangecoder_encode(&rc[1], C[l8[1]][c[1]], F[l8[1]][c[1]]);
+        rangecoder_encode(&rc[2], C[l8[2]][c[2]], F[l8[2]][c[2]]);
+        rangecoder_encode(&rc[3], C[l8[3]][c[3]], F[l8[3]][c[3]]);
+        rangecoder_encode(&rc[4], C[l8[4]][c[4]], F[l8[4]][c[4]]);
+        rangecoder_encode(&rc[5], C[l8[5]][c[5]], F[l8[5]][c[5]]);
+        rangecoder_encode(&rc[6], C[l8[6]][c[6]], F[l8[6]][c[6]]);
+        rangecoder_encode(&rc[7], C[l8[7]][c[7]], F[l8[7]][c[7]]);
 
         l8[0] = c[0];
         l8[1] = c[1];
@@ -626,78 +635,78 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
     for (; i8[7] < in_size; i8[7]++) {
         unsigned char c;
         c = in[i8[7]];
-        RC_Encode(&rc[7], C[l8[7]][c], F[l8[7]][c]);
+        rangecoder_encode(&rc[7], C[l8[7]][c], F[l8[7]][c]);
         l8[7] = c;
     }
-    
+
 
     /* Flush encoders */
-    RC_FinishEncode(&rc[0]);
-    RC_FinishEncode(&rc[1]);
-    RC_FinishEncode(&rc[2]);
-    RC_FinishEncode(&rc[3]);
-    RC_FinishEncode(&rc[4]);
-    RC_FinishEncode(&rc[5]);
-    RC_FinishEncode(&rc[6]);
-    RC_FinishEncode(&rc[7]);
-    
+    rangecoder_finish_encode(&rc[0]);
+    rangecoder_finish_encode(&rc[1]);
+    rangecoder_finish_encode(&rc[2]);
+    rangecoder_finish_encode(&rc[3]);
+    rangecoder_finish_encode(&rc[4]);
+    rangecoder_finish_encode(&rc[5]);
+    rangecoder_finish_encode(&rc[6]);
+    rangecoder_finish_encode(&rc[7]);
+
 
     /* Move decoder output to the final compressed buffer */
-    *cp++ = (RC_size_out(&rc[0]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[0]) >>24) & 0xff;
-    memcpy(cp, blk+0*BLK_SIZE2, RC_size_out(&rc[0]));
-    cp += RC_size_out(&rc[0]);
+    *cp++ = (rangecoder_size_out(&rc[0]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[0]) >>24) & 0xff;
+    memcpy(cp, blk+0*BLK_SIZE2, rangecoder_size_out(&rc[0]));
+    cp += rangecoder_size_out(&rc[0]);
 
-    *cp++ = (RC_size_out(&rc[1]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[1]) >>24) & 0xff;
-    memcpy(cp, blk+1*BLK_SIZE2, RC_size_out(&rc[1]));
-    cp += RC_size_out(&rc[1]);
+    *cp++ = (rangecoder_size_out(&rc[1]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[1]) >>24) & 0xff;
+    memcpy(cp, blk+1*BLK_SIZE2, rangecoder_size_out(&rc[1]));
+    cp += rangecoder_size_out(&rc[1]);
 
-    *cp++ = (RC_size_out(&rc[2]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[2]) >>24) & 0xff;
-    memcpy(cp, blk+2*BLK_SIZE2, RC_size_out(&rc[2]));
-    cp += RC_size_out(&rc[2]);
+    *cp++ = (rangecoder_size_out(&rc[2]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[2]) >>24) & 0xff;
+    memcpy(cp, blk+2*BLK_SIZE2, rangecoder_size_out(&rc[2]));
+    cp += rangecoder_size_out(&rc[2]);
 
-    *cp++ = (RC_size_out(&rc[3]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[3]) >>24) & 0xff;
-    memcpy(cp, blk+3*BLK_SIZE2, RC_size_out(&rc[3]));
-    cp += RC_size_out(&rc[3]);
+    *cp++ = (rangecoder_size_out(&rc[3]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[3]) >>24) & 0xff;
+    memcpy(cp, blk+3*BLK_SIZE2, rangecoder_size_out(&rc[3]));
+    cp += rangecoder_size_out(&rc[3]);
 
-    *cp++ = (RC_size_out(&rc[4]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[4]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[4]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[4]) >>24) & 0xff;
-    memcpy(cp, blk+4*BLK_SIZE2, RC_size_out(&rc[4]));
-    cp += RC_size_out(&rc[4]);
+    *cp++ = (rangecoder_size_out(&rc[4]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[4]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[4]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[4]) >>24) & 0xff;
+    memcpy(cp, blk+4*BLK_SIZE2, rangecoder_size_out(&rc[4]));
+    cp += rangecoder_size_out(&rc[4]);
 
-    *cp++ = (RC_size_out(&rc[5]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[5]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[5]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[5]) >>24) & 0xff;
-    memcpy(cp, blk+5*BLK_SIZE2, RC_size_out(&rc[5]));
-    cp += RC_size_out(&rc[5]);
+    *cp++ = (rangecoder_size_out(&rc[5]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[5]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[5]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[5]) >>24) & 0xff;
+    memcpy(cp, blk+5*BLK_SIZE2, rangecoder_size_out(&rc[5]));
+    cp += rangecoder_size_out(&rc[5]);
 
-    *cp++ = (RC_size_out(&rc[6]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[6]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[6]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[6]) >>24) & 0xff;
-    memcpy(cp, blk+6*BLK_SIZE2, RC_size_out(&rc[6]));
-    cp += RC_size_out(&rc[6]);
+    *cp++ = (rangecoder_size_out(&rc[6]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[6]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[6]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[6]) >>24) & 0xff;
+    memcpy(cp, blk+6*BLK_SIZE2, rangecoder_size_out(&rc[6]));
+    cp += rangecoder_size_out(&rc[6]);
 
-    *cp++ = (RC_size_out(&rc[7]) >> 0) & 0xff;
-    *cp++ = (RC_size_out(&rc[7]) >> 8) & 0xff;
-    *cp++ = (RC_size_out(&rc[7]) >>16) & 0xff;
-    *cp++ = (RC_size_out(&rc[7]) >>24) & 0xff;
-    memcpy(cp, blk+7*BLK_SIZE2, RC_size_out(&rc[7]));
-    cp += RC_size_out(&rc[7]);
+    *cp++ = (rangecoder_size_out(&rc[7]) >> 0) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[7]) >> 8) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[7]) >>16) & 0xff;
+    *cp++ = (rangecoder_size_out(&rc[7]) >>24) & 0xff;
+    memcpy(cp, blk+7*BLK_SIZE2, rangecoder_size_out(&rc[7]));
+    cp += rangecoder_size_out(&rc[7]);
 
     *out_size = cp - out_buf;
 
@@ -711,12 +720,12 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
     return out_buf;
 }
 
-unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
+unsigned char *arith_decompress_o1(unsigned char *in, unsigned int in_size,
                                    unsigned int *out_size) {
     /* Load in the static tables */
     unsigned char *cp = in + 4;
     int i, j, i_end, i8[8], l8[8], x, out_sz;
-    RngCoder rc[8];
+    rangecoder_t rc[8];
     char *out_buf;
     ari_decoder D[256];
     uint32_t sz;
@@ -754,45 +763,45 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
 
     /* Start up the 8 parallel decoders */
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[0], (char *)cp+4);
+    rangecoder_input(&rc[0], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[1], (char *)cp+4);
+    rangecoder_input(&rc[1], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[2], (char *)cp+4);
+    rangecoder_input(&rc[2], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[3], (char *)cp+4);
+    rangecoder_input(&rc[3], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[4], (char *)cp+4);
+    rangecoder_input(&rc[4], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[5], (char *)cp+4);
+    rangecoder_input(&rc[5], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[6], (char *)cp+4);
+    rangecoder_input(&rc[6], (char *)cp+4);
     cp += sz+4;
 
     sz = cp[0] + (cp[1]<<8) + (cp[2]<<16) + (cp[3]<<24);
-    RC_input(&rc[7], (char *)cp+4);
+    rangecoder_input(&rc[7], (char *)cp+4);
     cp += sz+4;
 
-    RC_StartDecode(&rc[0]);
-    RC_StartDecode(&rc[1]);
-    RC_StartDecode(&rc[2]);
-    RC_StartDecode(&rc[3]);
-    RC_StartDecode(&rc[4]);
-    RC_StartDecode(&rc[5]);
-    RC_StartDecode(&rc[6]);
-    RC_StartDecode(&rc[7]);
+    rangecoder_start_decode(&rc[0]);
+    rangecoder_start_decode(&rc[1]);
+    rangecoder_start_decode(&rc[2]);
+    rangecoder_start_decode(&rc[3]);
+    rangecoder_start_decode(&rc[4]);
+    rangecoder_start_decode(&rc[5]);
+    rangecoder_start_decode(&rc[6]);
+    rangecoder_start_decode(&rc[7]);
 
     i_end = out_sz>>3;
     i8[0] = 0*i_end;
@@ -812,14 +821,14 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
         uint32_t freq[8];
         unsigned char c[8];
 
-        freq[0] = RC_GetFreq(&rc[0]);
-        freq[1] = RC_GetFreq(&rc[1]);
-        freq[2] = RC_GetFreq(&rc[2]);
-        freq[3] = RC_GetFreq(&rc[3]);
-        freq[4] = RC_GetFreq(&rc[4]);
-        freq[5] = RC_GetFreq(&rc[5]);
-        freq[6] = RC_GetFreq(&rc[6]);
-        freq[7] = RC_GetFreq(&rc[7]);
+        freq[0] = rangecoder_GetFreq(&rc[0]);
+        freq[1] = rangecoder_GetFreq(&rc[1]);
+        freq[2] = rangecoder_GetFreq(&rc[2]);
+        freq[3] = rangecoder_GetFreq(&rc[3]);
+        freq[4] = rangecoder_GetFreq(&rc[4]);
+        freq[5] = rangecoder_GetFreq(&rc[5]);
+        freq[6] = rangecoder_GetFreq(&rc[6]);
+        freq[7] = rangecoder_GetFreq(&rc[7]);
 
         c[0] = D[l8[0]].R[freq[0]];
         c[1] = D[l8[1]].R[freq[1]];
@@ -830,14 +839,14 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
         c[6] = D[l8[6]].R[freq[6]];
         c[7] = D[l8[7]].R[freq[7]];
 
-        RC_Decode(&rc[0], D[l8[0]].fc[c[0]].C, D[l8[0]].fc[c[0]].F);
-        RC_Decode(&rc[1], D[l8[1]].fc[c[1]].C, D[l8[1]].fc[c[1]].F);
-        RC_Decode(&rc[2], D[l8[2]].fc[c[2]].C, D[l8[2]].fc[c[2]].F);
-        RC_Decode(&rc[3], D[l8[3]].fc[c[3]].C, D[l8[3]].fc[c[3]].F);
-        RC_Decode(&rc[4], D[l8[4]].fc[c[4]].C, D[l8[4]].fc[c[4]].F);
-        RC_Decode(&rc[5], D[l8[5]].fc[c[5]].C, D[l8[5]].fc[c[5]].F);
-        RC_Decode(&rc[6], D[l8[6]].fc[c[6]].C, D[l8[6]].fc[c[6]].F);
-        RC_Decode(&rc[7], D[l8[7]].fc[c[7]].C, D[l8[7]].fc[c[7]].F);
+        rangecoder_decode(&rc[0], D[l8[0]].fc[c[0]].C, D[l8[0]].fc[c[0]].F);
+        rangecoder_decode(&rc[1], D[l8[1]].fc[c[1]].C, D[l8[1]].fc[c[1]].F);
+        rangecoder_decode(&rc[2], D[l8[2]].fc[c[2]].C, D[l8[2]].fc[c[2]].F);
+        rangecoder_decode(&rc[3], D[l8[3]].fc[c[3]].C, D[l8[3]].fc[c[3]].F);
+        rangecoder_decode(&rc[4], D[l8[4]].fc[c[4]].C, D[l8[4]].fc[c[4]].F);
+        rangecoder_decode(&rc[5], D[l8[5]].fc[c[5]].C, D[l8[5]].fc[c[5]].F);
+        rangecoder_decode(&rc[6], D[l8[6]].fc[c[6]].C, D[l8[6]].fc[c[6]].F);
+        rangecoder_decode(&rc[7], D[l8[7]].fc[c[7]].C, D[l8[7]].fc[c[7]].F);
 
         out_buf[i8[0]] = c[0];
         out_buf[i8[1]] = c[1];
@@ -860,24 +869,24 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
 
     /* Remainder */
     for (; i8[7] < out_sz; i8[7]++) {
-        uint32_t freq = RC_GetFreq(&rc[7]);
+        uint32_t freq = rangecoder_GetFreq(&rc[7]);
         unsigned char c = D[l8[7]].R[freq];
 
-        RC_Decode(&rc[7], D[l8[7]].fc[c].C, D[l8[7]].fc[c].F);
+        rangecoder_decode(&rc[7], D[l8[7]].fc[c].C, D[l8[7]].fc[c].F);
         out_buf[i8[7]] = c;
         l8[7] = c;
     }
 
 
     /* Tidyup */
-    RC_FinishDecode(&rc[0]);
-    RC_FinishDecode(&rc[1]);
-    RC_FinishDecode(&rc[2]);
-    RC_FinishDecode(&rc[3]);
-    RC_FinishDecode(&rc[4]);
-    RC_FinishDecode(&rc[5]);
-    RC_FinishDecode(&rc[6]);
-    RC_FinishDecode(&rc[7]);
+    rangecoder_finish_decode(&rc[0]);
+    rangecoder_finish_decode(&rc[1]);
+    rangecoder_finish_decode(&rc[2]);
+    rangecoder_finish_decode(&rc[3]);
+    rangecoder_finish_decode(&rc[4]);
+    rangecoder_finish_decode(&rc[5]);
+    rangecoder_finish_decode(&rc[6]);
+    rangecoder_finish_decode(&rc[7]);
 
     *out_size = out_sz;
 
@@ -888,19 +897,19 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
 }
 
 
-#else /* UNROLLED */
-/*-----------------------------------------------------------------------------
+#else /* ARITHCODEC_UNROLLED */
+/*
  * Memory to memory compression functions.
  *
  * These are original versions without any manual loop unrolling. They
  * are easier to understand, but can be up to 2x slower.
  */
 
-unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size,
+unsigned char *arith_compress_o0(unsigned char *in, unsigned int in_size,
                                  unsigned int *out_size) {
     unsigned char *out_buf = malloc(1.05*in_size + 257*257*3 + 21);
     unsigned char *cp;
-    RngCoder rc;
+    rangecoder_t rc;
     int F[256], C[256], T = 0, i, j, n;
     unsigned char c;
 
@@ -941,16 +950,16 @@ unsigned char *arith_compress_O0(unsigned char *in, unsigned int in_size,
     }
     *cp++ = 0;
 
-    RC_output(&rc, (char *)cp);
-    RC_StartEncode(&rc);
+    rangecoder_output(&rc, (char *)cp);
+    rangecoder_start_encode(&rc);
     for (i = 0; i < in_size; i++) {
         unsigned char c = in[i];
-        RC_Encode(&rc, C[c], F[c]);
+        rangecoder_encode(&rc, C[c], F[c]);
     }
-    RC_FinishEncode(&rc);
+    rangecoder_finish_encode(&rc);
 
     // Finalise block size and return it
-    *out_size = RC_size_out(&rc) + (cp - out_buf);
+    *out_size = rangecoder_size_out(&rc) + (cp - out_buf);
 
     cp = out_buf;
     *cp++ = (in_size>> 0) & 0xff;
@@ -969,12 +978,12 @@ typedef struct {
     unsigned char *R;
 } ari_decoder;
 
-unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
+unsigned char *arith_decompress_o0(unsigned char *in, unsigned int in_size,
                                    unsigned int *out_size) {
     /* Load in the static tables */
     unsigned char *cp = in + 4, c;
     int i, j, x, out_sz;
-    RngCoder rc;
+    rangecoder_t rc;
     char *out_buf;
     ari_decoder D;
 
@@ -1005,15 +1014,15 @@ unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
         } while(j);
     }
 
-    RC_input(&rc, (char *)cp);
-    RC_StartDecode(&rc);
+    rangecoder_input(&rc, (char *)cp);
+    rangecoder_start_decode(&rc);
     for (i = 0; i < out_sz; i++) {
-        uint32_t freq = RC_GetFreq(&rc);
+        uint32_t freq = rangecoder_GetFreq(&rc);
         c = D.R[freq];
-        RC_Decode(&rc, D.fc[c].C, D.fc[c].F);
+        rangecoder_decode(&rc, D.fc[c].C, D.fc[c].F);
         out_buf[i] = c;
     }
-    RC_FinishDecode(&rc);
+    rangecoder_finish_decode(&rc);
 
     *out_size = out_sz;
 
@@ -1021,11 +1030,14 @@ unsigned char *arith_uncompress_O0(unsigned char *in, unsigned int in_size,
 
     return (unsigned char *)out_buf;
 }
-unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
-                                 unsigned int *out_size) {
+
+unsigned char* arith_compress_o1(unsigned char* in,
+                                 unsigned int   in_size,
+                                 unsigned int*  out_size)
+{
     unsigned char *out_buf = malloc(1.05*in_size + 257*257*3 + 37);
     unsigned char *cp = out_buf;
-    RngCoder rc;
+    rangecoder_t rc;
     unsigned int last;
 
     if (!out_buf)
@@ -1092,18 +1104,18 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
         }
         *cp++ = 0;
 
-        RC_output(&rc, (char *)cp);
-        RC_StartEncode(&rc);
+        rangecoder_output(&rc, (char *)cp);
+        rangecoder_start_encode(&rc);
         for (last = i = 0; i < in_size; i++) {
             unsigned char c = in[i];
             //fprintf(stderr, "c=%d => C[][] + F[] = %d+%d\n", c, C[last][c], F[last][c]);
-            RC_Encode(&rc, C[last][c], F[last][c]);
+            rangecoder_encode(&rc, C[last][c], F[last][c]);
             last = c;
         }
-        RC_FinishEncode(&rc);
+        rangecoder_finish_encode(&rc);
     }
-    
-    *out_size = RC_size_out(&rc) + (cp - out_buf);
+
+    *out_size = rangecoder_size_out(&rc) + (cp - out_buf);
 
     cp = out_buf;
     *cp++ = (in_size>> 0) & 0xff;
@@ -1114,12 +1126,14 @@ unsigned char *arith_compress_O1(unsigned char *in, unsigned int in_size,
     return out_buf;
 }
 
-unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
-                                   unsigned int *out_size) {
+unsigned char* arith_decompress_o1(unsigned char* in,
+                                   unsigned int   in_size,
+                                   unsigned int*  out_size)
+{
     /* Load in the static tables */
     unsigned char *cp = in + 4, c;
     int i, j, x, last, out_sz;
-    RngCoder rc;
+    rangecoder_t rc;
     char *out_buf;
     ari_decoder D[256];
 
@@ -1155,10 +1169,10 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
 
     // Precompute reverse lookup of frequency.
 
-    RC_input(&rc, (char *)cp);
-    RC_StartDecode(&rc);
+    rangecoder_input(&rc, (char *)cp);
+    rangecoder_start_decode(&rc);
     for (last = i = 0; i < out_sz; i++) {
-        uint32_t freq = RC_GetFreq(&rc);
+        uint32_t freq = rangecoder_GetFreq(&rc);
         // Direct lookup table
         c = D[last].R[freq];
 
@@ -1174,11 +1188,11 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
         // To do
 
         //fprintf(stderr, "Freq=%d => %d. Decode(%d, %d)\n", freq, c, C[last][c], F[last][c]);
-        RC_Decode(&rc, D[last].fc[c].C, D[last].fc[c].F);
+        rangecoder_decode(&rc, D[last].fc[c].C, D[last].fc[c].F);
         out_buf[i] = c;
         last = c;
     }
-    RC_FinishDecode(&rc);
+    rangecoder_finish_decode(&rc);
 
     *out_size = out_sz;
 
@@ -1187,127 +1201,6 @@ unsigned char *arith_uncompress_O1(unsigned char *in, unsigned int in_size,
 
     return (unsigned char *)out_buf;
 }
-#endif /* UNROLLED */
 
+#endif /* ARITHCODEC_UNROLLED */
 
-/*-----------------------------------------------------------------------------
- * Simple interface to the order-0 vs order-1 encoders and decoders.
- */
-unsigned char *arith_compress(unsigned char *in, unsigned int in_size,
-                              unsigned int *out_size, int order) {
-    return order
-            ? arith_compress_O1(in, in_size, out_size)
-            : arith_compress_O0(in, in_size, out_size);
-}
-
-unsigned char *arith_uncompress(unsigned char *in, unsigned int in_size,
-                                unsigned int *out_size, int order) {
-    return order
-            ? arith_uncompress_O1(in, in_size, out_size)
-            : arith_uncompress_O0(in, in_size, out_size);
-}
-
-#ifdef TEST_MAIN
-/*-----------------------------------------------------------------------------
- * Main
- */
-int main(int argc, char **argv) {
-    int opt, order = 1;
-    unsigned char in_buf[(int)(BLK_SIZE2+257*257*3 + 37)];
-    int decode = 0;
-    FILE *infp = stdin, *outfp = stdout;
-    struct timeval tv1, tv2;
-    size_t bytes = 0;
-
-    extern char *optarg;
-    extern int optind, opterr, optopt;
-
-    while ((opt = getopt(argc, argv, "o:d")) != -1) {
-        switch (opt) {
-        case 'o':
-            order = atoi(optarg);
-            break;
-
-        case 'd':
-            decode = 1;
-            break;
-        }
-    }
-
-    order = order ? 1 : 0; // Only support O(0) and O(1)
-
-    if (optind < argc) {
-        if (!(infp = fopen(argv[optind], "rb"))) {
-            perror(argv[optind]);
-            return 1;
-        }
-        optind++;
-    }
-
-    if (optind < argc) {
-        if (!(outfp = fopen(argv[optind], "wb"))) {
-            perror(argv[optind]);
-            return 1;
-        }
-        optind++;
-    }
-
-    gettimeofday(&tv1, NULL);
-
-    if (decode) {
-        // Only used in some test implementations of RC_GetFreq()
-        RC_init();
-        RC_init2();
-
-        for (;;) {
-            uint32_t in_size, out_size;
-            unsigned char *out;
-
-            order = fgetc(infp);
-            if (4 != fread(&in_size, 1, 4, infp))
-                break;
-            if (in_size != fread(in_buf, 1, in_size, infp)) {
-                fprintf(stderr, "Truncated input\n");
-                exit(1);
-            }
-            out = arith_uncompress(in_buf, in_size, &out_size, order);
-            if (!out)
-                abort();
-
-            fwrite(out, 1, out_size, outfp);
-            free(out);
-
-            bytes += out_size;
-        }
-    } else {
-        for (;;) {
-            uint32_t in_size, out_size;
-            unsigned char *out;
-
-            in_size = fread(in_buf, 1, BLK_SIZE, infp);
-            if (in_size <= 0)
-                break;
-
-            out = arith_compress(in_buf, in_size, &out_size, order);
-
-            fputc(order, outfp);
-            fwrite(&out_size, 1, 4, outfp);
-            fwrite(out, 1, out_size, outfp);
-            free(out);
-
-            bytes += in_size;
-        }
-    }
-
-    gettimeofday(&tv2, NULL);
-
-    /*
-    fprintf(stderr, "Took %ld microseconds, %5.1f MB/s\n",
-        (long)(tv2.tv_sec - tv1.tv_sec)*1000000 +
-        tv2.tv_usec - tv1.tv_usec,
-        (double)bytes / ((long)(tv2.tv_sec - tv1.tv_sec)*1000000 +
-                 tv2.tv_usec - tv1.tv_usec));
-    */
-    return 0;
-}
-#endif
