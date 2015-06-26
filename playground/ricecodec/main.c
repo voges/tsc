@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 
     /* Compress or decompress. */
     unsigned char* out;
-    unsigned int out_sz = 0;
+    size_t out_sz = 0;
     if (encode) out = ricecodec_compress(in, in_sz, &out_sz);
     else out = ricecodec_decompress(in, in_sz, &out_sz);
 
