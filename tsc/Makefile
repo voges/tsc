@@ -1,10 +1,10 @@
 EXEC        = tsc
 ALIAS       = detsc
 CC          = gcc
-CFLAGS      = -O0 -Wall -D _GNU_SOURCE #-ansi -pedantic
-INCLUDES    = #-I
-LIBRARIES   = #-L
-LDFLAGS     = -lm
+CFLAGS      = -O0 -Wall -D _GNU_SOURCE
+INCLUDES    = -I.
+LIBRARIES   = -L../arithcodec -L../ricecodec
+LDFLAGS     = -lm -larithcodec -lricecodec
 SOURCEDIR   = .
 SOURCES     = $(wildcard $(SOURCEDIR)/*.c)
 OBJECTS     = $(SOURCES:.c=.o)
@@ -19,8 +19,8 @@ all: $(EXEC) $(ALIAS)
 debug: CFLAGS += -g -DDBG
 debug: clean all
 
-$(EXEC): $(OBJECTS) 
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
+$(EXEC): $(OBJECTS)
+	$(CC) $(INCLUDES) $(LDFLAGS) $(LIBRARIES) -o $@ $(OBJECTS)
 
 $(ALIAS):
 	-$(LN_SF) $(EXEC) $(ALIAS)

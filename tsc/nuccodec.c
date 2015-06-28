@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "nuccodec.h"
-#include "accodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "bbuf.h"
 #include "frw.h"
 #include "tsclib.h"
@@ -110,17 +110,17 @@ static bool nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, u
     uint64_t pos_off = exp_pos - ref_pos;
 
     /* Determine length of match. */
-    if (pos_off > ref->n) {
+    if (pos_off > ref->len) {
         //tsc_warning("Position offset too large: %d\n", pos_off);
         return false;
     }
-    uint64_t match_len = ref->n - pos_off;
-    if (exp->n + pos_off < match_len) match_len = exp->n + pos_off;
-    
+    uint64_t match_len = ref->len - pos_off;
+    if (exp->len + pos_off < match_len) match_len = exp->len + pos_off;
+
     /* Allocate memory for diff. */
     str_clear(diff);
-    str_reserve(diff, exp->n);
-    
+    str_reserve(diff, exp->len);
+
     /* Compute differences from exp to ref. */
     size_t ref_idx = pos_off;
     size_t exp_idx = 0;
@@ -130,7 +130,7 @@ static bool nucenc_diff(str_t* diff, str_t* exp, uint64_t exp_pos, str_t* ref, u
         d = (int)exp->s[exp_idx++] - (int)ref->s[ref_idx++] + ((int)'T');
         str_append_char(diff, (char)d);
     }
-    while (i < exp->n) str_append_char(diff, exp->s[i++]);
+    while (i < exp->len) str_append_char(diff, exp->s[i++]);
 
     /*printf("pos_off: %"PRIu64"\n", pos_off);
     printf("ref:  %s\n", ref->s);
@@ -150,10 +150,10 @@ static double nucenc_entropy(str_t* seq)
     unsigned int i = 0;
     unsigned int freq[256];
     memset(freq, 0, sizeof(freq));
-    for (i = 0; i < seq->n; i++) freq[(int)(seq->s[i])]++;
+    for (i = 0; i < seq->len; i++) freq[(int)(seq->s[i])]++;
 
     /* Calculate entropy. */
-    double n = (double)seq->n;
+    double n = (double)seq->len;
     double h = 0.0;
     for (i = 0; i < 256; i++) {
         if (freq[i] > 0) {
@@ -169,7 +169,7 @@ static void nucenc_add_record_O1(nucenc_t*      nucenc,
                                  const uint64_t pos,
                                  const char*    cigar,
                                  const char*    seq)
-{    
+{
     /* Allocate memory for encoding. */
     str_t* exp = str_new();      /* expanded current sequence */
     str_t* diff = str_new();     /* difference sequence */
@@ -294,7 +294,7 @@ static void nucenc_add_record_O0(nucenc_t*      nucenc,
     str_append_cstr(nucenc->out_buf, "\t");
     str_append_cstr(nucenc->out_buf, seq);
     str_append_cstr(nucenc->out_buf, "\n");
-    
+
     nucenc->block_lc++;
 }
 
@@ -335,10 +335,10 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
 
     /* Compress block with AC. */
     unsigned char* ac_in = (unsigned char*)nucenc->out_buf->s;
-    unsigned int ac_in_sz = nucenc->out_buf->n;
+    unsigned int ac_in_sz = nucenc->out_buf->len;
     unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_compress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    //unsigned char* ac_out = arith_compress_O1(ac_in, ac_in_sz, &ac_out_sz);
+    unsigned char* ac_out = arith_compress_o0(ac_in, ac_in_sz, &ac_out_sz);
+    //unsigned char* ac_out = arith_compress_o1(ac_in, ac_in_sz, &ac_out_sz);
     if (tsc_verbose) tsc_log("Compressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
 
     /* Write compressed block to ofp. */
@@ -361,7 +361,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
 
     /* Reset encoder for next block. */
     nucenc_reset(nucenc);
-    
+
     return byte_cnt;
 }
 
@@ -461,9 +461,9 @@ void nucdec_decode_block(nucdec_t* nucdec,
     unsigned char* ac_in = bbuf->bytes;
     unsigned int ac_in_sz = block_sz;
     unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_uncompress_O0(ac_in, ac_in_sz, &ac_out_sz);
-    //unsigned char* ac_out = arith_uncompress_O1(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Uncompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    unsigned char* ac_out = arith_decompress_o0(ac_in, ac_in_sz, &ac_out_sz);
+    //unsigned char* ac_out = arith_decompress_o1(ac_in, ac_in_sz, &ac_out_sz);
+    if (tsc_verbose) tsc_log("Decompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
     bbuf_free(bbuf);
 
     /* Decode block. */
@@ -471,7 +471,7 @@ void nucdec_decode_block(nucdec_t* nucdec,
         NUCDEC_MODE_PLAIN,
         NUCDEC_MODE_CIPHER
     } nucdec_mode_t;
-    
+
     nucdec_mode_t nucdec_mode = NUCDEC_MODE_PLAIN;
     size_t i = 0;
     size_t line = 0;
@@ -484,7 +484,7 @@ void nucdec_decode_block(nucdec_t* nucdec,
             new_line = true;
             continue;
         }
-        
+
         if (new_line && ac_out[i] == 'P') { /* plain text */
             nucdec_mode = NUCDEC_MODE_PLAIN;
             continue;
@@ -492,13 +492,13 @@ void nucdec_decode_block(nucdec_t* nucdec,
             nucdec_mode = NUCDEC_MODE_CIPHER;
             continue;
         }
-        
+
         if (nucdec_mode == NUCDEC_MODE_PLAIN) {
             if (ac_out[i] == '\t') {
                 field++;
                 continue;
             }
-            
+
             switch (field) {
             case 0: pos[line] = 0;
             case 1: str_append_char(cigar[line], (const char)ac_out[i]);

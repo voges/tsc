@@ -5,20 +5,24 @@
  * This file is part of tsc.                                                  *
  ******************************************************************************/
 
+/*
+ * TODO: Add DeeZ copyright.
+ */
+
 #include "samparser.h"
 #include <string.h>
 
-static void samparser_init(samparser_t* samparser, FILE* fp)
+static void samparser_init(samparser_t* sp, FILE* fp)
 {
-    samparser->fp = fp;
+    sp->fp = fp;
 
     /* Read the SAM header. */
-    while (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
-        if (*(samparser->curr.line) == '@') {
-            str_append_cstr(samparser->head, samparser->curr.line);
+    while (fgets(sp->curr.line, sizeof(sp->curr.line), sp->fp)) {
+        if (*(sp->curr.line) == '@') {
+            str_append_cstr(sp->head, sp->curr.line);
         } else {
-            long offset = -strlen(samparser->curr.line);
-            fseek(samparser->fp, offset, SEEK_CUR);
+            long offset = -strlen(sp->curr.line);
+            fseek(sp->fp, offset, SEEK_CUR);
             break;
         }
     }
@@ -26,41 +30,39 @@ static void samparser_init(samparser_t* samparser, FILE* fp)
 
 samparser_t* samparser_new(FILE* fp)
 {
-    samparser_t* samparser = (samparser_t*)tsc_malloc(sizeof(samparser_t));
-    samparser->head = str_new();
-    samparser_init(samparser, fp);
-    return samparser;
+    samparser_t* sp = (samparser_t*)tsc_malloc(sizeof(samparser_t));
+    sp->head = str_new();
+    samparser_init(sp, fp);
+    return sp;
 }
 
-void samparser_free(samparser_t* samparser)
+void samparser_free(samparser_t* sp)
 {
-    if (samparser != NULL) {
-        str_free(samparser->head);
-        free((void*)samparser);
-        samparser = NULL;
-    } else { /* samparser == NULL */
+    if (sp != NULL) {
+        str_free(sp->head);
+        free(sp);
+        sp = NULL;
+    } else { /* sp == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-static void samparser_parse(samparser_t* samparser)
+static void samparser_parse(samparser_t* sp)
 {
-    size_t l = strlen(samparser->curr.line) - 1;
+    size_t l = strlen(sp->curr.line) - 1;
 
-    while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n')) {
-        samparser->curr.line[l--] = '\0';
-    }
+    while (l && (sp->curr.line[l] == '\r' || sp->curr.line[l] == '\n'))
+        sp->curr.line[l--] = '\0';
 
-    char* c = samparser->curr.str_fields[0] = samparser->curr.line;
+    char* c = sp->curr.str_fields[0] = sp->curr.line;
     int f = 1, sfc = 1, ifc = 0;
 
     while (*c) {
         if (*c == '\t') {
-            if (f == 1 || f == 3 || f == 4 || f == 7 || f == 8) {
-                samparser->curr.int_fields[ifc++] = atoi(c + 1);
-            } else {
-                samparser->curr.str_fields[sfc++] = c + 1;
-            }
+            if (f == 1 || f == 3 || f == 4 || f == 7 || f == 8)
+                sp->curr.int_fields[ifc++] = atoi(c + 1);
+            else
+                sp->curr.str_fields[sfc++] = c + 1;
             f++;
             *c = '\0';
             if (f == 12) { break; }
@@ -68,17 +70,17 @@ static void samparser_parse(samparser_t* samparser)
         c++;
     }
 
-    if (f == 11) samparser->curr.str_fields[sfc++] = c;
+    if (f == 11) sp->curr.str_fields[sfc++] = c;
 }
 
-bool samparser_next(samparser_t* samparser)
+bool samparser_next(samparser_t* sp)
 {
     /* Try to read and parse next line. */
-    if (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
-        if (*(samparser->curr.line) == '@')
+    if (fgets(sp->curr.line, sizeof(sp->curr.line), sp->fp)) {
+        if (*(sp->curr.line) == '@')
             tsc_error("Tried to read SAM record but found header line.\n");
         else
-            samparser_parse(samparser);
+            samparser_parse(sp);
     } else {
         return false;
     }

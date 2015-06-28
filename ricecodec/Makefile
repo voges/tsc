@@ -14,10 +14,10 @@ default: all
 
 all: $(EXEC)
 
-debug: CFLAGS += -g -DDBG
+debug: CFLAGS += -g
 debug: clean all
 
-$(EXEC): $(OBJECTS) 
+$(EXEC): $(OBJECTS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
 
 %.o: %.c %.h

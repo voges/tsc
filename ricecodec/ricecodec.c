@@ -5,10 +5,17 @@
  * This file is part of ricecodec.                                            *
  ******************************************************************************/
 
+/*
+ * Note it is up to the calling code to ensure that no overruns on input and
+ * output buffers occur.
+ */
+
 #include "ricecodec.h"
-#include "tntlib_common.h"
 #include <stdbool.h>
 #include <string.h>
+
+#define KB 1024LL
+#define MB (KB * 1024LL)
 
 typedef struct ricecodec_t_ {
     unsigned char  bbuf;        /* bit buffer           */
@@ -19,65 +26,63 @@ typedef struct ricecodec_t_ {
     bool           eof;         /* flag to indicate EOF */
 } ricecodec_t;
 
-static void ricecodec_init(ricecodec_t* ricecodec, size_t in_size)
+static void ricecodec_init(ricecodec_t* rc, size_t in_size)
 {
-    ricecodec->bbuf = 0x00;
-    ricecodec->bbuf_filled = 0;
-    ricecodec->in_idx = 0;
-    ricecodec->out_idx = 0;
-    ricecodec->in_size = in_size;
-    ricecodec->eof = false;
+    rc->bbuf = 0x00;
+    rc->bbuf_filled = 0;
+    rc->in_idx = 0;
+    rc->out_idx = 0;
+    rc->in_size = in_size;
+    rc->eof = false;
 }
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
-static int ricecodec_len(unsigned char x, int k)
+static int codelen(unsigned char x, int k)
 {
     int m = 1 << k;
     int q = x / m;
     return (q + 1 + k);
 }
 
-static void ricecodec_put_bit(ricecodec_t*   ricecodec,
-                              unsigned char* out,
-                              unsigned char  b)
+static void put_bit(ricecodec_t* rc, unsigned char* out, unsigned char b)
 {
-    ricecodec->bbuf = ricecodec->bbuf | ((b & 1) << ricecodec->bbuf_filled);
+    rc->bbuf = rc->bbuf | ((b & 1) << rc->bbuf_filled);
 
-    if (ricecodec->bbuf_filled == 7) {
-        out[ricecodec->out_idx++] = ricecodec->bbuf;
-        ricecodec->bbuf = 0x00;
-        ricecodec->bbuf_filled = 0;
+    if (rc->bbuf_filled == 7) {
+        out[rc->out_idx++] = rc->bbuf;
+        rc->bbuf = 0x00;
+        rc->bbuf_filled = 0;
     } else {
-        ricecodec->bbuf_filled++;
+        rc->bbuf_filled++;
     }
 }
 
-static void ricecodec_encode(ricecodec_t*   ricecodec,
-                             unsigned char* out,
-                             unsigned char  x,
-                             int            k)
+static void encode(ricecodec_t*   rc,
+                   unsigned char* out,
+                   unsigned char  x,
+                   int            k)
 {
     int m = 1 << k;
     int q = x / m;
     int i = 0;
 
     for (i = 0; i < q; i++)
-        ricecodec_put_bit(ricecodec, out, 1);
+        put_bit(rc, out, 1);
 
-    ricecodec_put_bit(ricecodec, out, 0);
+    put_bit(rc, out, 0);
 
     for (i = (k - 1); i >= 0; i--)
-        ricecodec_put_bit(ricecodec, out, (x >> i) & 1);
+        put_bit(rc, out, (x >> i) & 1);
 }
 
-unsigned char* ricecodec_compress(unsigned char* in,
-                                  size_t         in_size,
-                                  size_t*        out_size)
+unsigned char* rice_compress(unsigned char* in,
+                             size_t         in_size,
+                             size_t*        out_size)
 {
-    ricecodec_t ricecodec;
-    ricecodec_init(&ricecodec, in_size);
+    ricecodec_t rc;
+    ricecodec_init(&rc, in_size);
 
     /* Find best Rice parameter k. */
     unsigned int k = 0;
@@ -86,7 +91,7 @@ unsigned char* ricecodec_compress(unsigned char* in,
     size_t bit_cnt_best = SIZE_MAX;
     for (k = 0; k < 8; k++) {
         size_t i = 0;
-        for (i = 0; i < in_size; i++) bit_cnt += ricecodec_len(in[i], k);
+        for (i = 0; i < in_size; i++) bit_cnt += codelen(in[i], k);
         if (bit_cnt < bit_cnt_best) {
             bit_cnt_best = bit_cnt;
             k_best = k;
@@ -99,22 +104,24 @@ unsigned char* ricecodec_compress(unsigned char* in,
     *out_size += (bit_rem / 8) + 1;
 
     /* Allocate enough memory for 'out'. */
-    unsigned char* out = (unsigned char*)tnt_malloc(*out_size);
+    unsigned char* out = (unsigned char*)malloc(*out_size);
+    if (!out) abort();
     memset(out, 0x00, *out_size);
 
     /* Output k. */
-    ricecodec_put_bit(&ricecodec, out, (k_best >> 2) & 1);
-    ricecodec_put_bit(&ricecodec, out, (k_best >> 1) & 1);
-    ricecodec_put_bit(&ricecodec, out, (k_best     ) & 1);
+    put_bit(&rc, out, (k_best >> 2) & 1);
+    put_bit(&rc, out, (k_best >> 1) & 1);
+    put_bit(&rc, out, (k_best     ) & 1);
 
     /* Encode. */
     size_t i = 0;
     for (i = 0; i < in_size; i++)
-        ricecodec_encode(&ricecodec, out, in[i], k_best);
+        encode(&rc, out, in[i], k_best);
 
     /* Flush bit buffer: Fill with 1s, so decoder will run into EOF. */
-    size_t f = 8 - ricecodec.bbuf_filled;
-    while (f--) ricecodec_put_bit(&ricecodec, out, 1);
+    size_t f = 8 - rc.bbuf_filled;
+    while (f--)
+        put_bit(&rc, out, 1);
 
     return out;
 }
@@ -122,65 +129,67 @@ unsigned char* ricecodec_compress(unsigned char* in,
 /******************************************************************************
  * Decoder                                                                    *
  ******************************************************************************/
-static int ricecodec_get_bit(ricecodec_t*   ricecodec,
-                             unsigned char* in)
+static int get_bit(ricecodec_t* rc, unsigned char* in)
 {
-    if (!(ricecodec->bbuf_filled)) {
-        if (ricecodec->in_idx < ricecodec->in_size) {
-            ricecodec->bbuf = in[ricecodec->in_idx++];
-            ricecodec->bbuf_filled = 8;
+    if (!(rc->bbuf_filled)) {
+        if (rc->in_idx < rc->in_size) {
+            rc->bbuf = in[rc->in_idx++];
+            rc->bbuf_filled = 8;
         } else {
-            ricecodec->eof = true; /* reached EOF */
+            rc->eof = true; /* reached EOF */
         }
     }
 
-    int tmp = ricecodec->bbuf & 0x01;
-    ricecodec->bbuf = ricecodec->bbuf >> 1;
-    ricecodec->bbuf_filled--;
+    int tmp = rc->bbuf & 0x01;
+    rc->bbuf = rc->bbuf >> 1;
+    rc->bbuf_filled--;
 
     return tmp;
 }
 
-unsigned char* ricecodec_decompress(unsigned char* in,
-                                    size_t         in_size,
-                                    size_t*        out_size)
+unsigned char* rice_decompress(unsigned char* in,
+                               size_t         in_size,
+                               size_t*        out_size)
 {
-    ricecodec_t ricecodec;
-    ricecodec_init(&ricecodec, in_size);
+    ricecodec_t rc;
+    ricecodec_init(&rc, in_size);
     *out_size = 0;
 
     /* Allocate enough memory (100 is a bad estimate) for 'out'. */
     size_t out_alloc = 100 * in_size;
-    unsigned char* out = (unsigned char*)tnt_malloc(out_alloc);
+    unsigned char* out = (unsigned char*)malloc(out_alloc);
+    if (!out) abort();
 
-    unsigned int k = (ricecodec_get_bit(&ricecodec, in) << 2) |
-                     (ricecodec_get_bit(&ricecodec, in) << 1) |
-                     (ricecodec_get_bit(&ricecodec, in)     );
+    unsigned int k = (get_bit(&rc, in) << 2) |
+                     (get_bit(&rc, in) << 1) |
+                     (get_bit(&rc, in)     );
 
     while (1) {
         int m = 1 << k, q = 0, x = 0, i = 0;
 
-        while (ricecodec_get_bit(&ricecodec, in))
+        while (get_bit(&rc, in))
             q++;
 
-        if (ricecodec.eof) break;
+        if (rc.eof) break;
 
         x = m * q;
 
         for (i = (k - 1); i >= 0; i--)
-            x = x | (ricecodec_get_bit(&ricecodec, in) << i);
+            x = x | (get_bit(&rc, in) << i);
 
-        out[ricecodec.out_idx++] = x;
+        out[rc.out_idx++] = x;
         (*out_size)++;
 
         /* Allocate additional page if needed. */
-        if (ricecodec.out_idx == out_alloc) {
+        if (rc.out_idx == out_alloc) {
             out_alloc = *out_size + (4 * KB);
-            out = (unsigned char*)tnt_realloc(out, out_alloc);
+            out = (unsigned char*)realloc(out, out_alloc);
+            if (!out) abort();
         }
     }
 
-    out = (unsigned char*)tnt_realloc(out, *out_size);
+    out = (unsigned char*)realloc(out, *out_size);
+    if (!out) abort();
 
     return out;
 }

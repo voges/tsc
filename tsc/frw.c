@@ -47,7 +47,8 @@ size_t fwrite_cstr(FILE* fp, const char* cstr)
 {
     size_t len = strlen(cstr);
     unsigned int i = 0;
-    for (i = 0; i < len; i++) fwrite_byte(fp, cstr[i]);
+    for (i = 0; i < len; i++)
+        fwrite_byte(fp, cstr[i]);
     return len;
 }
 
@@ -65,18 +66,18 @@ size_t fread_uint32(FILE* fp, uint32_t* dword)
 {
     unsigned char* bytes = (unsigned char*)malloc(sizeof(uint32_t));
     size_t ret = fread(bytes, 1, sizeof(uint32_t), fp);
-    
+
     if (ret != sizeof(uint32_t)) {
-        free((void*)bytes);
+        free(bytes);
         return ret;
     }
-    
+
     *dword = (uint32_t)bytes[0] << 24 |
              (uint32_t)bytes[1] << 16 |
              (uint32_t)bytes[2] <<  8 |
              (uint32_t)bytes[3];
 
-    free((void*)bytes);
+    free(bytes);
     return ret;
 }
 
@@ -84,12 +85,12 @@ size_t fread_uint64(FILE* fp, uint64_t* qword)
 {
     unsigned char* bytes = (unsigned char*)malloc(sizeof(uint64_t));
     size_t ret = fread(bytes, 1, sizeof(uint64_t), fp);
-    
+
     if (ret != sizeof(uint64_t)) {
         free((void*)bytes);
         return ret;
     }
-    
+
     *qword = (uint64_t)bytes[0] << 56 |
              (uint64_t)bytes[1] << 48 |
              (uint64_t)bytes[2] << 40 |
@@ -98,8 +99,8 @@ size_t fread_uint64(FILE* fp, uint64_t* qword)
              (uint64_t)bytes[5] << 16 |
              (uint64_t)bytes[6] <<  8 |
              (uint64_t)bytes[7];
-             
-    free((void*)bytes);
+
+    free(bytes);
     return ret;
 }
 

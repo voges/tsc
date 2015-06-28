@@ -5,6 +5,14 @@
  * This file is part of tsc.                                                  *
  ******************************************************************************/
 
+/*
+ * Wrapper functions to safely read/write different data types from/to files (or
+ * streams).
+ * The 'fwrite_uintXX' and 'fread_uintXX' functions are always compatible with
+ * each other and are independent from the endianness of the system this file
+ * will be built on.
+ */
+
 #ifndef TSC_FRW_H
 #define TSC_FRW_H
 

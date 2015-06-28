@@ -5,20 +5,21 @@
  * This file is part of tsc.                                                  *
  ******************************************************************************/
 
+/*
+ * Encapsulated strings. All functions take care of appending the
+ * terminating '\0' byte themselves.
+ */
+
 #ifndef TSC_STR_H
 #define TSC_STR_H
-
-/* Encapsulated strings. All functions take care of appending the
- * terminating '\0' themselves.
- */
 
 #include <stdint.h>
 #include <stdlib.h>
 
 typedef struct str_t_ {
-    char*  s;    /* null-terminated string */
-    size_t n;    /* length of s            */
-    size_t size; /* bytes allocated for s  */
+    char*  s;   /* null-terminated string */
+    size_t len; /* length of s            */
+    size_t sz;  /* bytes allocated for s  */
 } str_t;
 
 str_t* str_new(void);

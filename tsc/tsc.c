@@ -125,16 +125,15 @@ static void parse_options(int argc, char *argv[])
         }
     } while (opt != -1);
 
-    /* There must be exactly one remaining CL argument (the input file). */
-    if (argc - optind > 1) {
+    /* There must be exactly one remaining command line argument (the input
+     * file).
+     */
+    if (argc - optind > 1)
         tsc_error("Only one input file allowed.\n");
-    }
-    else if (argc - optind < 1) {
+    else if (argc - optind < 1)
         tsc_error("Input file missing.\n");
-    }
-    else {
+    else
         opt_input = argv[optind];
-    }
 }
 
 static const char* file_extension(const char* path)
@@ -163,14 +162,16 @@ int main(int argc, char* argv[])
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
-    /* Determine program name. */
+    /* Determine program name. Truncate path if needed. */
     const char* prog_name = argv[0];
     char* p;
-    if ((p = strrchr(argv[0], '/')) != NULL) { prog_name = p + 1; }
+    if ((p = strrchr(argv[0], '/')) != NULL)
+        prog_name = p + 1;
     str_copy_cstr(tsc_prog_name, prog_name);
 
     /* If invoked as 'de...', switch to decompressor mode. */
-    if (!strncmp(tsc_prog_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
+    if (!strncmp(tsc_prog_name->s, "de", 2))
+        tsc_mode = TSC_MODE_DECOMPRESS;
 
     /* Invoke signal handler. */
     signal(SIGHUP,  handle_signal);

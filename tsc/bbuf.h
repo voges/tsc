@@ -5,10 +5,12 @@
  * This file is part of tsc.                                                  *
  ******************************************************************************/
 
+/*
+ * Simple byte buffer.
+ */
+
 #ifndef TSC_BBUF_H
 #define TSC_BBUF_H
-
-/* Byte buffer */
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -9,88 +9,88 @@
 #include "tsclib.h"
 #include <string.h>
 
-static void bbuf_init(bbuf_t* bbuf)
+static void bbuf_init(bbuf_t* bb)
 {
-    bbuf->bytes = NULL;
-    bbuf->sz = 0;
+    bb->bytes = NULL;
+    bb->sz = 0;
 }
 
 bbuf_t* bbuf_new(void)
 {
-    bbuf_t* bbuf = (bbuf_t*)tsc_malloc(sizeof(bbuf_t));
-    bbuf_init(bbuf);
-    return bbuf;
+    bbuf_t* bb = (bbuf_t*)tsc_malloc(sizeof(bbuf_t));
+    bbuf_init(bb);
+    return bb;
 }
 
-void bbuf_free(bbuf_t* bbuf)
+void bbuf_free(bbuf_t* bb)
 {
-    if (bbuf != NULL) {
-        if (bbuf->bytes != NULL) {
-            free((void*)bbuf->bytes);
-            bbuf->bytes = NULL;
+    if (bb != NULL) {
+        if (bb->bytes != NULL) {
+            free(bb->bytes);
+            bb->bytes = NULL;
         }
-        free((void*)bbuf);
-        bbuf = NULL;
-    } else { /* bbuf == NULL */
+        free(bb);
+        bb = NULL;
+    } else { /* bb == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-void bbuf_clear(bbuf_t* bbuf)
+void bbuf_clear(bbuf_t* bb)
 {
-    if (bbuf->bytes != NULL) {
-        free((void*)bbuf->bytes);
-        bbuf->bytes = NULL;
+    if (bb->bytes != NULL) {
+        free(bb->bytes);
+        bb->bytes = NULL;
     }
-    bbuf->sz = 0;
+    bb->sz = 0;
 }
 
-void bbuf_reserve(bbuf_t* bbuf, const size_t sz)
+void bbuf_reserve(bbuf_t* bb, const size_t sz)
 {
-    bbuf->sz = sz;
-    bbuf->bytes = (unsigned char*)tsc_realloc(bbuf->bytes, bbuf->sz);
+    bb->sz = sz;
+    bb->bytes = (unsigned char*)tsc_realloc(bb->bytes, bb->sz);
 }
 
-void bbuf_extend(bbuf_t* bbuf, const size_t ex)
+void bbuf_extend(bbuf_t* bb, const size_t ex)
 {
-    bbuf_reserve(bbuf, bbuf->sz + ex);
+    bbuf_reserve(bb, bb->sz + ex);
 }
 
-void bbuf_trunc(bbuf_t* bbuf, const size_t tr)
+void bbuf_trunc(bbuf_t* bb, const size_t tr)
 {
-    bbuf->sz -= tr;
-    bbuf_reserve(bbuf, bbuf->sz);
+    bb->sz -= tr;
+    bbuf_reserve(bb, bb->sz);
 }
 
-void bbuf_append_bbuf(bbuf_t* bbuf, const bbuf_t* app)
+void bbuf_append_bbuf(bbuf_t* bb, const bbuf_t* app)
 {
-    bbuf_extend(bbuf, app->sz);
-    memcpy(bbuf->bytes + bbuf->sz, app->bytes, app->sz);
-    bbuf->sz += app->sz;
+    bbuf_extend(bb, app->sz);
+    memcpy(bb->bytes + bb->sz, app->bytes, app->sz);
+    bb->sz += app->sz;
 }
 
-void bbuf_append_byte(bbuf_t* bbuf, const char byte)
+void bbuf_append_byte(bbuf_t* bb, const char byte)
 {
-    bbuf_extend(bbuf, 1);
-    bbuf->bytes[bbuf->sz++] = byte;
+    bbuf_extend(bb, 1);
+    bb->bytes[bb->sz++] = byte;
 }
 
-void bbuf_append_uint64(bbuf_t* bbuf, const uint64_t x)
+void bbuf_append_uint64(bbuf_t* bb, const uint64_t x)
 {
-    bbuf_append_byte(bbuf, (x >> 56) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 48) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 40) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 32) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 24) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 16) & 0xFF);
-    bbuf_append_byte(bbuf, (x >>  8) & 0xFF);
-    bbuf_append_byte(bbuf, (x      ) & 0xFF);
+    bbuf_append_byte(bb, (x >> 56) & 0xFF);
+    bbuf_append_byte(bb, (x >> 48) & 0xFF);
+    bbuf_append_byte(bb, (x >> 40) & 0xFF);
+    bbuf_append_byte(bb, (x >> 32) & 0xFF);
+    bbuf_append_byte(bb, (x >> 24) & 0xFF);
+    bbuf_append_byte(bb, (x >> 16) & 0xFF);
+    bbuf_append_byte(bb, (x >>  8) & 0xFF);
+    bbuf_append_byte(bb, (x      ) & 0xFF);
 }
 
-void bbuf_append_buf(bbuf_t* bbuf, const unsigned char* app, const size_t n)
+void bbuf_append_buf(bbuf_t* bb, const unsigned char* app, const size_t n)
 {
-    bbuf_extend(bbuf, n);
-    memcpy(bbuf->bytes + bbuf->sz, app, n);
-    bbuf->sz += n;
+    bbuf_extend(bb, n);
+    memcpy(bb->bytes + bb->sz, app, n);
+    bb->sz += n;
 }
 

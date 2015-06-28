@@ -14,7 +14,8 @@ static bool tsc_yesno(void)
 {
     int c = getchar();
     bool yes = c == 'y' || c == 'Y';
-    while (c != '\n' && c != EOF) c = getchar();
+    while (c != '\n' && c != EOF)
+        c = getchar();
     return yes;
 }
 
@@ -26,7 +27,7 @@ void tsc_cleanup(void)
     if (tsc_out_fp != NULL) {
         tsc_fclose(tsc_out_fp);
     }
-    if (tsc_out_fname->n > 0) {
+    if (tsc_out_fname->len > 0) {
         tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {
             unlink((const char*)tsc_out_fname->s);

@@ -6,10 +6,10 @@
  ******************************************************************************/
 
 #include "qualcodec.h"
-#include "accodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "bbuf.h"
 #include "frw.h"
-#include "ricecodec.h"
+#include "../ricecodec/ricecodec.h"
 #include "tsclib.h"
 #include <float.h>
 #include <math.h>
@@ -119,15 +119,15 @@ static void qualenc_add_record_o1(qualenc_t* qualenc, const char* qual)
             /* Compute the prediction error and write it to output
              * buffer.
              */
-            if (matches->n == 0) {
+            if (matches->len == 0) {
                 /* Did not find any matches. Just write qual[i] to output. */
                 str_append_char(qualenc->out_buf, qual[i]);
             } else {
                 /* Compute mean prediction value. */
                 int pred = 0;
                 size_t m = 0;
-                for (m = 0; m < matches->n; m++) pred += (int)(matches->s[m]);
-                pred = (int)round((double)pred / (double)matches->n);
+                for (m = 0; m < matches->len; m++) pred += (int)(matches->s[m]);
+                pred = (int)round((double)pred / (double)matches->len);
                 char err = qual[i] - (char)pred;
                 str_append_char(qualenc->out_buf, err);
             }
@@ -191,7 +191,7 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
     }
     DEBUG("range ok");
     DEBUG("%s", q);
-    
+
     if (qual[0] != '*' && qualenc->block_lc > 0) {
         /* QUAL exists and this is not the first line in the current block.
          * Encode it!
@@ -208,7 +208,7 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
         size_t curr_len = strlen(qual);
         int curr_mu = qualenc_mu(q);
         int curr_var = qualenc_var(q);
-        
+
         size_t cbuf_idx = 0;
         size_t cbuf_idx_best = 0;
         size_t cbuf_n = qualenc->qual_cbuf->n;
@@ -218,7 +218,7 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
             int64_t len = cbufint64_get(qualenc->qual_cbuf_len, cbuf_idx);
             int64_t mu = cbufint64_get(qualenc->qual_cbuf_mu, cbuf_idx);
             int64_t var = cbufint64_get(qualenc->qual_cbuf_var, cbuf_idx);
-            
+
             /* Compute distance. */
             d = (curr_len - len) * (curr_len - len);
             d += (curr_mu - mu) * (curr_mu - mu);
@@ -227,14 +227,14 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
                 d_best = d;
                 cbuf_idx_best = cbuf_idx;
             }
-            
+
             cbuf_idx++;
         } while (cbuf_idx < cbuf_n);
-        
+
         /* Get best reference line. */
         str_t* ref = cbufstr_get(qualenc->qual_cbuf, cbuf_idx_best);
         DEBUG("ref: %s", ref->s);
-            
+
         for (i = QUALCODEC_MEM_SZ; i < strlen(qual); i++) {
             /* Compute the prediction error and write it to output
              * buffer.
@@ -242,10 +242,10 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
             size_t table_idx = q[i-QUALCODEC_MEM_SZ] * q[i-QUALCODEC_MEM_SZ+1] * ref->s[i];
             char err = q[i] - qualenc->pred[table_idx];
             str_append_char(qualenc->out_buf, err);
-             
+
             /* Update tables. */
             (qualenc->freq[table_idx][(size_t)q[i]])++;
-            
+
             unsigned int max = 0;
             for (j = 0; j < QUALCODEC_RANGE; j++) {
                 if (qualenc->freq[table_idx][j] > max)
@@ -316,17 +316,17 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 
     /* Compress block with AC or Rice coder. */
     unsigned char* ec_in = (unsigned char*)qualenc->out_buf->s;
-    unsigned int ec_in_sz = qualenc->out_buf->n;
+    size_t ec_in_sz = qualenc->out_buf->len;
     unsigned int ec_out_sz = 0;
     unsigned char* ec_out;
-    //ec_out = arith_compress_O0(ec_in, ec_in_sz, &ec_out_sz);
-    //ec_out = arith_compress_O1(ec_in, ec_in_sz, &ec_out_sz);
-    
+    //ec_out = arith_compress_o0(ec_in, ec_in_sz, &ec_out_sz);
+    //ec_out = arith_compress_o1(ec_in, ec_in_sz, &ec_out_sz);
+
     // Testing Rice codec
     size_t i = 0;
     for (i = 0; i < ec_in_sz; i++) ec_in[i] = 0;
-    
-    ec_out = ricecodec_compress(ec_in, ec_in_sz, &ec_out_sz);
+
+    ec_out = rice_compress(ec_in, ec_in_sz, &ec_out_sz);
     if (tsc_verbose) tsc_log("Compressed QUAL block: %zu bytes -> %zu bytes\n", ec_in_sz, ec_out_sz);
 
     /* Write compressed block to ofp. */
@@ -438,10 +438,10 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
     unsigned int ec_in_sz = block_sz;
     unsigned int ec_out_sz = 0;
     unsigned char* ec_out;
-    ec_out = arith_compress_O0(ec_in, ec_in_sz, &ec_out_sz);
-    //ec_out = arith_compress_O1(ec_in, ec_in_sz, &ec_out_sz);
-    //ec_out = ricecodec_compress(ec_in, ec_in_sz, &ec_out_sz);
-    if (tsc_verbose) tsc_log("Uncompressed QUAL block: %zu bytes -> %zu bytes\n", ec_in_sz, ec_out_sz);
+    ec_out = arith_decompress_o0(ec_in, ec_in_sz, &ec_out_sz);
+    //ec_out = arith_decompress_o1(ec_in, ec_in_sz, &ec_out_sz);
+    //ec_out = rice_decompress(ec_in, ec_in_sz, &ec_out_sz);
+    if (tsc_verbose) tsc_log("Decompressed QUAL block: %zu bytes -> %zu bytes\n", ec_in_sz, ec_out_sz);
     bbuf_free(bbuf);
 
     /* Decode block. */
