@@ -20,7 +20,7 @@ debug: CFLAGS += -g -DDBG
 debug: clean all
 
 $(EXEC): $(OBJECTS)
-	$(CC) $(INCLUDES) $(LDFLAGS) $(LIBRARIES) -o $@ $(OBJECTS)
+	$(CC) $(INCLUDES) $(LIBRARIES) -o $@ $(OBJECTS) $(LDFLAGS)
 
 $(ALIAS):
 	-$(LN_SF) $(EXEC) $(ALIAS)

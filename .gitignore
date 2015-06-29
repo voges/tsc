@@ -2,9 +2,10 @@
 *.o
 *.a
 *.so
-src/tsc
-src/detsc
-doxygen/*
+tsc/tsc
+tsc/detsc
 .directory
 *tmp
+arithcodec/arith
+ricecodec/rice
 

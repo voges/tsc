@@ -17,6 +17,8 @@
 #define KB 1024LL
 #define MB (KB * 1024LL)
 
+#define SIZE_MAX (size_t)-1 /* due to portability */
+
 typedef struct ricecodec_t_ {
     unsigned char  bbuf;        /* bit buffer           */
     size_t         bbuf_filled; /* bit count            */
