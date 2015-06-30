@@ -21,12 +21,10 @@ static bool tsc_yesno(void)
 
 void tsc_cleanup(void)
 {
-    if (tsc_in_fp != NULL) {
+    if (tsc_in_fp != NULL)
         tsc_fclose(tsc_in_fp);
-    }
-    if (tsc_out_fp != NULL) {
+    if (tsc_out_fp != NULL)
         tsc_fclose(tsc_out_fp);
-    }
     if (tsc_out_fname->len > 0) {
         tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {

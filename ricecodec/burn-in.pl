@@ -3,13 +3,21 @@
 use strict;
 use warnings;
 
-my $I_MAX = 64;
+my $MB = 1024 * 1024;
+my $i_max = 100;
 my @bytes = [];
 my $fn = "tmp.dat";
+my $fn_enc = $fn.".rice";
+my $fn_dec = $fn_enc.".dat";
 my $ret = "";
 
-for (my $i = 1; $i <= $I_MAX; $i++) {
-    my $bytes = int(rand 2**16);
+if (-e $fn || -e $fn_enc || -e $fn_dec) {
+    print "Error: One of these files already exists: $fn $fn_enc $fn_dec\n";
+    exit 0;
+}
+
+for (my $i = 1; $i <= $i_max; $i++) {
+    my $bytes = int(rand($MB));
     print "Testing codec on $bytes bytes ...";
 
     # Generate file containing $i random bytes.
@@ -25,10 +33,18 @@ for (my $i = 1; $i <= $I_MAX; $i++) {
         print " passed\n";
     } else {
         print " NOT passed: $ret\n";
+        cleanup();
         exit -1;
     }
 }
 
-print "Files created: $fn $fn.rice $fn.rice.dat\n";
+cleanup();
+
 exit 0;
+
+sub cleanup {
+    unlink $fn or warn "Could not unlink $fn: $!";
+    unlink $fn_enc or warn "Could not unlink $fn_enc: $!";
+    unlink $fn_dec or warn "Could not unlink $fn_dec: $!";
+}
 

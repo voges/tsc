@@ -1,6 +1,6 @@
 EXEC        = arith
 CC          = gcc
-CFLAGS      = -O0 -Wall #-ansi -pedantic
+CFLAGS      = -Wall
 INCLUDES    = #-I
 LIBRARIES   = #-L
 LDFLAGS     = #-lm
@@ -12,17 +12,18 @@ OBJECTS     = $(SOURCES:.c=.o)
 
 default: all
 
+all: CFLAGS += -O2
 all: $(EXEC)
 
-debug: CFLAGS += -g
-debug: clean all
+debug: CFLAGS += -g -O0
+debug: clean $(EXEC)
 
 lib: $(OBJECTS)
 	ar r libarithcodec.a arithcodec.o
 	ranlib libarithcodec.a
 
 $(EXEC): $(OBJECTS) 
-	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
+	$(CC) $(INCLUDES) $(LIBRARIES) -o $@ $(OBJECTS) $(LDFLAGS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<

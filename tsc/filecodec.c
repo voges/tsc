@@ -15,104 +15,129 @@
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
-static void fileenc_init(fileenc_t* fe, FILE* ifp, FILE* ofp,
+static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp,
                          const size_t block_sz)
 {
-    fe->ifp = ifp;
-    fe->ofp = ofp;
-    fe->block_sz = block_sz;
+    fileenc->ifp = ifp;
+    fileenc->ofp = ofp;
+    fileenc->block_sz = block_sz;
 }
 
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz)
 {
-    fileenc_t* fe = (fileenc_t *)tsc_malloc(sizeof(fileenc_t));
-    fe->samparser = samparser_new(ifp);
-    fe->nucenc = nucenc_new();
-    fe->qualenc = qualenc_new();
-    fe->auxenc = auxenc_new();
-    fe->stats = str_new();
-    fileenc_init(fe, ifp, ofp, block_sz);
-    return fe;
+    fileenc_t* fileenc = (fileenc_t *)tsc_malloc(sizeof(fileenc_t));
+    fileenc->samparser = samparser_new(ifp);
+    fileenc->nucenc = nucenc_new();
+    fileenc->qualenc = qualenc_new();
+    fileenc->auxenc = auxenc_new();
+    fileenc->stats = str_new();
+    fileenc_init(fileenc, ifp, ofp, block_sz);
+    return fileenc;
 }
 
-void fileenc_free(fileenc_t* fe)
+void fileenc_free(fileenc_t* fileenc)
 {
-    if (fe != NULL) {
-        samparser_free(fe->samparser);
-        nucenc_free(fe->nucenc);
-        qualenc_free(fe->qualenc);
-        auxenc_free(fe->auxenc);
-        str_free(fe->stats);
-        free(fe);
-        fe = NULL;
-    } else { /* fe == NULL */
+    if (fileenc != NULL) {
+        samparser_free(fileenc->samparser);
+        nucenc_free(fileenc->nucenc);
+        qualenc_free(fileenc->qualenc);
+        auxenc_free(fileenc->auxenc);
+        str_free(fileenc->stats);
+        free(fileenc);
+        fileenc = NULL;
+    } else { /* fileenc == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
-
-str_t* fileenc_encode(fileenc_t* fe)
+static size_t fileenc_write_file_header(fileenc_t* fileenc)
 {
-    /* Statistics. */
-    uint32_t block_cnt   = 0; /* block counter                              */
-    uint32_t line_cnt    = 0; /* line counter                               */
-    size_t byte_cnt      = 0; /* total no. of bytes written                 */
-    size_t ff_byte_cnt   = 0; /* total no. of bytes written for file format */
-    size_t sh_byte_cnt   = 0; /* total no. of bytes written for SAM header  */
-    size_t nuc_byte_cnt  = 0; /* total no. of bytes written by nucenc       */
-    size_t qual_byte_cnt = 0; /* total no. of bytes written by qualenc      */
-    size_t aux_byte_cnt  = 0; /* total no. of bytes written by auxenc       */
-
-    /* Write tsc file header:
-     * - unsigned char[7] : "tsc----"
-     * - unsigned char[5] : VERSION
-     * - uint64_t         : block size
+    /* File header:
+     *   unsigned char[7]: "tsc----"
+     *   unsigned char[5]: VERSION
+     *   uint64_t        : block size
      */
+    size_t byte_cnt = 0;
     tsc_log("Format: %s %s\n", tsc_prog_name->s, tsc_version->s);
-    ff_byte_cnt += fwrite_cstr(fe->ofp, tsc_prog_name->s);
-    ff_byte_cnt += fwrite_cstr(fe->ofp, "----");
-    ff_byte_cnt += fwrite_cstr(fe->ofp, tsc_version->s);
-    tsc_log("Block size: %"PRIu64"\n", fe->block_sz);
-    ff_byte_cnt += fwrite_uint64(fe->ofp, (uint64_t)fe->block_sz);
+    byte_cnt += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
+    byte_cnt += fwrite_cstr(fileenc->ofp, "----");
+    byte_cnt += fwrite_cstr(fileenc->ofp, tsc_version->s);
+    tsc_log("Block size: %"PRIu64"\n", fileenc->block_sz);
+    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)fileenc->block_sz);
+    return byte_cnt;
+}
 
-    /* Write SAM header:
-     * - uint64_t       : header size
-     * - unsigned char[]: data
+static size_t fileenc_write_sam_header(fileenc_t* fileenc)
+{
+    /* SAM header:
+     *   uint64_t       : header size
+     *   unsigned char[]: data
      */
+    size_t byte_cnt = 0;
     if (tsc_verbose) tsc_log("Writing SAM header\n");
-    ff_byte_cnt += fwrite_uint64(fe->ofp, (uint64_t)fe->samparser->head->len);
-    sh_byte_cnt += fwrite_cstr(fe->ofp, fe->samparser->head->s);
+    byte_cnt += fwrite_uint64(fileenc->ofp,
+                              (uint64_t)fileenc->samparser->head->len);
+    byte_cnt += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
+    return byte_cnt;
+}
 
-    /* Parse SAM file line by line and invoke encoders. */
-    uint32_t block_line_cnt = 0; /* block-wise line count */
-    samrecord_t* samrecord = &(fe->samparser->curr);
+static size_t fileenc_write_block_header(fileenc_t* fileenc,
+                                         const size_t block_cnt,
+                                         const size_t block_line_cnt)
+{
+    /* Block header:
+     *   uint64_t: block count
+     *   uint64_t: no. of lines in block
+     */
+    size_t byte_cnt = 0;
+    if (tsc_verbose)
+        tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_line_cnt);
+    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)block_cnt);
+    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)block_line_cnt);
+    return byte_cnt;
+}
 
-    while (samparser_next(fe->samparser)) {
-        if (block_line_cnt >= fe->block_sz) {
-            /* Write block header:
-             * - uint32_t: block count
-             * - uint32_t: no. of lines in block
-             */
-            if (tsc_verbose) tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_line_cnt);
-            ff_byte_cnt += fwrite_uint32(fe->ofp, block_cnt);
-            ff_byte_cnt += fwrite_uint32(fe->ofp, block_line_cnt);
+str_t* fileenc_encode(fileenc_t* fileenc)
+{
+    /* Input statistics. */
+    enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
+           RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
+    size_t in_sz[12];
+    int i = 0; for (i = 0; i < 12; i++) in_sz[i] = 0;
 
-            /* Write NUC, QUAL, and AUX blocks. */
-            nuc_byte_cnt += nucenc_write_block(fe->nucenc, fe->ofp);
-            qual_byte_cnt += qualenc_write_block(fe->qualenc, fe->ofp);
-            aux_byte_cnt += auxenc_write_block(fe->auxenc, fe->ofp);
+    /* Ouput statistics. */
+    size_t blk_cnt     = 0; /* block counter                              */
+    size_t line_cnt    = 0; /* line counter                               */
+    size_t blkline_cnt = 0; /* block-wise line counter                    */
+    size_t byte_cnt    = 0; /* total no. of bytes written                 */
+    size_t ff_cnt      = 0; /* total no. of bytes written for file format */
+    size_t sh_cnt      = 0; /* total no. of bytes written for SAM header  */
+    size_t nuc_cnt     = 0; /* total no. of bytes written by nucenc       */
+    size_t qual_cnt    = 0; /* total no. of bytes written by qualenc      */
+    size_t aux_cnt     = 0; /* total no. of bytes written by auxenc       */
 
-            block_cnt++;
-            block_line_cnt = 0;
+    ff_cnt += fileenc_write_file_header(fileenc);
+    sh_cnt += fileenc_write_sam_header(fileenc);
+
+    samrecord_t* samrecord = &(fileenc->samparser->curr);
+    while (samparser_next(fileenc->samparser)) {
+        if (block_line_cnt >= fileenc->block_sz) {
+            /* Write block. */
+            ff_cnt += fileenc_write_block_header(fileenc, blk_cnt, blkline_cnt);
+            nuc_cnt += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+            qual_cnt += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+            aux_cnt += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            blk_cnt++;
+            blkline_cnt = 0;
         }
 
         /* Add records to encoders. */
-        nucenc_add_record(fe->nucenc,
+        nucenc_add_record(fileenc->nucenc,
                           samrecord->int_fields[POS],
                           samrecord->str_fields[CIGAR],
                           samrecord->str_fields[SEQ]);
-        qualenc_add_record(fe->qualenc,
+        qualenc_add_record(fileenc->qualenc,
                            samrecord->str_fields[QUAL]);
-        auxenc_add_record(fe->auxenc,
+        auxenc_add_record(fileenc->auxenc,
                           samrecord->str_fields[QNAME],
                           samrecord->int_fields[FLAG],
                           samrecord->str_fields[RNAME],
@@ -121,26 +146,25 @@ str_t* fileenc_encode(fileenc_t* fe)
                           samrecord->int_fields[PNEXT],
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
-        block_line_cnt++;
+
+        /* Accumulate input statistics. */
+        in_sz[QNAME]
+
+        blkline_cnt++;
         line_cnt++;
     }
 
-    /* Write last block header:
-     * - uint32_t: block count
-     * - uint32_t: no. of lines in block
-     */
-    if (tsc_verbose) tsc_log("Writing last block %"PRIu32": %"PRIu32" line(s)\n", block_cnt, block_line_cnt);
-    ff_byte_cnt += fwrite_uint32(fe->ofp, block_cnt);
-    ff_byte_cnt += fwrite_uint32(fe->ofp, block_line_cnt);
+    /* Write last block. */
+    ff_cnt += fileenc_write_block_header(fileenc, blk_cnt, blkline_cnt);
+    nuc_cnt += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+    qual_cnt += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+    aux_cnt += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    blk_cnt++;
 
-    /* Write last NUC, QUAL, and AUX blocks. */
-    nuc_byte_cnt += nucenc_write_block(fe->nucenc, fe->ofp);
-    qual_byte_cnt += qualenc_write_block(fe->qualenc, fe->ofp);
-    aux_byte_cnt += auxenc_write_block(fe->auxenc, fe->ofp);
-
-    block_cnt++;
-    byte_cnt = ff_byte_cnt + sh_byte_cnt + nuc_byte_cnt + qual_byte_cnt + aux_byte_cnt;
-    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n", byte_cnt, ((double)byte_cnt / GB), line_cnt, block_cnt);
+    /* Print small statistics. */
+    byte_cnt = ff_cnt + sh_cnt + nuc_cnt + qual_cnt + aux_cnt;
+    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
+            byte_cnt, ((double)byte_cnt / GB), line_cnt, block_cnt);
 
     /* Return compression statistics. */
     char stats[4 * KB]; /* this should be enough space */
@@ -163,9 +187,9 @@ str_t* fileenc_encode(fileenc_t* fe)
              nuc_byte_cnt, (100 * (double)nuc_byte_cnt / (double)byte_cnt),
              qual_byte_cnt, (100 * (double)qual_byte_cnt / (double)byte_cnt),
              aux_byte_cnt, (100 * (double)aux_byte_cnt / (double)byte_cnt));
-    str_append_cstr(fe->stats, stats);
+    str_append_cstr(fileenc->stats, stats);
 
-    return fe->stats;
+    return fileenc->stats;
 }
 
 /******************************************************************************

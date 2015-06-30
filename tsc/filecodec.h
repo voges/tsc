@@ -30,8 +30,8 @@ typedef struct fileenc_t_ {
 } fileenc_t;
 
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz);
-void fileenc_free(fileenc_t* fe);
-str_t* fileenc_encode(fileenc_t* fe);
+void fileenc_free(fileenc_t* fileenc);
+str_t* fileenc_encode(fileenc_t* fileenc);
 
 /******************************************************************************
  * Decoder                                                                    *
@@ -46,8 +46,8 @@ typedef struct filedec_t_ {
 } filedec_t;
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp);
-void filedec_free(filedec_t* fd);
-str_t* filedec_decode(filedec_t* fd);
+void filedec_free(filedec_t* filedec);
+str_t* filedec_decode(filedec_t* filedec);
 
 #endif /*TSC_FILECODEC_H */
 

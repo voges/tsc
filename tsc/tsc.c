@@ -170,8 +170,7 @@ int main(int argc, char* argv[])
     str_copy_cstr(tsc_prog_name, prog_name);
 
     /* If invoked as 'de...', switch to decompressor mode. */
-    if (!strncmp(tsc_prog_name->s, "de", 2))
-        tsc_mode = TSC_MODE_DECOMPRESS;
+    if (!strncmp(tsc_prog_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
 
     /* Invoke signal handler. */
     signal(SIGHUP,  handle_signal);
@@ -209,7 +208,7 @@ int main(int argc, char* argv[])
 
         /* Check if output file already exists. */
         if (!access((const char*)tsc_out_fname->s, F_OK | W_OK)
-                && opt_flag_force == false) {
+            && opt_flag_force == false) {
             tsc_warning("Output file already exists (use '-f' to force "
                         "overwriting): %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);

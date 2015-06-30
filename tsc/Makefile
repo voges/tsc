@@ -1,7 +1,7 @@
 EXEC        = tsc
 ALIAS       = detsc
 CC          = gcc
-CFLAGS      = -O0 -Wall -D _GNU_SOURCE
+CFLAGS      = -Wall -D _GNU_SOURCE
 INCLUDES    = -I.
 LIBRARIES   = -L../arithcodec -L../ricecodec
 LDFLAGS     = -lm -larithcodec -lricecodec
@@ -14,10 +14,11 @@ LN_SF       = ln -sf
 
 default: all
 
+all: CFLAGS += -O2
 all: $(EXEC) $(ALIAS)
 
-debug: CFLAGS += -g -DDBG
-debug: clean all
+debug: CFLAGS += -g -DDBG -O0
+debug: clean $(EXEC) $(ALIAS)
 
 $(EXEC): $(OBJECTS)
 	$(CC) $(INCLUDES) $(LIBRARIES) -o $@ $(OBJECTS) $(LDFLAGS)
