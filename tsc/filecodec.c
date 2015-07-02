@@ -11,27 +11,51 @@
 #include "version.h"
 #include <inttypes.h>
 #include <string.h>
+#include <sys/time.h>
+
+/* 
+ * File header format:
+ *   unsigned char[7]: "tsc----"
+ *   unsigned char[5]: VERSION
+ *   uint64_t        : blk_sz
+ *
+ * SAM header format:
+ *   uint64_t       : header_sz
+ *   unsigned char* : header
+ *
+ * Block header:
+ *   uint64_t : blk_cnt
+ *   uint64_t : blkl_cnt
+ */
+
+static long tvdiff(struct timeval tv0, struct timeval tv1)
+{
+    return (tv1.tv_sec - tv0.tv_sec) * 1000000 + tv1.tv_usec - tv0.tv_usec;
+}
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
 static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp,
-                         const size_t block_sz)
+                         const size_t blk_sz)
 {
     fileenc->ifp = ifp;
     fileenc->ofp = ofp;
-    fileenc->block_sz = block_sz;
+    fileenc->blk_sz = blk_sz;
+
+    memset(fileenc->in_sz, 0, sizeof(fileenc->in_sz));
+    memset(fileenc->out_sz, 0, sizeof(fileenc->out_sz));
+    memset(fileenc->elapsed, 0, sizeof(fileenc->elapsed));
 }
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz)
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_sz)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc(sizeof(fileenc_t));
     fileenc->samparser = samparser_new(ifp);
+    fileenc->auxenc = auxenc_new();
     fileenc->nucenc = nucenc_new();
     fileenc->qualenc = qualenc_new();
-    fileenc->auxenc = auxenc_new();
-    fileenc->stats = str_new();
-    fileenc_init(fileenc, ifp, ofp, block_sz);
+    fileenc_init(fileenc, ifp, ofp, blk_sz);
     return fileenc;
 }
 
@@ -42,101 +66,164 @@ void fileenc_free(fileenc_t* fileenc)
         nucenc_free(fileenc->nucenc);
         qualenc_free(fileenc->qualenc);
         auxenc_free(fileenc->auxenc);
-        str_free(fileenc->stats);
         free(fileenc);
         fileenc = NULL;
     } else { /* fileenc == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
-static size_t fileenc_write_file_header(fileenc_t* fileenc)
+
+static void fileenc_write_file_header(fileenc_t* fileenc)
 {
-    /* File header:
-     *   unsigned char[7]: "tsc----"
-     *   unsigned char[5]: VERSION
-     *   uint64_t        : block size
-     */
-    size_t byte_cnt = 0;
+    
     tsc_log("Format: %s %s\n", tsc_prog_name->s, tsc_version->s);
-    byte_cnt += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
-    byte_cnt += fwrite_cstr(fileenc->ofp, "----");
-    byte_cnt += fwrite_cstr(fileenc->ofp, tsc_version->s);
-    tsc_log("Block size: %"PRIu64"\n", fileenc->block_sz);
-    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)fileenc->block_sz);
-    return byte_cnt;
+    fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
+    fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, "----");
+    fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, tsc_version->s);
+    tsc_log("Block size: %zu\n", fileenc->blk_sz);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp,
+                                             (uint64_t)fileenc->blk_sz);
 }
 
-static size_t fileenc_write_sam_header(fileenc_t* fileenc)
+static void fileenc_write_sam_header(fileenc_t* fileenc)
 {
-    /* SAM header:
-     *   uint64_t       : header size
-     *   unsigned char[]: data
-     */
-    size_t byte_cnt = 0;
+    
     if (tsc_verbose) tsc_log("Writing SAM header\n");
-    byte_cnt += fwrite_uint64(fileenc->ofp,
-                              (uint64_t)fileenc->samparser->head->len);
-    byte_cnt += fwrite_cstr(fileenc->ofp, fileenc->samparser->head->s);
-    return byte_cnt;
+    fileenc->out_sz[OUT_SH]
+        += fwrite_uint64(fileenc->ofp, (uint64_t)fileenc->samparser->head->len);
+    fileenc->out_sz[OUT_SH] += fwrite_cstr(fileenc->ofp,
+                                           fileenc->samparser->head->s);
 }
 
-static size_t fileenc_write_block_header(fileenc_t* fileenc,
-                                         const size_t block_cnt,
-                                         const size_t block_line_cnt)
+static void fileenc_write_block(fileenc_t* fileenc, const size_t blk_cnt,
+                                const size_t blkl_cnt)
 {
-    /* Block header:
-     *   uint64_t: block count
-     *   uint64_t: no. of lines in block
-     */
-    size_t byte_cnt = 0;
+    struct timeval tv0, tv1;
+
     if (tsc_verbose)
-        tsc_log("Writing block %zu: %zu line(s)\n", block_cnt, block_line_cnt);
-    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)block_cnt);
-    byte_cnt += fwrite_uint64(fileenc->ofp, (uint64_t)block_line_cnt);
-    return byte_cnt;
+        tsc_log("Writing block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blk_cnt);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blkl_cnt);
+
+    gettimeofday(&tv0, NULL);
+    fileenc->out_sz[OUT_AUX]
+        += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    gettimeofday(&tv1, NULL);
+    fileenc->elapsed[ELAPSED_AUXENTR] += tvdiff(tv0, tv1);
+
+    gettimeofday(&tv0, NULL);
+    //fileenc->out_sz[OUT_NUC]
+        //+= nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+    gettimeofday(&tv1, NULL);
+    fileenc->elapsed[ELAPSED_NUCENTR] += tvdiff(tv0, tv1);
+
+    gettimeofday(&tv0, NULL);
+    //fileenc->out_sz[OUT_QUAL]
+        //+= qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+    gettimeofday(&tv1, NULL);
+    fileenc->elapsed[ELAPSED_QUALENTR] += tvdiff(tv0, tv1);
 }
 
-str_t* fileenc_encode(fileenc_t* fileenc)
+static void fileenc_print_stats(fileenc_t* fileenc, const size_t blk_cnt,
+                         const size_t line_cnt)
 {
-    /* Input statistics. */
-    enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
-           RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
-    size_t in_sz[12];
-    int i = 0; for (i = 0; i < 12; i++) in_sz[i] = 0;
+    tsc_log("\n"
+            "\tCompression Statistics:\n"
+            "\t-----------------------\n"
+            "\tNumber of blocks written  : %12zu\n"
+            "\tNumber of lines processed : %12zu\n"
+            "\tBytes written             : %12zu (%6.2f%%)\n"
+            "\t  File format             : %12zu (%6.2f%%)\n"
+            "\t  SAM header              : %12zu (%6.2f%%)\n"
+            "\t  AUX                     : %12zu (%6.2f%%)\n"
+            "\t  NUC                     : %12zu (%6.2f%%)\n"
+            "\t  QUAL                    : %12zu (%6.2f%%)\n"
+            "\tCompression ratios (bytes read / written)\n"
+            "\t  NUC                     : %12zu / %12zu (%6.2f%%)\n"
+            "\t  QUAL                    : %12zu / %12zu (%6.2f%%)\n"
+            "\n",
+            blk_cnt,
+            line_cnt,
+            fileenc->out_sz[OUT_TOTAL],
+            (100 * (double)fileenc->out_sz[OUT_TOTAL]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->out_sz[OUT_FF],
+            (100 * (double)fileenc->out_sz[OUT_FF]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->out_sz[OUT_SH],
+            (100 * (double)fileenc->out_sz[OUT_SH]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->out_sz[OUT_AUX],
+            (100 * (double)fileenc->out_sz[OUT_AUX]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->out_sz[OUT_NUC],
+            (100 * (double)fileenc->out_sz[OUT_NUC]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->out_sz[OUT_QUAL],
+            (100 * (double)fileenc->out_sz[OUT_QUAL]
+             / (double)fileenc->out_sz[OUT_TOTAL]),
+            fileenc->in_sz[IN_SEQ], fileenc->out_sz[OUT_NUC],
+            (100 * (double)fileenc->in_sz[IN_SEQ]
+             / (double)fileenc->out_sz[OUT_NUC]),
+            fileenc->in_sz[IN_QUAL], fileenc->out_sz[OUT_QUAL],
+            (100 * (double)fileenc->in_sz[IN_QUAL]
+             / (double)fileenc->out_sz[OUT_QUAL]));
+}
 
-    /* Ouput statistics. */
-    size_t blk_cnt     = 0; /* block counter                              */
-    size_t line_cnt    = 0; /* line counter                               */
-    size_t blkline_cnt = 0; /* block-wise line counter                    */
-    size_t byte_cnt    = 0; /* total no. of bytes written                 */
-    size_t ff_cnt      = 0; /* total no. of bytes written for file format */
-    size_t sh_cnt      = 0; /* total no. of bytes written for SAM header  */
-    size_t nuc_cnt     = 0; /* total no. of bytes written by nucenc       */
-    size_t qual_cnt    = 0; /* total no. of bytes written by qualenc      */
-    size_t aux_cnt     = 0; /* total no. of bytes written by auxenc       */
+static void fileenc_print_time(fileenc_t* fileenc)
+{
+    tsc_log("\n"
+            "\tTiming Statistics:\n"
+            "\t------------------\n"
+            "\tTotal time elapsed : %12ld us (%6.2f%%)\n"
+            "\t  Predictive Coding\n"
+            "\t    AUX            : %12ld us (%6.2f%%)\n"
+            "\t    NUC            : %12ld us (%6.2f%%)\n"
+            "\t    QUAL           : %12ld us (%6.2f%%)\n"
+            "\t  Entropy Coding\n"
+            "\t    AUX            : %12ld us (%6.2f%%)\n"
+            "\t    NUC            : %12ld us (%6.2f%%)\n"
+            "\t    QUAL           : %12ld us (%6.2f%%)\n"
+            "\n",
+            fileenc->elapsed[ELAPSED_TOTAL],
+            (100 * (double)fileenc->elapsed[ELAPSED_TOTAL] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_AUXPRED],
+            (100 * (double)fileenc->elapsed[ELAPSED_AUXPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_NUCPRED],
+            (100 * (double)fileenc->elapsed[ELAPSED_NUCPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_QUALPRED],
+            (100 * (double)fileenc->elapsed[ELAPSED_QUALPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_AUXENTR],
+            (100 * (double)fileenc->elapsed[ELAPSED_AUXENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_NUCENTR],
+            (100 * (double)fileenc->elapsed[ELAPSED_NUCENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            fileenc->elapsed[ELAPSED_QUALENTR],
+            (100 * (double)fileenc->elapsed[ELAPSED_QUALENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]));
+}
 
-    ff_cnt += fileenc_write_file_header(fileenc);
-    sh_cnt += fileenc_write_sam_header(fileenc);
+void fileenc_encode(fileenc_t* fileenc)
+{
+    struct timeval tt0, tt1, tv0, tv1;
+    gettimeofday(&tt0, NULL);
+
+    size_t blk_cnt  = 0; /* block counter           */
+    size_t line_cnt = 0; /* line counter            */
+    size_t blkl_cnt = 0; /* block-wise line counter */
+
+    fileenc_write_file_header(fileenc);
+    fileenc_write_sam_header(fileenc);
 
     samrecord_t* samrecord = &(fileenc->samparser->curr);
     while (samparser_next(fileenc->samparser)) {
-        if (block_line_cnt >= fileenc->block_sz) {
+        if (blkl_cnt >= fileenc->blk_sz) {
             /* Write block. */
-            ff_cnt += fileenc_write_block_header(fileenc, blk_cnt, blkline_cnt);
-            nuc_cnt += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
-            qual_cnt += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-            aux_cnt += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            fileenc_write_block(fileenc, blk_cnt, blkl_cnt);
             blk_cnt++;
-            blkline_cnt = 0;
+            blkl_cnt = 0;
         }
 
         /* Add records to encoders. */
-        nucenc_add_record(fileenc->nucenc,
-                          samrecord->int_fields[POS],
-                          samrecord->str_fields[CIGAR],
-                          samrecord->str_fields[SEQ]);
-        qualenc_add_record(fileenc->qualenc,
-                           samrecord->str_fields[QUAL]);
+        gettimeofday(&tv0, NULL);
         auxenc_add_record(fileenc->auxenc,
                           samrecord->str_fields[QNAME],
                           samrecord->int_fields[FLAG],
@@ -146,150 +233,180 @@ str_t* fileenc_encode(fileenc_t* fileenc)
                           samrecord->int_fields[PNEXT],
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
+        gettimeofday(&tv1, NULL);
+        fileenc->elapsed[ELAPSED_AUXPRED] += tvdiff(tv0, tv1);
 
+        gettimeofday(&tv0, NULL);
+        nucenc_add_record(fileenc->nucenc,
+                          samrecord->int_fields[POS],
+                          samrecord->str_fields[CIGAR],
+                          samrecord->str_fields[SEQ]);
+        gettimeofday(&tv1, NULL);
+        fileenc->elapsed[ELAPSED_NUCPRED] += tvdiff(tv0, tv1);
+
+        gettimeofday(&tv0, NULL);
+        qualenc_add_record(fileenc->qualenc,
+                           samrecord->str_fields[QUAL]);
+        gettimeofday(&tv1, NULL);
+        fileenc->elapsed[ELAPSED_QUALPRED] += tvdiff(tv0, tv1);
+        
         /* Accumulate input statistics. */
-        in_sz[QNAME]
+        fileenc->in_sz[IN_QNAME] += strlen(samrecord->str_fields[QNAME]);
+        fileenc->in_sz[IN_FLAG]++;
+        fileenc->in_sz[IN_RNAME] += strlen(samrecord->str_fields[RNAME]);
+        fileenc->in_sz[IN_POS]++;
+        fileenc->in_sz[IN_MAPQ]++;
+        fileenc->in_sz[IN_CIGAR] += strlen(samrecord->str_fields[CIGAR]);
+        fileenc->in_sz[IN_RNEXT] += strlen(samrecord->str_fields[RNEXT]);
+        fileenc->in_sz[IN_PNEXT]++;
+        fileenc->in_sz[IN_TLEN]++;
+        fileenc->in_sz[IN_SEQ] += strlen(samrecord->str_fields[SEQ]);
+        fileenc->in_sz[IN_QUAL] += strlen(samrecord->str_fields[QUAL]);
+        fileenc->in_sz[IN_OPT] += strlen(samrecord->str_fields[OPT]);
 
-        blkline_cnt++;
+        blkl_cnt++;
         line_cnt++;
     }
 
     /* Write last block. */
-    ff_cnt += fileenc_write_block_header(fileenc, blk_cnt, blkline_cnt);
-    nuc_cnt += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
-    qual_cnt += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
-    aux_cnt += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+    fileenc_write_block(fileenc, blk_cnt, blkl_cnt);
     blk_cnt++;
 
-    /* Print small statistics. */
-    byte_cnt = ff_cnt + sh_cnt + nuc_cnt + qual_cnt + aux_cnt;
+    /* Print summary. */
+    gettimeofday(&tt1, NULL);
+    fileenc->elapsed[ELAPSED_TOTAL] = tvdiff(tt0, tt1);
+    fileenc->out_sz[OUT_TOTAL] = fileenc->out_sz[OUT_FF]
+                                 + fileenc->out_sz[OUT_SH]
+                                 + fileenc->out_sz[OUT_NUC]
+                                 + fileenc->out_sz[OUT_QUAL]
+                                 + fileenc->out_sz[OUT_AUX];
     tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
-            byte_cnt, ((double)byte_cnt / GB), line_cnt, block_cnt);
+            fileenc->out_sz[OUT_TOTAL],
+            ((double)fileenc->out_sz[OUT_TOTAL] / GB),
+            line_cnt,
+            blk_cnt);
+    tsc_log("Took %ld us ~= %.4f s\n", fileenc->elapsed[ELAPSED_TOTAL],
+            (double)fileenc->elapsed[ELAPSED_TOTAL] / 1000000);
 
-    /* Return compression statistics. */
-    char stats[4 * KB]; /* this should be enough space */
-    snprintf(stats, sizeof(stats),
-             "\tCompression Statistics:\n"
-             "\t-----------------------\n"
-             "\tNumber of blocks written  : %12zu\n"
-             "\tNumber of lines processed : %12zu\n"
-             "\tBytes written             : %12zu (%6.2f%%)\n"
-             "\t  File format             : %12zu (%6.2f%%)\n"
-             "\t  SAM header              : %12zu (%6.2f%%)\n"
-             "\t  NUC                     : %12zu (%6.2f%%)\n"
-             "\t  QUAL                    : %12zu (%6.2f%%)\n"
-             "\t  AUX                     : %12zu (%6.2f%%)\n",
-             (size_t)block_cnt,
-             (size_t)line_cnt,
-             byte_cnt, (100 * (double)byte_cnt / (double)byte_cnt),
-             ff_byte_cnt, (100 * (double)ff_byte_cnt / (double)byte_cnt),
-             sh_byte_cnt, (100 * (double)sh_byte_cnt / (double)byte_cnt),
-             nuc_byte_cnt, (100 * (double)nuc_byte_cnt / (double)byte_cnt),
-             qual_byte_cnt, (100 * (double)qual_byte_cnt / (double)byte_cnt),
-             aux_byte_cnt, (100 * (double)aux_byte_cnt / (double)byte_cnt));
-    str_append_cstr(fileenc->stats, stats);
-
-    return fileenc->stats;
+    /* If selected by the user, print detailed statistics and/or timing info. */
+    if (tsc_stats) fileenc_print_stats(fileenc, blk_cnt, line_cnt);
+    if (tsc_time) fileenc_print_time(fileenc);
 }
 
 /******************************************************************************
  * Decoder                                                                    *
  ******************************************************************************/
-static void filedec_init(filedec_t* fd, FILE* ifp, FILE* ofp)
+static void filedec_init(filedec_t* filedec, FILE* ifp, FILE* ofp)
 {
-    fd->ifp = ifp;
-    fd->ofp = ofp;
+    filedec->ifp = ifp;
+    filedec->ofp = ofp;
+    filedec->out_sz = 0;
 }
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp)
 {
-    filedec_t* fd = (filedec_t *)tsc_malloc(sizeof(filedec_t));
-    fd->nucdec = nucdec_new();
-    fd->qualdec = qualdec_new();
-    fd->auxdec = auxdec_new();
-    fd->stats = str_new();
-    filedec_init(fd, ifp, ofp);
-    return fd;
+    filedec_t* filedec = (filedec_t *)tsc_malloc(sizeof(filedec_t));
+    filedec->nucdec = nucdec_new();
+    filedec->qualdec = qualdec_new();
+    filedec->auxdec = auxdec_new();
+    filedec_init(filedec, ifp, ofp);
+    return filedec;
 }
 
-void filedec_free(filedec_t* fd)
+void filedec_free(filedec_t* filedec)
 {
-    if (fd != NULL) {
-        nucdec_free(fd->nucdec);
-        qualdec_free(fd->qualdec);
-        auxdec_free(fd->auxdec);
-        str_free(fd->stats);
-        free(fd);
-        fd = NULL;
-    } else { /* fd == NULL */
+    if (filedec != NULL) {
+        nucdec_free(filedec->nucdec);
+        qualdec_free(filedec->qualdec);
+        auxdec_free(filedec->auxdec);
+        free(filedec);
+        filedec = NULL;
+    } else { /* filedec == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-str_t* filedec_decode(filedec_t* fd)
+static void filedec_read_file_header(filedec_t* filedec)
 {
-    /* Statistics. */
-    uint32_t line_cnt = 0; /* total no. of lines processed */
-    size_t byte_cnt   = 0; /* total no. of bytes written   */
-
-    /* Read tsc file header:
-     * - unsigned char[7] : "tsc----"
-     * - unsigned char[5] : VERSION
-     * - uint64_t         : block size
-     */
-    unsigned char prog_name[7];
+    unsigned char magic[7];
     unsigned char version[5];
-    uint64_t block_sz;
-
-    if (fread_buf(fd->ifp, prog_name, sizeof(prog_name)) != sizeof(prog_name))
-        tsc_error("Failed to read program name!\n");
-    if (fread_buf(fd->ifp, version, sizeof(version)) != sizeof(version))
+    uint64_t      blk_sz;
+    
+    if (fread_buf(filedec->ifp, magic, sizeof(magic)) != sizeof(magic))
+        tsc_error("Failed to read magic!\n");
+    if (fread_buf(filedec->ifp, version, sizeof(version)) != sizeof(version))
         tsc_error("Failed to read version!\n");
-    if (strncmp((const char*)version, (const char*)tsc_version->s, sizeof(version)))
+    if (strncmp((const char*)version, (const char*)tsc_version->s,
+                sizeof(version)))
         tsc_error("File was compressed with another version: %s\n", version);
-    if (fread_uint64(fd->ifp, &block_sz) != sizeof(block_sz))
+    if (fread_uint64(filedec->ifp, &blk_sz) != sizeof(blk_sz))
         tsc_error("Failed to read block size!\n");
+    
+    magic[3] = '\0';
+    tsc_log("Format: %s %s\n", magic, version);
+    tsc_log("Block size: %zu\n", (size_t)blk_sz);
+}
 
-    prog_name[3] = '\0';
-    tsc_log("Format: %s %s\n", prog_name, version);
-    tsc_log("Block size: %"PRIu64"\n", block_sz);
-
-    /* Write SAM header:
-     * - uint64_t       : header size
-     * - unsigned char[]: data
-     */
-    if (tsc_verbose) tsc_log("Reading SAM header\n");
-    uint64_t header_sz;
-    if (fread_uint64(fd->ifp, &header_sz) != sizeof(header_sz))
+static void filedec_read_sam_header(filedec_t* filedec)
+{
+    uint64_t       header_sz;
+    unsigned char* header;
+    
+    if (fread_uint64(filedec->ifp, &header_sz) != sizeof(header_sz))
         tsc_error("Failed to read SAM header size!\n");
-    str_t* header = str_new();
-    str_reserve(header, header_sz);
-    if (fread_buf(fd->ifp, (unsigned char*)header->s, header_sz) != header_sz)
+    header = (unsigned char*)tsc_malloc((size_t)header_sz);
+    if (fread_buf(filedec->ifp, header, header_sz) != header_sz)
         tsc_error("Failed to read SAM header!\n");
-    byte_cnt += fwrite_cstr(fd->ofp, header->s);
-    str_free(header);
+    filedec->out_sz += fwrite_buf(filedec->ofp, header, header_sz);
+    free(header);
+}
 
-    /* Read block header:
-     * - uint32_t: block count
-     * - uint32_t: no. of lines in block
-     */
-    uint32_t block_cnt = 0;
-    uint32_t block_line_cnt = 0;
+static void filedec_print_stats(filedec_t* filedec, const size_t blk_cnt,
+                                const size_t line_cnt, const size_t out_sz)
+{
+    tsc_log("\n"
+            "\tDecompression Statistics:\n"
+            "\t-------------------------\n"
+            "\tNumber of blocks decoded      : %12zu\n"
+            "\tSAM records (lines) processed : %12zu\n"
+            "\tTotal bytes written           : %12zu\n"
+            "\n",
+            blk_cnt,
+            line_cnt,
+            out_sz);
+}
 
-    while (fread_uint32(fd->ifp, &block_cnt) == sizeof(block_cnt)) {
-        if (fread_uint32(fd->ifp, &block_line_cnt) != sizeof(block_line_cnt))
-            tsc_error("Failed to read number of lines in block %"PRIu32"!\n", block_cnt);
-        if (tsc_verbose) tsc_log("Decoding block %"PRIu32": %"PRIu32" lines\n", block_cnt, block_line_cnt);
+void filedec_decode(filedec_t* filedec)
+{
+    struct timeval tv0, tv1;
+    gettimeofday(&tv0, NULL);
+    
+    size_t line_cnt = 0; /* total no. of lines processed */
+    size_t out_sz   = 0; /* total no. of bytes written   */
+    
+    filedec_read_file_header(filedec);
+    filedec_read_sam_header(filedec);
+
+    uint64_t blk_cnt;
+    uint64_t blkl_cnt;
+
+    while (fread_uint64(filedec->ifp, &blk_cnt) == sizeof(blk_cnt)) {
+        if (fread_uint64(filedec->ifp, &blkl_cnt) != sizeof(blkl_cnt))
+            tsc_error("Failed to read number of lines in block %zu!\n",
+                      (size_t)blk_cnt);
+        if (tsc_verbose)
+            tsc_log("Decoding block %zu: %zu lines\n", (size_t)blk_cnt,
+                    (size_t)blkl_cnt);
 
         /* Allocate memory to prepare decoding of the next block. */
-        uint64_t* pos = (uint64_t*)tsc_malloc(sizeof(uint64_t) * block_line_cnt);
-        str_t** cigar = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
-        str_t** seq = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
-        str_t** qual = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
-        str_t** aux = (str_t**)tsc_malloc(sizeof(str_t*) * block_line_cnt);
+        uint64_t* pos = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        str_t** cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t** seq = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t** qual = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t** aux = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
 
         size_t i = 0;
-        for (i = 0; i < block_line_cnt; i++) {
+        for (i = 0; i < blkl_cnt; i++) {
             cigar[i] = str_new();
             seq[i] = str_new();
             qual[i] = str_new();
@@ -297,13 +414,15 @@ str_t* filedec_decode(filedec_t* fd)
         }
 
         /* Decode NUC, QUAL, and AUX blocks. */
-        nucdec_decode_block(fd->nucdec, fd->ifp, pos, cigar, seq);
-        qualdec_decode_block(fd->qualdec, fd->ifp, qual);
-        auxdec_decode_block(fd->auxdec, fd->ifp, aux);
-
+        auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
+        nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
+        qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
+        
         /* Write NUC, QUAL and AUX in correct order to outfile. */
-        if (tsc_verbose) tsc_log("Writing decoded block %"PRIu32": %zu lines\n", block_cnt, block_line_cnt);
-        for (i = 0; i < block_line_cnt; i++) {
+        if (tsc_verbose)
+            tsc_log("Writing decoded block %zu: %zu lines\n",
+                    blk_cnt, blkl_cnt);
+        for (i = 0; i < blkl_cnt; i++) {
             enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
                    RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
             char* sam_fields[12];
@@ -335,10 +454,10 @@ str_t* filedec_decode(filedec_t* fd)
             /* Write data to file. */
             size_t f = 0;
             for (f = 0; f < 12; f++) {
-                byte_cnt += fwrite_cstr(fd->ofp, sam_fields[f]);
-                byte_cnt += fwrite_byte(fd->ofp, '\t');
+                out_sz += fwrite_cstr(filedec->ofp, sam_fields[f]);
+                out_sz += fwrite_byte(filedec->ofp, '\t');
             }
-            byte_cnt += fwrite_byte(fd->ofp, '\n');
+            out_sz += fwrite_byte(filedec->ofp, '\n');
 
             /* Free the memory used for the current line. */
             str_free(cigar[i]);
@@ -348,32 +467,26 @@ str_t* filedec_decode(filedec_t* fd)
         }
 
         /* Free memory allocated for this block. */
-        free((void*)pos);
-        free((void*)cigar);
-        free((void*)seq);
-        free((void*)qual);
-        free((void*)aux);
+        free(pos);
+        free(cigar);
+        free(seq);
+        free(qual);
+        free(aux);
 
-        line_cnt += block_line_cnt;
-        block_cnt++;
+        line_cnt += blkl_cnt;
+        blk_cnt++;
     }
 
-    tsc_log("Decoded %"PRIu32" line(s) in %"PRIu32" block(s) and wrote %zu bytes ~= %.2f GiB\n",
-            line_cnt, block_cnt, byte_cnt, ((double)byte_cnt / GB));
+    /* Print summary. */
+    gettimeofday(&tv1, NULL);
+    tsc_log("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= %.2f "
+            "GiB\n", line_cnt, (size_t)blk_cnt, out_sz, ((double)out_sz / GB));
+    tsc_log("Took %ld us ~= %.4f s\n", tvdiff(tv0, tv1),
+            (double)tvdiff(tv0, tv1) / 1000000);
 
-    /* Return decompression statistics. */
-    char stats[4*KB]; /* this should be enough space */
-    snprintf(stats, sizeof(stats),
-             "\tDecompression Statistics:\n"
-             "\t-------------------------\n"
-             "\tNumber of blocks decoded     : %12zu\n"
-             "\tSAM records (lines) processed: %12zu\n"
-             "\tTotal bytes written          : %12zu\n",
-             (size_t)block_cnt,
-             (size_t)line_cnt,
-             (size_t)byte_cnt);
-    str_append_cstr(fd->stats, stats);
-
-    return fd->stats;
+    /* If selected by the user, print detailed statistics. */
+    if (tsc_stats)
+        filedec_print_stats(filedec, (size_t)blk_cnt, line_cnt,
+                            out_sz);
 }
 

@@ -21,17 +21,61 @@
 typedef struct fileenc_t_ {
     FILE*        ifp;
     FILE*        ofp;
-    size_t       block_sz;
+    size_t       blk_sz; /* number of lines in a block */
     samparser_t* samparser;
+
+    /* Encoders. */
     auxenc_t*    auxenc;
     nucenc_t*    nucenc;
     qualenc_t*   qualenc;
-    str_t*       stats;
+    
+    /* Input statistics. */
+    size_t in_sz[12];
+    
+    enum {
+        IN_QNAME,
+        IN_FLAG,
+        IN_RNAME,
+        IN_POS,
+        IN_MAPQ,
+        IN_CIGAR,
+        IN_RNEXT,
+        IN_PNEXT,
+        IN_TLEN,
+        IN_SEQ,
+        IN_QUAL,
+        IN_OPT
+    };
+
+    /* Output statistics. */
+    size_t out_sz[6];
+    
+    enum {
+        OUT_TOTAL, /* total no. of bytes written                 */
+        OUT_FF,    /* total no. of bytes written for file format */
+        OUT_SH,    /* total no. of bytes written for SAM header  */
+        OUT_AUX,   /* total no. of bytes written by auxenc       */
+        OUT_NUC,   /* total no. of bytes written by nucenc       */
+        OUT_QUAL   /* total no. of bytes written by qualenc      */
+    };
+    
+    /* Timing statistics. */
+    long elapsed[7];
+    
+    enum {
+        ELAPSED_TOTAL,    /* time elapsed for file compression             */
+        ELAPSED_AUXPRED,  /* time elapsed for predictive aux coding        */
+        ELAPSED_NUCPRED,  /* time elapsed for predictive aux coding        */
+        ELAPSED_QUALPRED, /* time elapsed for predictive aux coding        */
+        ELAPSED_AUXENTR,  /* time elapsed for entropy coding of aux blocks */
+        ELAPSED_NUCENTR,  /* time elapsed for entropy coding of aux blocks */
+        ELAPSED_QUALENTR  /* time elapsed for entropy coding of aux blocks */
+    };
 } fileenc_t;
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t block_sz);
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_sz);
 void fileenc_free(fileenc_t* fileenc);
-str_t* fileenc_encode(fileenc_t* fileenc);
+void fileenc_encode(fileenc_t* fileenc);
 
 /******************************************************************************
  * Decoder                                                                    *
@@ -42,12 +86,12 @@ typedef struct filedec_t_ {
     auxdec_t*  auxdec;
     nucdec_t*  nucdec;
     qualdec_t* qualdec;
-    str_t*     stats;
+    size_t     out_sz;
 } filedec_t;
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp);
 void filedec_free(filedec_t* filedec);
-str_t* filedec_decode(filedec_t* filedec);
+void filedec_decode(filedec_t* filedec);
 
 #endif /*TSC_FILECODEC_H */
 

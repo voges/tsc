@@ -21,6 +21,7 @@ static const char* opt_input = NULL;
 static const char* opt_output = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
+static bool opt_flag_time = false;
 static bool opt_flag_verbose = false;
 
 /* Initializing global vars from 'tsclib.h' */
@@ -32,6 +33,8 @@ FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
 size_t tsc_block_sz = TSC_BLOCK_SZ_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
+bool tsc_stats = false;
+bool tsc_time = false;
 bool tsc_verbose = false;
 
 static void print_version(void)
@@ -61,6 +64,7 @@ static void print_help(void)
     printf("  -h, --help        Print this help\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
+    printf("  -t, --time        Print timing statistics\n");
     printf("  -v, --verbose     Print detailed information\n");
     printf("  -V, --version     Display program version\n");
     printf("\n");
@@ -77,12 +81,13 @@ static void parse_options(int argc, char *argv[])
         { "help",       no_argument,       NULL, 'h'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
+        { "time",       no_argument,       NULL, 't'},
         { "verbose",    no_argument,       NULL, 'v'},
         { "version",    no_argument,       NULL, 'V'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfho:svV";
+    const char *short_options = "b:dfho:stvV";
 
     do {
         int opt_idx = 0;
@@ -112,6 +117,9 @@ static void parse_options(int argc, char *argv[])
             break;
         case 's':
             opt_flag_stats = true;
+            break;
+        case 't':
+            opt_flag_time = true;
             break;
         case 'v':
             opt_flag_verbose = true;
@@ -184,6 +192,8 @@ int main(int argc, char* argv[])
     /* Parse command line options, get input file name and set flags. */
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
+    if (opt_flag_stats) tsc_stats = true;
+    if (opt_flag_time) tsc_time = true;
     if (opt_flag_verbose) tsc_verbose = true;
 
     /* Check if input file is accessible. */
@@ -221,8 +231,7 @@ int main(int argc, char* argv[])
         /* Invoke file encoder. */
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
         fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
-        str_t* fileenc_stats = fileenc_encode(fileenc);
-        if (opt_flag_stats) tsc_log("\n%s\n", fileenc_stats->s);
+        fileenc_encode(fileenc);
         fileenc_free(fileenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 
@@ -263,8 +272,7 @@ int main(int argc, char* argv[])
         /* Invoke file decoder. */
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
-        str_t* filedec_stats = filedec_decode(filedec);
-        if (opt_flag_stats) tsc_log("\n%s\n", filedec_stats->s);
+        filedec_decode(filedec);
         filedec_free(filedec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
 

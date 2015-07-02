@@ -16,8 +16,8 @@
  * Encoder                                                                   *
  *****************************************************************************/
 typedef struct auxenc_t_ {
-    uint32_t line_cnt; /* no. of records processed in the curr block */
-    str_t* out;        /* output string (for the arithmetic coder)   */
+    size_t blkl_cnt; /* no. of records processed in the curr block */
+    str_t* out;      /* output string (for the arithmetic coder)   */
 } auxenc_t;
 
 auxenc_t* auxenc_new(void);
@@ -37,12 +37,12 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
  * Decoder                                                                   *
  *****************************************************************************/
 typedef struct auxdec_t_ {
-    uint32_t line_cnt; /* no. of records processed in the curr block */
+
 } auxdec_t;
 
 auxdec_t* auxdec_new(void);
-void auxdec_free(auxdec_t* ad);
-void auxdec_decode_block(auxdec_t* ad, FILE* ifp, str_t** aux);
+void auxdec_free(auxdec_t* auxdec);
+void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux);
 
 #endif /* TSC_AUXCODEC_H */
 

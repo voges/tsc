@@ -1,54 +1,64 @@
-/*****************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)           *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                           *
- *                                                                           *
- * This file is part of tsc.                                                 *
- *****************************************************************************/
+/******************************************************************************
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
+ *                                                                            *
+ * This file is part of tsc.                                                  *
+ ******************************************************************************/
 
 #include "auxcodec.h"
-#include "../arithcodec/arithcodec.h"
+#include "./arithcodec/arithcodec.h"
 #include "bbuf.h"
-#include "tsclib.h"
+#include "crc64.h"
 #include "frw.h"
+#include "tsclib.h"
 #include <inttypes.h>
 #include <string.h>
 
-/*****************************************************************************
- * Encoder                                                                   *
- *****************************************************************************/
-static void auxenc_init(auxenc_t* ae)
+/*
+ * AUX block format:
+ *   unsigned char  blk_id[8] : "AUX-----"
+ *   uint64_t       blkl_cnt  : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of unencoded data
+ *   unsigned char* data      : data
+ */
+
+/******************************************************************************
+ * Encoder                                                                    *
+ ******************************************************************************/
+static void auxenc_init(auxenc_t* auxenc)
 {
-    ae->line_cnt = 0;
+    auxenc->blkl_cnt = 0;
 }
 
 auxenc_t* auxenc_new(void)
 {
-    auxenc_t* ae = (auxenc_t*)tsc_malloc(sizeof(auxenc_t));
-    ae->out = str_new();
-    auxenc_init(ae);
-    return ae;
+    auxenc_t* auxenc = (auxenc_t*)tsc_malloc(sizeof(auxenc_t));
+    auxenc->out = str_new();
+    auxenc_init(auxenc);
+    return auxenc;
 }
 
-void auxenc_free(auxenc_t* ae)
+void auxenc_free(auxenc_t* auxenc)
 {
-    if (ae != NULL) {
-        str_free(ae->out);
-        free(ae);
-        ae = NULL;
-    } else { /* ae == NULL */
+    if (auxenc != NULL) {
+        str_free(auxenc->out);
+        free(auxenc);
+        auxenc = NULL;
+    } else { /* auxenc == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-void auxenc_add_record(auxenc_t*      ae,
-                       const char*    qname,
-                       const uint64_t flag,
-                       const char*    rname,
-                       const uint64_t mapq,
-                       const char*    rnext,
-                       const uint64_t pnext,
-                       const uint64_t tlen,
-                       const char*    opt)
+static void auxenc_add_record_o0(auxenc_t*      auxenc,
+                                 const char*    qname,
+                                 const uint64_t flag,
+                                 const char*    rname,
+                                 const uint64_t mapq,
+                                 const char*    rnext,
+                                 const uint64_t pnext,
+                                 const uint64_t tlen,
+                                 const char*    opt)
 {
     char flag_cstr[101];  /* this should be enough space */
     char mapq_cstr[101];  /* this should be enough space */
@@ -59,178 +69,150 @@ void auxenc_add_record(auxenc_t*      ae,
     snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu64, pnext);
     snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRIu64, tlen);
 
-    str_append_cstr(ae->out, qname);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, flag_cstr);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, rname);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, mapq_cstr);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, rnext);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, pnext_cstr);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, tlen_cstr);
-    str_append_cstr(ae->out, "\t");
-    str_append_cstr(ae->out, opt);
-    str_append_cstr(ae->out, "\n");
+    str_append_cstr(auxenc->out, qname);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, flag_cstr);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, rname);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, mapq_cstr);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, rnext);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, pnext_cstr);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, tlen_cstr);
+    str_append_cstr(auxenc->out, "\t");
+    str_append_cstr(auxenc->out, opt);
+    str_append_cstr(auxenc->out, "\n");
 
-    ae->line_cnt++;
+    auxenc->blkl_cnt++;
 }
 
-static void auxenc_reset(auxenc_t* ae)
+void auxenc_add_record(auxenc_t*      auxenc,
+                       const char*    qname,
+                       const uint64_t flag,
+                       const char*    rname,
+                       const uint64_t mapq,
+                       const char*    rnext,
+                       const uint64_t pnext,
+                       const uint64_t tlen,
+                       const char*    opt)
 {
-    ae->line_cnt = 0;
-    str_clear(ae->out);
+    auxenc_add_record_o0(auxenc, qname, flag, rname, mapq, rnext, pnext, tlen,
+                         opt);
 }
 
-size_t auxenc_write_block(auxenc_t* ae, FILE* ofp)
+static void auxenc_reset(auxenc_t* auxenc)
 {
-    /* Write block:
-     *   unsigned char[8]: "AUX-----"
-     *   uint32_t        : no. of lines in block
-     *   uint32_t        : block size
-     *   unsigned char[] : data
-     */
-    size_t header_byte_cnt = 0;
-    size_t data_byte_cnt = 0;
-    size_t byte_cnt = 0;
+    auxenc->blkl_cnt = 0;
+    str_clear(auxenc->out);
+}
 
-    header_byte_cnt += fwrite_cstr(ofp, "AUX-----");
-    header_byte_cnt += fwrite_uint32(ofp, (uint32_t)ae->line_cnt);
+size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
+{
+    size_t blk_sz = 0;
 
-    /* Compress block with AC. */
-    unsigned char* ac_in = (unsigned char*)ae->out->s;
-    unsigned int ac_in_sz = (unsigned int)ae->out->len;
-    unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_compress_o0(ac_in, ac_in_sz, &ac_out_sz);
+    /* Compress block with an entropy coder. */
+    unsigned char* in = (unsigned char*)auxenc->out->s;
+    unsigned int in_sz = (unsigned int)auxenc->out->len;
+    unsigned int data_sz = 0;
+    unsigned char* data = arith_compress_o0(in, in_sz, &data_sz);
+    
     if (tsc_verbose)
-        tsc_log("Compressed AUX block: %zu bytes -> %zu bytes (%5.2f%%)\n",
-                ac_in_sz, ac_out_sz, (double)ac_out_sz/(double)ac_in_sz*100);
+        tsc_log("Compressed AUX block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+                in_sz, data_sz, (double)data_sz / (double)in_sz*100);
 
-    /* Write compressed block to ofp. */
-    header_byte_cnt += fwrite_uint32(ofp, ac_out_sz);
-    data_byte_cnt += fwrite_buf(ofp, ac_out, ac_out_sz);
-    byte_cnt = header_byte_cnt + data_byte_cnt;
+    /* Compute CRC64. */
+    uint64_t data_crc = crc64(data, data_sz);
+    
+    /* Write compressed block. */
+    blk_sz += fwrite_cstr(ofp, "AUX-----");
+    blk_sz += fwrite_uint64(ofp, (uint64_t)auxenc->blkl_cnt);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_sz);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_crc);
+    blk_sz += fwrite_buf(ofp, data, data_sz);
 
-    /* Log this if in verbose mode. */
     if (tsc_verbose)
-        tsc_log("\tWrote AUX block:\n"
-                "\t  lines : %12zu\n"
-                "\t  header: %12zu bytes\n"
-                "\t  data  : %12zu bytes\n"
-                "\t  total : %12zu bytes\n",
-                ae->line_cnt,
-                header_byte_cnt,
-                data_byte_cnt,
-                byte_cnt);
+        tsc_log("\tWrote AUX block: %zu lines, %zu data bytes\n",
+                auxenc->blkl_cnt, data_sz);
 
-    auxenc_reset(ae); /* reset encoder for next block */
-    free(ac_out); /* free memory used for encoded bitstream */
+    auxenc_reset(auxenc); /* reset encoder for next block */
+    free(data); /* free memory used for encoded bitstream */
 
-    return byte_cnt;
+    return blk_sz;
 }
 
 /*****************************************************************************
  * Decoder                                                                   *
  *****************************************************************************/
-static void auxdec_init(auxdec_t* ad)
+static void auxdec_init(auxdec_t* auxdec)
 {
-    ad->line_cnt = 0;
+
 }
 
 auxdec_t* auxdec_new(void)
 {
-    auxdec_t* ad = (auxdec_t*)tsc_malloc(sizeof(auxdec_t));
-    auxdec_init(ad);
-    return ad;
+    auxdec_t* auxdec = (auxdec_t*)tsc_malloc(sizeof(auxdec_t));
+    auxdec_init(auxdec);
+    return auxdec;
 }
 
-void auxdec_free(auxdec_t* ad)
+void auxdec_free(auxdec_t* auxdec)
 {
-    if (ad != NULL) {
-        free(ad);
-        ad = NULL;
-    } else { /* ad == NULL */
+    if (auxdec != NULL) {
+        free(auxdec);
+        auxdec = NULL;
+    } else { /* auxdec == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
 
-static void auxdec_reset(auxdec_t* ad)
+void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux)
 {
-    ad->line_cnt = 0;
-}
-
-void auxdec_decode_block(auxdec_t* ad, FILE* ifp, str_t** aux)
-{
-    /* Read block:
-     * - unsigned char[8]: "AUX-----"
-     * - uint32_t        : no. of lines in block
-     * - uint32_t        : block size
-     * - unsigned char[] : data
-     */
-    size_t header_byte_cnt = 0;
-    size_t data_byte_cnt = 0;
-    size_t byte_cnt = 0;
+    unsigned char  blk_id[8];
+    uint64_t       blkl_cnt;
+    uint64_t       data_sz;
+    uint64_t       data_crc;
+    unsigned char* data;
 
     /* Read and check block header. */
-    unsigned char block_id[8];
-    uint32_t block_sz;
-
-    if (fread_buf(ifp, block_id, sizeof(block_id)) != sizeof(block_id))
+    if (fread_buf(ifp, blk_id, sizeof(blk_id)) != sizeof(blk_id))
         tsc_error("Could not read block ID!\n");
-    if (fread_uint32(ifp, &(ad->line_cnt)) != sizeof(ad->line_cnt))
+    if (strncmp("AUX-----", (const char*)blk_id, sizeof(blk_id)))
+        tsc_error("Wrong block ID: %s\n", blk_id);
+    if (fread_uint64(ifp, &blkl_cnt) != sizeof(blkl_cnt))
         tsc_error("Could not read no. of lines in block!\n");
-    if (fread_uint32(ifp, &block_sz) != sizeof(block_sz))
-        tsc_error("Could not read block size!\n");
-    if (strncmp("AUX-----", (const char*)block_id, sizeof(block_id)))
-        tsc_error("Wrong block ID: %s\n", block_id);
+    if (fread_uint64(ifp, &data_sz) != sizeof(data_sz))
+        tsc_error("Could not read size of data section!\n");
+    if (fread_uint64(ifp, &data_crc) != sizeof(data_crc))
+        tsc_error("Could not read CRC for data section!\n");
 
-    header_byte_cnt += sizeof(block_id) + sizeof(ad->line_cnt)
-                       + sizeof(block_sz);
-    data_byte_cnt += block_sz;
-    byte_cnt = header_byte_cnt + data_byte_cnt;
-
-    /* Log this if in verbose mode. */
     if (tsc_verbose)
-        tsc_log("\tReading AUX block:\n"
-                "\t  lines : %12zu\n"
-                "\t  header: %12zu bytes\n"
-                "\t  data  : %12zu bytes\n"
-                "\t  total : %12zu bytes\n",
-                (size_t)ad->line_cnt,
-                header_byte_cnt,
-                data_byte_cnt,
-                byte_cnt);
+        tsc_log("Reading AUX block: %zu lines, %zu data bytes\n", blkl_cnt,
+                data_sz);
 
-    /* Read block. */
-    bbuf_t* bbuf = bbuf_new();
-    bbuf_reserve(bbuf, block_sz);
-    fread_buf(ifp, bbuf->bytes, block_sz);
-
-    /* Decompress block with AC. */
-    unsigned char* ac_in = bbuf->bytes;
-    unsigned int ac_in_sz = block_sz;
-    unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_decompress_o0(ac_in, ac_in_sz, &ac_out_sz);
-    bbuf_free(bbuf);
+    /* Read and decompress block. */
+    data = (unsigned char*)tsc_malloc((size_t)data_sz);
+    fread_buf(ifp, data, data_sz);
+    unsigned int out_sz = 0;
+    unsigned char* out = arith_decompress_o0(data, data_sz, &out_sz);
+    free(data);
 
     if (tsc_verbose)
         tsc_log("Decompressed AUX block: %zu bytes -> %zu bytes (%5.2f%%)\n",
-                ac_in_sz, ac_out_sz, (double)ac_out_sz/(double)ac_in_sz*100);
+                data_sz, out_sz, (double)out_sz/(double)data_sz*100);
 
     /* Decode block. */
     size_t i = 0;
     size_t line = 0;
-    for (i = 0; i < ac_out_sz; i++) {
-        if (ac_out[i] != '\n')
-            str_append_char(aux[line], (const char)ac_out[i]);
+    for (i = 0; i < out_sz; i++) {
+        if (out[i] != '\n')
+            str_append_char(aux[line], (const char)out[i]);
         else
             line++;
     }
 
-    auxdec_reset(ad); /* reset decoder for next block */
-    free(ac_out); /* free memory used for encoded bitstream */
+    free(out); /* free memory used for decoded bitstream */
 }
 

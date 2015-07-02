@@ -43,6 +43,8 @@ extern FILE* tsc_in_fp;
 extern FILE* tsc_out_fp;
 extern size_t tsc_block_sz;
 extern tsc_mode_t tsc_mode;
+extern bool tsc_stats;
+extern bool tsc_time;
 extern bool tsc_verbose;
 
 void tsc_cleanup(void);

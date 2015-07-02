@@ -305,6 +305,7 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
      * - unsigned char[8]: "QUAL----"
      * - uint32_t        : no. of lines in block
      * - uint32_t        : block size
+     *   uint64_t        : CRC64
      * - unsigned char[] : data
      */
     size_t header_byte_cnt = 0;
