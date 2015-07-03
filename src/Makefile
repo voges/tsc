@@ -17,7 +17,7 @@ default: all
 all: CFLAGS += -O2
 all: $(EXEC) $(ALIAS)
 
-debug: CFLAGS += -g -DDBG -O0
+debug: CFLAGS += -g -D DBG -O0
 debug: clean $(EXEC) $(ALIAS)
 
 $(EXEC): $(OBJECTS)

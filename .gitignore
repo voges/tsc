@@ -1,11 +1,16 @@
+# General
 *~
 *.o
 *.a
 *.so
-tsc/tsc
-tsc/detsc
+*.tmp
+
+# Created by Dolphin file manager
 .directory
-*tmp
-arithcodec/arith
-ricecodec/rice
+
+# Ignore some dedicated executables
+src/arithcodec/arith
+src/detsc
+src/ricecodec/rice
+src/tsc
 

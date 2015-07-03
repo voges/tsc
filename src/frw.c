@@ -11,13 +11,15 @@
 
 size_t fwrite_byte(FILE* fp, const unsigned char byte)
 {
-    if (fwrite(&byte, 1, 1, fp) != 1) tsc_error("Could not write byte.\n");
+    if (fwrite(&byte, 1, 1, fp) != 1)
+        tsc_error("Could not write byte.\n");
     return 1;
 }
 
 size_t fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
 {
-    if (fwrite(buf, 1, n, fp) != n) tsc_error("Could not write %d bytes.\n", n);
+    if (fwrite(buf, 1, n, fp) != n)
+        tsc_error("Could not write %d bytes.\n", n);
     return n;
 }
 
@@ -87,7 +89,7 @@ size_t fread_uint64(FILE* fp, uint64_t* qword)
     size_t ret = fread(bytes, 1, sizeof(uint64_t), fp);
 
     if (ret != sizeof(uint64_t)) {
-        free((void*)bytes);
+        free(bytes);
         return ret;
     }
 

@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "nuccodec.h"
-#include "../arithcodec/arithcodec.h"
+#include "./arithcodec/arithcodec.h"
 #include "bbuf.h"
 #include "frw.h"
 #include "tsclib.h"

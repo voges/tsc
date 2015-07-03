@@ -6,10 +6,10 @@
  ******************************************************************************/
 
 #include "qualcodec.h"
-#include "../arithcodec/arithcodec.h"
+#include "./arithcodec/arithcodec.h"
 #include "bbuf.h"
 #include "frw.h"
-#include "../ricecodec/ricecodec.h"
+#include "./ricecodec/ricecodec.h"
 #include "tsclib.h"
 #include <float.h>
 #include <math.h>

@@ -27,9 +27,9 @@
  *     [Aux block  n-1]
  *     [Nuc block  n-1]
  *     [Qual block n-1]
- *   [Block offset 0  ]
+ *   [Block LUT entry 0  ]
  *   ...
- *   [Block offset n-1]
+ *   [Block LUT entry n-1]
  *
  *
  * File header format:
@@ -38,6 +38,7 @@
  *   unsigned char version[5] : VERSION
  *   uint64_t      blk_lc     : no. of lines per block
  *   uint64_t      blk_n      : number of blocks written
+ *   uint64_t      lut_pos    : beginning of Block LUT
  *
  * SAM header format:
  * ------------------
@@ -49,8 +50,8 @@
  *   uint64_t blk_cnt         : block count, starting with 0
  *   uint64_t blkl_cnt        : no. of lines in block
  *
- * Block offset format:
- * --------------------
+ * Block LUT entry format:
+ * -----------------------
  *   uint64_t blk_i           : block number
  *   uint64_t pos_min         : smallest position contained in block
  *   uint64_t pos_max         : largest position contained in block
@@ -66,25 +67,25 @@ static long tvdiff(struct timeval tv0, struct timeval tv1)
  * Encoder                                                                    *
  ******************************************************************************/
 static void fileenc_init(fileenc_t* fileenc, FILE* ifp, FILE* ofp,
-                         const size_t blk_sz)
+                         const size_t blk_lc)
 {
     fileenc->ifp = ifp;
     fileenc->ofp = ofp;
-    fileenc->blk_sz = blk_sz;
+    fileenc->blk_lc = blk_lc;
 
     memset(fileenc->in_sz, 0, sizeof(fileenc->in_sz));
     memset(fileenc->out_sz, 0, sizeof(fileenc->out_sz));
     memset(fileenc->elapsed, 0, sizeof(fileenc->elapsed));
 }
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_sz)
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_lc)
 {
     fileenc_t* fileenc = (fileenc_t *)tsc_malloc(sizeof(fileenc_t));
     fileenc->samparser = samparser_new(ifp);
     fileenc->auxenc = auxenc_new();
     fileenc->nucenc = nucenc_new();
     fileenc->qualenc = qualenc_new();
-    fileenc_init(fileenc, ifp, ofp, blk_sz);
+    fileenc_init(fileenc, ifp, ofp, blk_lc);
     return fileenc;
 }
 
@@ -104,35 +105,54 @@ void fileenc_free(fileenc_t* fileenc)
 
 static void fileenc_write_file_header(fileenc_t* fileenc)
 {
-    
-    tsc_log("Format: %s %s\n", tsc_prog_name->s, tsc_version->s);
+    unsigned char magic[7]   = "tsc----";
+    unsigned char version[5] = VERSION;
+    uint64_t      blk_lc     = (uint64_t)fileenc->blk_lc;
+    uint64_t      blk_n      = (uint64_t)0; /* keep this free for now */
+    uint64_t      lut_pos    = (uint64_t)0; /* keep this free for now */
+
     fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, tsc_prog_name->s);
     fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, "----");
     fileenc->out_sz[OUT_FF] += fwrite_cstr(fileenc->ofp, tsc_version->s);
-    tsc_log("Block size: %zu\n", fileenc->blk_sz);
-    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp,
-                                             (uint64_t)fileenc->blk_sz);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, blk_lc);
+
+    fwrite_uint64(fileenc->ofp, blk_n);
+    fwrite_uint64(fileenc->ofp, lut_pos);
+
+    tsc_log("Format: tsc %s\n", VERSION);
+    tsc_log("Block size: %zu lines\n", blk_lc);
 }
 
 static void fileenc_write_sam_header(fileenc_t* fileenc)
 {
-    
-    if (tsc_verbose) tsc_log("Writing SAM header\n");
-    fileenc->out_sz[OUT_SH]
-        += fwrite_uint64(fileenc->ofp, (uint64_t)fileenc->samparser->head->len);
-    fileenc->out_sz[OUT_SH] += fwrite_cstr(fileenc->ofp,
-                                           fileenc->samparser->head->s);
+    uint64_t       header_sz = (uint64_t)fileenc->samparser->head->len;
+    unsigned char* header    = (unsigned char*)fileenc->samparser->head->s;
+
+    fileenc->out_sz[OUT_SH] += fwrite_uint64(fileenc->ofp, header_sz);
+    fileenc->out_sz[OUT_SH] += fwrite_buf(fileenc->ofp, header, header_sz);
+
+    tsc_log("Wrote SAM header\n");
+}
+
+static void fileenc_write_block_header(fileenc_t* fileenc, const size_t blk_cnt,
+                                       const size_t blkl_cnt)
+{
+    /* Retain information for Block LUT. */
+    blklut[blk_cnt][BLKLUT_BLK_I]   = (uint64_t)blk_cnt;
+    blklut[blk_cnt][BLKLUT_POS_MIN] = (uint64_t)0;
+    blklut[blk_cnt][BLKLUT_POS_MAX] = (uint64_t)0;
+    blklut[blk_cnt][BLKLUT_OFFSET]  = (uint64_t)ftell(fileenc->ofp);
+
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blk_cnt);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blkl_cnt);
 }
 
 static void fileenc_write_block(fileenc_t* fileenc, const size_t blk_cnt,
                                 const size_t blkl_cnt)
 {
-    struct timeval tv0, tv1;
+    fileenc_write_block_header(fileenc, blk_cnt, blkl_cnt);
 
-    if (tsc_verbose)
-        tsc_log("Writing block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
-    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blk_cnt);
-    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, (uint64_t)blkl_cnt);
+    struct timeval tv0, tv1;
 
     gettimeofday(&tv0, NULL);
     fileenc->out_sz[OUT_AUX]
@@ -151,6 +171,33 @@ static void fileenc_write_block(fileenc_t* fileenc, const size_t blk_cnt,
         //+= qualenc_write_block(fileenc->qualenc, fileenc->ofp);
     gettimeofday(&tv1, NULL);
     fileenc->elapsed[ELAPSED_QUALENTR] += tvdiff(tv0, tv1);
+
+    tsc_log("Wrote block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+}
+
+static void fileenc_write_block_lut(fileenc_t* fileenc)
+{
+    /* Complete the file header. */
+    long fpos = ftell(fileenc->ofp);
+    fseek(fileenc->ofp, 20, SEEK_SET);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, blk_n);
+    fileenc->out_sz[OUT_FF] += fwrite_uint64(fileenc->ofp, lut_pos);
+    fseek(fileenc->ofp, fpos, SEEK_SET);
+
+    /* Write the LUT. */
+    size_t i = 0;
+    for (i = 0; i < blk_n; i++) {
+        fileenc->out_sz[OUT_FF]
+                += fwrite_uint64(fileenc->ofp, blklut[blk_cnt][BLKLUT_BLK_I]);
+        fileenc->out_sz[OUT_FF]
+                += fwrite_uint64(fileenc->ofp, blklut[blk_cnt][BLKLUT_POS_MIN]);
+        fileenc->out_sz[OUT_FF]
+                += fwrite_uint64(fileenc->ofp, blklut[blk_cnt][BLKLUT_POS_MAX]);
+        fileenc->out_sz[OUT_FF]
+                += fwrite_uint64(fileenc->ofp, blklut[blk_cnt][BLKLUT_OFFSET]);
+    }
+
+    tsc_log("Wrote block LUT\n");
 }
 
 static void fileenc_print_stats(fileenc_t* fileenc, const size_t blk_cnt,
@@ -215,19 +262,26 @@ static void fileenc_print_time(fileenc_t* fileenc)
             "\t    QUAL           : %12ld us (%6.2f%%)\n"
             "\n",
             fileenc->elapsed[ELAPSED_TOTAL],
-            (100 * (double)fileenc->elapsed[ELAPSED_TOTAL] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_TOTAL]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_AUXPRED],
-            (100 * (double)fileenc->elapsed[ELAPSED_AUXPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_AUXPRED]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_NUCPRED],
-            (100 * (double)fileenc->elapsed[ELAPSED_NUCPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_NUCPRED]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_QUALPRED],
-            (100 * (double)fileenc->elapsed[ELAPSED_QUALPRED] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_QUALPRED]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_AUXENTR],
-            (100 * (double)fileenc->elapsed[ELAPSED_AUXENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_AUXENTR]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_NUCENTR],
-            (100 * (double)fileenc->elapsed[ELAPSED_NUCENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]),
+            (100 * (double)fileenc->elapsed[ELAPSED_NUCENTR]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]),
             fileenc->elapsed[ELAPSED_QUALENTR],
-            (100 * (double)fileenc->elapsed[ELAPSED_QUALENTR] / (double)fileenc->elapsed[ELAPSED_TOTAL]));
+            (100 * (double)fileenc->elapsed[ELAPSED_QUALENTR]
+             / (double)fileenc->elapsed[ELAPSED_TOTAL]));
 }
 
 void fileenc_encode(fileenc_t* fileenc)
@@ -244,7 +298,7 @@ void fileenc_encode(fileenc_t* fileenc)
 
     samrecord_t* samrecord = &(fileenc->samparser->curr);
     while (samparser_next(fileenc->samparser)) {
-        if (blkl_cnt >= fileenc->blk_sz) {
+        if (blkl_cnt >= fileenc->blk_lc) {
             /* Write block. */
             fileenc_write_block(fileenc, blk_cnt, blkl_cnt);
             blk_cnt++;
@@ -278,7 +332,7 @@ void fileenc_encode(fileenc_t* fileenc)
                            samrecord->str_fields[QUAL]);
         gettimeofday(&tv1, NULL);
         fileenc->elapsed[ELAPSED_QUALPRED] += tvdiff(tv0, tv1);
-        
+
         /* Accumulate input statistics. */
         fileenc->in_sz[IN_QNAME] += strlen(samrecord->str_fields[QNAME]);
         fileenc->in_sz[IN_FLAG]++;
@@ -360,7 +414,7 @@ static void filedec_read_file_header(filedec_t* filedec)
     unsigned char magic[7];
     unsigned char version[5];
     uint64_t      blk_sz;
-    
+
     if (fread_buf(filedec->ifp, magic, sizeof(magic)) != sizeof(magic))
         tsc_error("Failed to read magic!\n");
     if (fread_buf(filedec->ifp, version, sizeof(version)) != sizeof(version))
@@ -370,7 +424,7 @@ static void filedec_read_file_header(filedec_t* filedec)
         tsc_error("File was compressed with another version: %s\n", version);
     if (fread_uint64(filedec->ifp, &blk_sz) != sizeof(blk_sz))
         tsc_error("Failed to read block size!\n");
-    
+
     magic[3] = '\0';
     tsc_log("Format: %s %s\n", magic, version);
     tsc_log("Block size: %zu\n", (size_t)blk_sz);
@@ -380,7 +434,7 @@ static void filedec_read_sam_header(filedec_t* filedec)
 {
     uint64_t       header_sz;
     unsigned char* header;
-    
+
     if (fread_uint64(filedec->ifp, &header_sz) != sizeof(header_sz))
         tsc_error("Failed to read SAM header size!\n");
     header = (unsigned char*)tsc_malloc((size_t)header_sz);
@@ -409,10 +463,10 @@ void filedec_decode(filedec_t* filedec)
 {
     struct timeval tv0, tv1;
     gettimeofday(&tv0, NULL);
-    
+
     size_t line_cnt = 0; /* total no. of lines processed */
     size_t out_sz   = 0; /* total no. of bytes written   */
-    
+
     filedec_read_file_header(filedec);
     filedec_read_sam_header(filedec);
 
@@ -447,7 +501,7 @@ void filedec_decode(filedec_t* filedec)
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
         nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
         qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
-        
+
         /* Write block in correct order to outfile. */
         for (i = 0; i < blkl_cnt; i++) {
             enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
@@ -513,5 +567,10 @@ void filedec_decode(filedec_t* filedec)
     /* If selected by the user, print detailed statistics. */
     if (tsc_stats)
         filedec_print_stats(filedec, (size_t)blk_cnt, line_cnt, out_sz);
+}
+
+void filedec_info(filedec_t* filedec)
+{
+    tsc_log("Reading block table ...\n");
 }
 

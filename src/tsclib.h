@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Safe debug macro. */
+/* Safe debug macro */
 #if DBG
     #define DEBUG(c,...)\
         do {\
@@ -25,14 +25,15 @@
 #endif
 
 #define KB 1024LL
-#define MB (KB * 1024LL)
-#define GB (MB * 1024LL)
+#define MB (KB*1024LL)
+#define GB (MB*1024LL)
 
 #define TSC_BLOCK_SZ_DEFAULT 100000LL
 
 typedef enum {
     TSC_MODE_COMPRESS,
-    TSC_MODE_DECOMPRESS
+    TSC_MODE_DECOMPRESS,
+    TSC_MODE_INFO
 } tsc_mode_t;
 
 extern str_t* tsc_prog_name;

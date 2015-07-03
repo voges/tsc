@@ -9,7 +9,7 @@
  * Wrapper functions to safely read/write different data types from/to files (or
  * streams).
  * The 'fwrite_uintXX' and 'fread_uintXX' functions are always compatible with
- * each other and are independent from the endianness of the system this file
+ * each other and are independent from the endianness of the system this code
  * will be built on.
  */
 

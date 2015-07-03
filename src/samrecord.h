@@ -15,7 +15,11 @@
 /*
  * Structure of a SAM alignment line: The 11 mandatory fields are
  * TAB-delimited. Optional information is stored as 12th field.
- * Data types have been selected according to the SAM format specification.
+ * Data types have been selected according to the SAM format specification [1].
+ *
+ * [1] The SAM/BAM Format Specification Working Group: Sequence Alignment/Map
+ *     Format Specification, 28 December 2014, Available:
+ *     https://github.com/samtools/hts-specs
  */
 
 enum {
