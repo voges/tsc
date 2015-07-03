@@ -1,3 +1,4 @@
+/data/genome/cancercells/ad3d4757-f358-40a3-9d92-742463a95e88/G15511.HCC1143.1.sam
 /data/genome/cancercells/ad3d4757-f358-40a3-9d92-742463a95e88/tmp/G15511.HCC1143.1.sam
 /data/genome/cancercells/f0eaa94b-f622-49b9-8eac-e4eac6762598/tmp/G15511.HCC1143_BL.1.sam
 /data/genome/cancercells/360b4736-6c5e-48df-af58-c1cf51609350/tmp/HCC1954.mix1.n80t20.sam
@@ -12,6 +13,7 @@
 /data/genome/human/illumina/ERP001960/tmp/NA12890_S1.sam
 /data/genome/human/illumina/ERP001960/tmp/NA12879_S1.sam
 /data/genome/human/illumina/NA21144.chrom11/tmp/NA21144.chrom11.ILLUMINA.bwa.GIH.low_coverage.20130415.sam
+/data/genome/human/illumina/NA21144.chrom11/tmp/NA21144.chrom11.ILLUMINA.bwa.GIH.low_coverage.20130415.sam.short.sam.tsc.sam
 /data/genome/human/IonTorrent/tmp/sample-2-12_sorted.sam
 /data/genome/human/IonTorrent/tmp/sample-2-11_sorted.sam
 /data/genome/human/IonTorrent/tmp/sample-2-10_sorted.sam
