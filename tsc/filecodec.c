@@ -13,19 +13,48 @@
 #include <string.h>
 #include <sys/time.h>
 
-/* 
+/*
+ * File format (using e.g. dedicated aux-, nuc-, and qualcodecs):
+ * --------------------------------------------------------------
+ *   [File header     ]
+ *   [SAM header      ]
+ *   [Block header 0  ]
+ *     [Aux block  0  ]
+ *     [Nuc block  0  ]
+ *     [Qual block 0  ]
+ *   ...
+ *   [Block header n-1]
+ *     [Aux block  n-1]
+ *     [Nuc block  n-1]
+ *     [Qual block n-1]
+ *   [Block offset 0  ]
+ *   ...
+ *   [Block offset n-1]
+ *
+ *
  * File header format:
- *   unsigned char[7]: "tsc----"
- *   unsigned char[5]: VERSION
- *   uint64_t        : blk_sz
+ * -------------------
+ *   unsigned char magic[7]   : "tsc----"
+ *   unsigned char version[5] : VERSION
+ *   uint64_t      blk_lc     : no. of lines per block
+ *   uint64_t      blk_n      : number of blocks written
  *
  * SAM header format:
- *   uint64_t       : header_sz
- *   unsigned char* : header
+ * ------------------
+ *   uint64_t       header_sz : header size
+ *   unsigned char* header    : header data
  *
- * Block header:
- *   uint64_t : blk_cnt
- *   uint64_t : blkl_cnt
+ * Block header format:
+ * --------------------
+ *   uint64_t blk_cnt         : block count, starting with 0
+ *   uint64_t blkl_cnt        : no. of lines in block
+ *
+ * Block offset format:
+ * --------------------
+ *   uint64_t blk_i           : block number
+ *   uint64_t pos_min         : smallest position contained in block
+ *   uint64_t pos_max         : largest position contained in block
+ *   uint64_t offset          : fp offset from beginning of file to block
  */
 
 static long tvdiff(struct timeval tv0, struct timeval tv1)
@@ -387,6 +416,7 @@ void filedec_decode(filedec_t* filedec)
     filedec_read_file_header(filedec);
     filedec_read_sam_header(filedec);
 
+    /* Block header. */
     uint64_t blk_cnt;
     uint64_t blkl_cnt;
 
@@ -413,21 +443,17 @@ void filedec_decode(filedec_t* filedec)
             aux[i] = str_new();
         }
 
-        /* Decode NUC, QUAL, and AUX blocks. */
+        /* Decode block. */
         auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
         nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
         qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
         
-        /* Write NUC, QUAL and AUX in correct order to outfile. */
-        if (tsc_verbose)
-            tsc_log("Writing decoded block %zu: %zu lines\n",
-                    blk_cnt, blkl_cnt);
+        /* Write block in correct order to outfile. */
         for (i = 0; i < blkl_cnt; i++) {
             enum { QNAME, FLAG, RNAME, POS, MAPQ, CIGAR,
                    RNEXT, PNEXT, TLEN, SEQ, QUAL, OPT };
             char* sam_fields[12];
 
-            /* Get pointers to POS, CIGAR, SEQ, QUAL and AUX. */
             char pos_cstr[101]; /* this should be enough space */
             snprintf(pos_cstr, sizeof(pos_cstr), "%"PRIu64, pos[i]);
             sam_fields[POS] = pos_cstr;
@@ -486,7 +512,6 @@ void filedec_decode(filedec_t* filedec)
 
     /* If selected by the user, print detailed statistics. */
     if (tsc_stats)
-        filedec_print_stats(filedec, (size_t)blk_cnt, line_cnt,
-                            out_sz);
+        filedec_print_stats(filedec, (size_t)blk_cnt, line_cnt, out_sz);
 }
 
