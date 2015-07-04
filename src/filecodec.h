@@ -23,8 +23,6 @@ typedef struct fileenc_t_ {
     FILE*        ofp;
     size_t       blk_lc; /* number of lines in a block */
     samparser_t* samparser;
-
-    /* Encoders. */
     auxenc_t*    auxenc;
     nucenc_t*    nucenc;
     qualenc_t*   qualenc;
@@ -56,18 +54,6 @@ typedef struct fileenc_t_ {
         OUT_NUC,   /* total no. of bytes written by nucenc       */
         OUT_QUAL   /* total no. of bytes written by qualenc      */
     };
-
-    /* Timing statistics. */
-    long elapsed[7];
-    enum {
-        ELAPSED_TOTAL,    /* time elapsed for file compression             */
-        ELAPSED_AUXPRED,  /* time elapsed for predictive aux coding        */
-        ELAPSED_NUCPRED,  /* time elapsed for predictive aux coding        */
-        ELAPSED_QUALPRED, /* time elapsed for predictive aux coding        */
-        ELAPSED_AUXENTR,  /* time elapsed for entropy coding of aux blocks */
-        ELAPSED_NUCENTR,  /* time elapsed for entropy coding of aux blocks */
-        ELAPSED_QUALENTR  /* time elapsed for entropy coding of aux blocks */
-    };
 } fileenc_t;
 
 fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_lc);
@@ -83,7 +69,6 @@ typedef struct filedec_t_ {
     auxdec_t*  auxdec;
     nucdec_t*  nucdec;
     qualdec_t* qualdec;
-    size_t     out_sz;
 } filedec_t;
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp);

@@ -31,7 +31,7 @@ str_t* tsc_in_fname = NULL;
 str_t* tsc_out_fname = NULL;
 FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
-size_t tsc_block_sz = TSC_BLOCK_SZ_DEFAULT;
+size_t tsc_blk_lc = TSC_BLK_LC_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 bool tsc_time = false;
@@ -53,14 +53,22 @@ static void print_help(void)
     print_version();
     print_copyright();
     printf("\n");
-    printf("Usage: Compress:   tsc [options] <file.sam>\n");
-    printf("       Decompress: tsc -d [options] <file.tsc>\n");
-    printf("                   detsc [options] <file.tsc>\n");
+    printf("Usage:\n");
+    printf("  Compress  : tsc [-b blocksize] [-o output] [-fstv] <file.sam>\n");
+    printf("  Decompress: tsc -d [-o output] [-fstv] <file.tsc>\n");
+    printf("              detsc [-o output] [-fstv] <file.tsc>\n");
+    printf("  Info      : tsc -i [-v] <file.tsc>\n");
+    printf("              detsc -i [-v] <file.tsc>\n");
+    printf("\n");
+    printf("Examples (using default preferences):\n");
+    printf("  Compress  : tsc test.sam\n");
+    printf("  Decompress: detsc test.sam.tsc\n");
+    printf("  Info      : detsc -i test.sam.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b, --blocksize   Block size (default: %zu)\n", tsc_block_sz);
+    printf("  -b, --blocksize   Block size (default: %zu)\n", tsc_blk_lc);
     printf("  -d  --decompress  Decompress\n");
-    printf("  -f, --force       Force overwriting of output file\n");
+    printf("  -f, --force       Force overwriting of output file(s)\n");
     printf("  -h, --help        Print this help\n");
     printf("  -i, --info        Print information about tsc file\n");
     printf("  -o, --output      Specify output file\n");
@@ -102,7 +110,7 @@ static void parse_options(int argc, char *argv[])
                 tsc_error("Block size must be greather than zero: %d\n",
                           atoi(optarg));
             else
-                tsc_block_sz = (size_t)atoi(optarg);
+                tsc_blk_lc = (size_t)atoi(optarg);
             break;
         case 'd':
             tsc_mode = TSC_MODE_DECOMPRESS;
@@ -229,7 +237,7 @@ int main(int argc, char* argv[])
         tsc_in_fp = tsc_fopen((const char*)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char*)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_block_sz);
+        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_blk_lc);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);

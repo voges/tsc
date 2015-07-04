@@ -28,7 +28,7 @@
 #define MB (KB*1024LL)
 #define GB (MB*1024LL)
 
-#define TSC_BLOCK_SZ_DEFAULT 100000LL
+#define TSC_BLK_LC_DEFAULT 100000LL
 
 typedef enum {
     TSC_MODE_COMPRESS,
@@ -42,7 +42,7 @@ extern str_t* tsc_in_fname;
 extern str_t* tsc_out_fname;
 extern FILE* tsc_in_fp;
 extern FILE* tsc_out_fp;
-extern size_t tsc_block_sz;
+extern size_t tsc_blk_lc;
 extern tsc_mode_t tsc_mode;
 extern bool tsc_stats;
 extern bool tsc_time;
