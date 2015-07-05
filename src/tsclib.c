@@ -74,6 +74,19 @@ void tsc_log(const char* fmt, ...)
     free(msg);
 }
 
+void tsc_vlog(const char* fmt, ...)
+{
+    if (tsc_verbose) {
+        va_list args;
+        va_start(args, fmt);
+        char* msg;
+        vasprintf(&msg, fmt, args);
+        va_end(args);
+        fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
+        free(msg);
+    }
+}
+
 void* tsc_malloc(const size_t n)
 {
     void* p = malloc(n);

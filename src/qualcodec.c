@@ -15,6 +15,15 @@
 #include <math.h>
 #include <string.h>
 
+/*
+ * Qual block format:
+ *   unsigned char  blk_id[8] : "qual---" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
+
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/

@@ -224,8 +224,8 @@ void fileenc_encode(fileenc_t* fileenc)
     tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blk_lc);
     fseek(fileenc->ofp, sizeof(blk_n) + sizeof(lut_pos), SEEK_CUR);
 
-    if (tsc_verbose) tsc_log("Format: tsc %s\n", VERSION);
-    if (tsc_verbose) tsc_log("Block size: %zu lines\n", blk_lc);
+    tsc_vlog("Format: tsc %s\n", VERSION);
+    tsc_vlog("Block size: %zu lines\n", blk_lc);
 
     /* SAM header */
     uint64_t       header_sz = (uint64_t)fileenc->samparser->head->len;
@@ -234,7 +234,7 @@ void fileenc_encode(fileenc_t* fileenc)
     tsc_sz[TSC_SH] += fwrite_uint64(fileenc->ofp, header_sz);
     tsc_sz[TSC_SH] += fwrite_buf(fileenc->ofp, header, header_sz);
 
-    if (tsc_verbose) tsc_log("Wrote SAM header\n");
+    tsc_vlog("Wrote SAM header\n");
 
     samrecord_t* samrecord = &(fileenc->samparser->curr);
     while (samparser_next(fileenc->samparser)) {
@@ -262,8 +262,7 @@ void fileenc_encode(fileenc_t* fileenc)
             gettimeofday(&tv1, NULL);
             elapsed_pred += tvdiff(tv0, tv1);
 
-            if (tsc_verbose)
-                tsc_log("Wrote block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+            tsc_vlog("Wrote block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
 
             blk_cnt++;
             blkl_cnt = 0;
@@ -271,6 +270,7 @@ void fileenc_encode(fileenc_t* fileenc)
 
         /* Add records to encoders */
         gettimeofday(&tv0, NULL);
+
         auxenc_add_record(fileenc->auxenc,
                           samrecord->str_fields[QNAME],
                           samrecord->int_fields[FLAG],
@@ -288,6 +288,7 @@ void fileenc_encode(fileenc_t* fileenc)
         qualenc_add_record(fileenc->qualenc,
                            samrecord->str_fields[QUAL]);
         */
+
         gettimeofday(&tv1, NULL);
         elapsed_entr += tvdiff(tv0, tv1);
 
@@ -322,8 +323,7 @@ void fileenc_encode(fileenc_t* fileenc)
     gettimeofday(&tv1, NULL);
     elapsed_pred += tvdiff(tv0, tv1);
 
-    if (tsc_verbose)
-        tsc_log("Wrote last block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+    tsc_vlog("Wrote last block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
 
     blk_cnt++;
 
@@ -341,7 +341,7 @@ void fileenc_encode(fileenc_t* fileenc)
     tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, lut_magic, sizeof(lut_magic));
     tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, lut_sz);
 
-    if (tsc_verbose) tsc_log("Wrote LUT header\n");
+    tsc_vlog("Wrote LUT header\n");
 
     /* LUT entries */
     tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, (unsigned char*)lut, lut_sz);
@@ -351,7 +351,8 @@ void fileenc_encode(fileenc_t* fileenc)
         free(lut);
         lut = NULL;
     }
-    if (tsc_verbose) tsc_log("Wrote LUT entries\n");
+
+    tsc_vlog("Wrote LUT entries\n");
 
     /* Print summary */
     gettimeofday(&tt1, NULL);
@@ -361,13 +362,11 @@ void fileenc_encode(fileenc_t* fileenc)
                                  + tsc_sz[TSC_NUC]
                                  + tsc_sz[TSC_QUAL]
                                  + tsc_sz[TSC_AUX];
-    if (tsc_verbose) {
-        tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
-                tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
-                blk_cnt);
-        tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
-                (double)elapsed_total / 1000000);
-    }
+    tsc_vlog("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
+             tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
+             blk_cnt);
+    tsc_vlog("Took %ld us ~= %.4f s\n", elapsed_total,
+             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics and/or timing info. */
     if (tsc_stats) fileenc_print_stats(sam_sz, tsc_sz, blk_cnt, line_cnt);
@@ -477,8 +476,8 @@ void filedec_decode(filedec_t* filedec)
         tsc_error("File was compressed with another version: %s\n", version);
 
     magic[3] = '\0';
-    if (tsc_verbose) tsc_log("Format: %s %s\n", magic, version);
-    if (tsc_verbose) tsc_log("Block size: %zu\n", (size_t)blk_lc);
+    tsc_vlog("Format: %s %s\n", magic, version);
+    tsc_vlog("Block size: %zu\n", (size_t)blk_lc);
 
     /* SAM header */
     uint64_t       header_sz;
@@ -492,7 +491,7 @@ void filedec_decode(filedec_t* filedec)
     sam_sz += fwrite_buf(filedec->ofp, header, header_sz);
     free(header);
 
-    if (tsc_verbose) tsc_log("Read SAM header\n");
+    tsc_vlog("Read SAM header\n");
 
     size_t i = 0;
     for (i = 0; i < blk_n; i++) {
@@ -502,35 +501,49 @@ void filedec_decode(filedec_t* filedec)
         if (fread_uint64(filedec->ifp, &blkl_cnt) != sizeof(blkl_cnt))
             tsc_error("Failed to read no. of lines in block %zu!\n",
                       (size_t)blk_cnt);
-        if (tsc_verbose)
-            tsc_log("Decoding block %zu: %zu lines\n", (size_t)blk_cnt,
-                    (size_t)blkl_cnt);
+
+        tsc_vlog("Decoding block %zu: %zu lines\n", (size_t)blk_cnt,
+                 (size_t)blkl_cnt);
 
         /* Allocate memory to prepare decoding of the sub-blocks. */
-        uint64_t* pos = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        str_t** cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t** seq = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t** qual = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t** aux = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**   qname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        uint64_t* flag  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        str_t**   rname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        uint64_t* pos   = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        uint64_t* mapq  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        str_t**   cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**   rnext = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        uint64_t* pnext = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        uint64_t* tlen  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
+        str_t**   seq   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**   qual  = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**   opt   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
 
         size_t i = 0;
         for (i = 0; i < blkl_cnt; i++) {
+            qname[i] = str_new();
+            rname[i] = str_new();
             cigar[i] = str_new();
+            rnext[i] = str_new();
             seq[i] = str_new();
             qual[i] = str_new();
-            aux[i] = str_new();
+            opt[i] = str_new();
         }
 
         /* Decode sub-blocks */
         gettimeofday(&tv0, NULL);
-        auxdec_decode_block(filedec->auxdec, filedec->ifp, aux);
+
+        auxdec_decode_block(filedec->auxdec, filedec->ifp, qname, flag, rname,
+                            mapq, rnext, pnext, tlen, opt);
         //nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
         //qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
+
         gettimeofday(&tv1, NULL);
         elapsed_dec += tvdiff(tv0, tv1);
 
         /* DUMMIES */
         for (i = 0; i < blkl_cnt; i++) {
+            pos[i] = 905;
             str_append_cstr(cigar[i], "cigar");
             str_append_cstr(seq[i], "seq");
             str_append_cstr(qual[i], "qual");
@@ -538,31 +551,34 @@ void filedec_decode(filedec_t* filedec)
 
         /* Write decoded sub-blocks in correct order to outfile. */
         gettimeofday(&tv0, NULL);
-        for (i = 0; i < blkl_cnt; i++) {
-            char* sam_fields[12];
 
-            char pos_cstr[101]; /* this should be enough space */
+        for (i = 0; i < blkl_cnt; i++) {
+            /* Convert int-fields to C-strings */
+            char flag_cstr[101];  /* this should be enough space */
+            char pos_cstr[101];   /* this should be enough space */
+            char mapq_cstr[101];  /* this should be enough space */
+            char pnext_cstr[101]; /* this should be enough space */
+            char tlen_cstr[101];  /* this should be enough space */
+            snprintf(flag_cstr, sizeof(flag_cstr), "%"PRIu64, flag[i]);
             snprintf(pos_cstr, sizeof(pos_cstr), "%"PRIu64, pos[i]);
-            sam_fields[SAM_POS] = pos_cstr;
+            snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRIu64, mapq[i]);
+            snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu64, pnext[i]);
+            snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRIu64, tlen[i]);
+
+            /* Set pointers to C-strings */
+            char* sam_fields[12];
+            sam_fields[SAM_QNAME] = qname[i]->s;
+            sam_fields[SAM_FLAG]  = flag_cstr;
+            sam_fields[SAM_RNAME] = rname[i]->s;
+            sam_fields[SAM_POS]   = pos_cstr;
+            sam_fields[SAM_MAPQ]  = mapq_cstr;
             sam_fields[SAM_CIGAR] = cigar[i]->s;
-            sam_fields[SAM_SEQ] = seq[i]->s;
-            sam_fields[SAM_QUAL] = qual[i]->s;
-            char* aux_itr = aux[i]->s;
-            sam_fields[SAM_QNAME]= aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_FLAG] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_RNAME] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_MAPQ] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_RNEXT] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_PNEXT] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_TLEN] = ++aux_itr;
-            aux_itr = strchr(aux_itr, '\t'); *aux_itr = '\0';
-            sam_fields[SAM_OPT] = ++aux_itr;
+            sam_fields[SAM_RNEXT] = rnext[i]->s;
+            sam_fields[SAM_PNEXT] = pnext_cstr;
+            sam_fields[SAM_TLEN]  = tlen_cstr;
+            sam_fields[SAM_SEQ]   = seq[i]->s;
+            sam_fields[SAM_QUAL]  = qual[i]->s;
+            sam_fields[SAM_OPT]   = opt[i]->s;
 
             /* Write data to file */
             size_t f = 0;
@@ -575,20 +591,31 @@ void filedec_decode(filedec_t* filedec)
             sam_sz += fwrite_byte(filedec->ofp, '\n');
 
             /* Free the memory used for the current line. */
+            str_free(qname[i]);
+            str_free(rname[i]);
             str_free(cigar[i]);
+            str_free(rnext[i]);
             str_free(seq[i]);
             str_free(qual[i]);
-            str_free(aux[i]);
+            str_free(opt[i]);
         }
+
         gettimeofday(&tv1, NULL);
         elapsed_wrt += tvdiff(tv0, tv1);
 
         /* Free memory allocated for this block. */
+        free(qname);
+        free(flag);
+        free(rname);
         free(pos);
+        free(mapq);
         free(cigar);
+        free(rnext);
+        free(pnext);
+        free(tlen);
         free(seq);
         free(qual);
-        free(aux);
+        free(opt);
 
         line_cnt += blkl_cnt;
         blk_cnt++;
@@ -598,13 +625,11 @@ void filedec_decode(filedec_t* filedec)
     elapsed_total += tvdiff(tt0, tt1);
 
     /* Print summary */
-    if (tsc_verbose) {
-        tsc_log("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
-                "%.2f GiB\n",
-                line_cnt, (size_t)blk_cnt, sam_sz, ((double)sam_sz / GB));
-        tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
-                (double)elapsed_total / 1000000);
-    }
+    tsc_vlog("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
+             "%.2f GiB\n",
+             line_cnt, (size_t)blk_cnt, sam_sz, ((double)sam_sz / GB));
+    tsc_vlog("Took %ld us ~= %.4f s\n", elapsed_total,
+             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics. */
     if (tsc_stats)

@@ -50,6 +50,7 @@ void tsc_abort(void);
 void tsc_error(const char* fmt, ...);
 void tsc_warning(const char* fmt, ...);
 void tsc_log(const char* fmt, ...);
+void tsc_vlog(const char* fmt, ...); /* verbose logging */
 void* tsc_malloc(const size_t n);
 void* tsc_realloc(void* ptr, const size_t n);
 FILE* tsc_fopen(const char* fname, const char* mode);

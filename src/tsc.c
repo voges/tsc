@@ -59,11 +59,6 @@ static void print_help(void)
     printf("  Info       : tsc -i [-v] <file.tsc>\n");
     printf("               detsc -i [-v] <file.tsc>\n");
     printf("\n");
-    printf("Examples (using default preferences):\n");
-    printf("  Compress   : tsc test.sam\n");
-    printf("  Decompress : detsc test.sam.tsc\n");
-    printf("  Info       : detsc -i test.sam.tsc\n");
-    printf("\n");
     printf("Options:\n");
     printf("  -d  --decompress  Decompress\n");
     printf("  -f, --force       Force overwriting of output file(s)\n");
@@ -71,8 +66,8 @@ static void print_help(void)
     printf("  -i, --info        Print information about tsc file\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -t, --time        Print timing statistics\n");
-    printf("  -v, --verbose     Print detailed information\n");
+    printf("  -t, --time        Print (de-)compression timing statistics\n");
+    printf("  -v, --verbose     Let tsc be verbose\n");
     printf("  -V, --version     Display program version\n");
     printf("\n");
 }
