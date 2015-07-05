@@ -8,7 +8,7 @@
 #ifndef TSC_CBUFSTR_H
 #define TSC_CBUFSTR_H
 
-#include "./str/str.h"
+#include "../str/str.h"
 
 typedef struct cbufstr_t_ {
     size_t  sz;  /* size of circular buffer                 */

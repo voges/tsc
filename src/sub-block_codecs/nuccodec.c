@@ -6,23 +6,32 @@
  ******************************************************************************/
 
 #include "nuccodec.h"
-#include "../arithcodec/arithcodec.h"
+#include "../../arithcodec/arithcodec.h"
 #include "bbuf.h"
-#include "./frw/frw.h"
-#include "tsclib.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../tsclib.h"
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>
 #include <math.h>
 #include <string.h>
 
+/*
+ * Nuc block format:
+ *   unsigned char  blk_id[8] : "nuc----" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
 static void nucenc_init(nucenc_t* nucenc)
 {
-    nucenc->block_lc = 0;
+    nucenc->blkl_n = 0;
     nucenc->block_ln = 0;
 }
 
@@ -33,7 +42,7 @@ nucenc_t* nucenc_new(void)
     nucenc->cigar_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucenc->seq_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucenc->exp_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
-    nucenc->out_buf = str_new();
+    nucenc->residues = str_new();
     nucenc_init(nucenc);
     return nucenc;
 }
@@ -45,7 +54,7 @@ void nucenc_free(nucenc_t* nucenc)
         cbufstr_free(nucenc->cigar_cbuf);
         cbufstr_free(nucenc->seq_cbuf);
         cbufstr_free(nucenc->exp_cbuf);
-        str_free(nucenc->out_buf);
+        str_free(nucenc->residues);
         free((void*)nucenc);
         nucenc = NULL;
     } else { /* nucenc == NULL */
@@ -165,7 +174,7 @@ static double nucenc_entropy(str_t* seq)
     return h;
 }
 
-static void nucenc_add_record_O1(nucenc_t*      nucenc,
+static void nucenc_add_record_o1(nucenc_t*      nucenc,
                                  const uint64_t pos,
                                  const char*    cigar,
                                  const char*    seq)
@@ -175,7 +184,7 @@ static void nucenc_add_record_O1(nucenc_t*      nucenc,
     str_t* diff = str_new();     /* difference sequence */
     str_t* diff_min = str_new(); /* best difference sequence */
 
-    if (cigar[0] != '*' && seq[0] != '*' && nucenc->block_lc > 0) {
+    if (cigar[0] != '*' && seq[0] != '*' && nucenc->blkl_n > 0) {
         /* SEQ is mapped , SEQ & CIGAR are present and this is not the first
          * record in the current block. Encode it!
          */
@@ -219,17 +228,17 @@ static void nucenc_add_record_O1(nucenc_t*      nucenc,
         /* Append to output stream. */
         /* TODO: Append cbuf_idx_min */
         if (diff_ok) {
-            str_append_str(nucenc->out_buf, diff_min);
+            str_append_str(nucenc->residues, diff_min);
         } else {
             if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
             char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
-            str_append_cstr(nucenc->out_buf, tmp);
-            str_append_cstr(nucenc->out_buf, "\t");
-            str_append_cstr(nucenc->out_buf, cigar);
-            str_append_cstr(nucenc->out_buf, "\t");
-            str_append_cstr(nucenc->out_buf, seq);
+            str_append_cstr(nucenc->residues, tmp);
+            str_append_cstr(nucenc->residues, "\t");
+            str_append_cstr(nucenc->residues, cigar);
+            str_append_cstr(nucenc->residues, "\t");
+            str_append_cstr(nucenc->residues, seq);
         }
-        str_append_cstr(nucenc->out_buf, "\n");
+        str_append_cstr(nucenc->residues, "\n");
 
         /* Push POS, CIGAR, SEQ and EXP to circular buffers. */
         cbufint64_push(nucenc->pos_cbuf, pos);
@@ -249,12 +258,12 @@ static void nucenc_add_record_O1(nucenc_t*      nucenc,
         /* Output record. */
         if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
         char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
-        str_append_cstr(nucenc->out_buf, tmp);
-        str_append_cstr(nucenc->out_buf, "\t");
-        str_append_cstr(nucenc->out_buf, cigar);
-        str_append_cstr(nucenc->out_buf, "\t");
-        str_append_cstr(nucenc->out_buf, seq);
-        str_append_cstr(nucenc->out_buf, "\n");
+        str_append_cstr(nucenc->residues, tmp);
+        str_append_cstr(nucenc->residues, "\t");
+        str_append_cstr(nucenc->residues, cigar);
+        str_append_cstr(nucenc->residues, "\t");
+        str_append_cstr(nucenc->residues, seq);
+        str_append_cstr(nucenc->residues, "\n");
 
         /* If this record is present, add it to circular buffers. */
         if (cigar[0] != '*' && seq[0] != '*') {
@@ -273,98 +282,81 @@ static void nucenc_add_record_O1(nucenc_t*      nucenc,
     str_free(diff);
     str_free(diff_min);
 
-    /*DEBUG("out_buf: \n%s", nucenc->out_buf->s);*/
-    nucenc->block_lc++;
+    /*DEBUG("out_buf: \n%s", nucenc->residues->s);*/
+    nucenc->blkl_n++;
 }
 
-static void nucenc_add_record_O0(nucenc_t*      nucenc,
-                                 const uint64_t pos,
+/*
+ * nucenc_add_record_o0: Fall-trough to entropy coder
+ */
+static void nucenc_add_record_o0(nucenc_t*      nucenc,
+                                 const int64_t  pos,
                                  const char*    cigar,
                                  const char*    seq)
 {
-    /* This is just a fall trough to code blocks only with an entropy coder
-     * and without prediction.
-     */
-    str_append_cstr(nucenc->out_buf, "P"); /* mark this line as plain text */
-    if (pos > pow(10, 10) - 1) tsc_error("Buffer too small for POS data!\n");
-    char tmp[101]; snprintf(tmp, sizeof(tmp), "%"PRIu64, pos);
-    str_append_cstr(nucenc->out_buf, tmp);
-    str_append_cstr(nucenc->out_buf, "\t");
-    str_append_cstr(nucenc->out_buf, cigar);
-    str_append_cstr(nucenc->out_buf, "\t");
-    str_append_cstr(nucenc->out_buf, seq);
-    str_append_cstr(nucenc->out_buf, "\n");
+    char pos_cstr[101];
+    snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos);
 
-    nucenc->block_lc++;
+    str_append_cstr(nucenc->residues, pos_cstr);
+    str_append_cstr(nucenc->residues, "\t");
+    str_append_cstr(nucenc->residues, cigar);
+    str_append_cstr(nucenc->residues, "\t");
+    str_append_cstr(nucenc->residues, seq);
+    str_append_cstr(nucenc->residues, "\n");
 }
 
 void nucenc_add_record(nucenc_t*      nucenc,
-                       const uint64_t pos,
+                       const int64_t  pos,
                        const char*    cigar,
                        const char*    seq)
 {
-    nucenc_add_record_O0(nucenc, pos, cigar, seq);
-    /*nucenc_add_record_O1(nucenc, pos, cigar, seq);*/
+    nucenc_add_record_o0(nucenc, pos, cigar, seq);
+    /*nucenc_add_record_o1(nucenc, pos, cigar, seq);*/
+    nucenc->blkl_n++;
 }
 
 static void nucenc_reset(nucenc_t* nucenc)
 {
-    nucenc->block_lc = 0;
+    nucenc->blkl_n = 0;
     nucenc->block_ln = 0;
     cbufint64_clear(nucenc->pos_cbuf);
     cbufstr_clear(nucenc->cigar_cbuf);
     cbufstr_clear(nucenc->seq_cbuf);
     cbufstr_clear(nucenc->exp_cbuf);
-    str_clear(nucenc->out_buf);
+    str_clear(nucenc->residues);
 }
 
 size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
 {
-    /* Write block:
-     * - unsigned char[8]: "NUC-----"
-     * - uint32_t        : no. of lines in block
-     * - uint32_t        : block size
-     * - unsigned char[] : data
-     */
-    size_t header_byte_cnt = 0;
-    size_t data_byte_cnt = 0;
-    size_t byte_cnt = 0;
+    size_t blk_sz = 0;
 
-    unsigned char blk_id[8] = "NUC----"; blk_id[7] = '\0';
+    /* Compress whole block with an entropy coder */
+    unsigned char* residues = (unsigned char*)nucenc->residues->s;
+    unsigned int residues_sz = (unsigned int)nucenc->residues->len;
+    unsigned int data_sz = 0;
+    unsigned char* data = arith_compress_o0(residues, residues_sz, &data_sz);
 
-    header_byte_cnt += fwrite_buf(ofp, blk_id, sizeof(blk_id));
-    header_byte_cnt += fwrite_uint32(ofp, nucenc->block_lc);
+    tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+             residues_sz, data_sz, (double)data_sz / (double)residues_sz*100);
 
-    /* Compress block with AC. */
-    unsigned char* ac_in = (unsigned char*)nucenc->out_buf->s;
-    unsigned int ac_in_sz = nucenc->out_buf->len;
-    unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_compress_o0(ac_in, ac_in_sz, &ac_out_sz);
-    //unsigned char* ac_out = arith_compress_o1(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Compressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
+    /* Compute CRC64 */
+    uint64_t data_crc = crc64(data, data_sz);
 
-    /* Write compressed block to ofp. */
-    header_byte_cnt += fwrite_uint32(ofp, ac_out_sz);
-    data_byte_cnt += fwrite_buf(ofp, ac_out, ac_out_sz);
-    free((void*)ac_out);
-    byte_cnt = header_byte_cnt + data_byte_cnt;
+    /* Write compressed block */
+    unsigned char blk_id[8] = "nuc----"; blk_id[7] = '\0';
+    blk_sz += fwrite_buf(ofp, blk_id, sizeof(blk_id));
+    blk_sz += fwrite_uint64(ofp, (uint64_t)nucenc->blkl_n);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_sz);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_crc);
+    blk_sz += fwrite_buf(ofp, data, data_sz);
 
-    /* Log this if in verbose mode. */
-    if (tsc_verbose)
-        tsc_log("\tWrote NUC block:\n"
-                "\t  lines : %12zu (%zu unmapped)\n"
-                "\t  header: %12zu bytes\n"
-                "\t  data  : %12zu bytes\n"
-                "\t  total : %12zu bytes\n",
-                (size_t)nucenc->block_lc, (size_t)nucenc->block_ln,
-                header_byte_cnt,
-                data_byte_cnt,
-                byte_cnt);
+    tsc_vlog("Wrote nuc block: %zu lines, %zu data bytes\n",
+             nucenc->blkl_n, data_sz);
 
-    /* Reset encoder for next block. */
-    nucenc_reset(nucenc);
+    nucenc_reset(nucenc); /* reset encoder for next block */
+    free(data); /* free memory used for encoded bitstream */
 
-    return byte_cnt;
+    return blk_sz;
 }
 
 /******************************************************************************
@@ -372,16 +364,12 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
  ******************************************************************************/
 static void nucdec_init(nucdec_t* nucdec)
 {
-    nucdec->block_lc = 0;
+
 }
 
 nucdec_t* nucdec_new(void)
 {
     nucdec_t* nucdec = (nucdec_t*)tsc_malloc(sizeof(nucdec_t));
-    nucdec->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
-    nucdec->cigar_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
-    nucdec->seq_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
-    nucdec->exp_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucdec_init(nucdec);
     return nucdec;
 }
@@ -389,11 +377,7 @@ nucdec_t* nucdec_new(void)
 void nucdec_free(nucdec_t* nucdec)
 {
     if (nucdec != NULL) {
-        cbufint64_free(nucdec->pos_cbuf);
-        cbufstr_free(nucdec->cigar_cbuf);
-        cbufstr_free(nucdec->seq_cbuf);
-        cbufstr_free(nucdec->exp_cbuf);
-        free((void*)nucdec);
+        free(nucdec);
         nucdec = NULL;
     } else { /* nucdec == NULL */
         tsc_error("Tried to free NULL pointer.\n");
@@ -402,120 +386,96 @@ void nucdec_free(nucdec_t* nucdec)
 
 static void nucdec_reset(nucdec_t* nucdec)
 {
-    nucdec->block_lc = 0;
-    cbufint64_clear(nucdec->pos_cbuf);
-    cbufstr_clear(nucdec->cigar_cbuf);
-    cbufstr_clear(nucdec->seq_cbuf);
-    cbufstr_clear(nucdec->exp_cbuf);
+    nucdec_init(nucdec);
+}
+
+static void nucdec_decode_block_o0(nucdec_t*      nucdec,
+                                   unsigned char* residues,
+                                   size_t         residues_sz,
+                                   int64_t*       pos,
+                                   str_t**        cigar,
+                                   str_t**        seq)
+{
+    size_t i = 0;
+    size_t line = 0;
+    unsigned char* cstr = residues;
+    unsigned int idx = 0;
+
+    for (i = 0; i < residues_sz; i++) {
+        if (residues[i] == '\n') {
+            residues[i] = '\0';
+            str_append_cstr(seq[line], (const char*)cstr);
+            cstr = &residues[i+1];
+            idx = 0;
+            line++;
+            continue;
+        }
+
+        if (residues[i] == '\t') {
+            residues[i] = '\0';
+            switch (idx++) {
+            case 0:
+                pos[line] = strtoll((const char*)cstr, NULL, 10);
+                break;
+            case 1:
+                str_append_cstr(cigar[line], (const char*)cstr);
+                break;
+            default:
+                tsc_error("Failed to decode nuc block (o0)!\n");
+                break;
+            }
+            cstr = &residues[i+1];
+        }
+    }
 }
 
 void nucdec_decode_block(nucdec_t* nucdec,
                          FILE*     ifp,
-                         uint64_t* pos,
+                         int64_t*  pos,
                          str_t**   cigar,
                          str_t**   seq)
 {
-    /* Read block:
-     * - unsigned char[8]: "NUC-----"
-     * - uint32_t        : no. of lines in block
-     * - uint32_t        : block size
-     * - unsigned char[] : data
-     */
-    size_t header_byte_cnt = 0;
-    size_t data_byte_cnt = 0;
-    size_t byte_cnt = 0;
+    unsigned char  blk_id[8];
+    uint64_t       blkl_n;
+    uint64_t       data_sz;
+    uint64_t       data_crc;
+    unsigned char* data;
 
-    /* Read and check block header. */
-    unsigned char block_id[8];
-    uint32_t block_sz;
-
-    if (fread_buf(ifp, block_id, sizeof(block_id)) != sizeof(block_id))
+    /* Read and check block header */
+    if (fread_buf(ifp, blk_id, sizeof(blk_id)) != sizeof(blk_id))
         tsc_error("Could not read block ID!\n");
-    if (fread_uint32(ifp, &(nucdec->block_lc)) != sizeof(nucdec->block_lc))
+    if (strncmp("nuc----", (const char*)blk_id, 7))
+        tsc_error("Wrong block ID: %s\n", blk_id);
+    if (fread_uint64(ifp, &blkl_n) != sizeof(blkl_n))
         tsc_error("Could not read no. of lines in block!\n");
-    if (fread_uint32(ifp, &block_sz) != sizeof(block_sz))
-        tsc_error("Could not read block size!\n");
-    if (strncmp("NUC-----", (const char*)block_id, sizeof(block_id)))
-        tsc_error("Wrong block ID: %s\n", block_id);
+    if (fread_uint64(ifp, &data_sz) != sizeof(data_sz))
+        tsc_error("Could not read data size!\n");
+    if (fread_uint64(ifp, &data_crc) != sizeof(data_crc))
+        tsc_error("Could not read CRC64 of compressed data!\n");
 
-    header_byte_cnt += sizeof(block_id) + sizeof(nucdec->block_lc) + sizeof(block_sz);
-    data_byte_cnt += block_sz;
-    byte_cnt = header_byte_cnt + data_byte_cnt;
+    tsc_vlog("Reading nuc block: %zu lines, %zu data bytes\n", blkl_n, data_sz);
 
-    /* Log this if in verbose mode. */
-    if (tsc_verbose)
-        tsc_log("\tReading NUC block:\n"
-                "\t  lines : %12zu\n"
-                "\t  header: %12zu bytes\n"
-                "\t  data  : %12zu bytes\n"
-                "\t  total : %12zu bytes\n",
-                (size_t)nucdec->block_lc,
-                header_byte_cnt,
-                data_byte_cnt,
-                byte_cnt);
+    /* Read and check block, then decompress and decode it. */
+    data = (unsigned char*)tsc_malloc((size_t)data_sz);
+    if (fread_buf(ifp, data, data_sz) != data_sz)
+        tsc_error("Could not read nuc block!\n");
 
-    /* Read block. */
-    bbuf_t* bbuf = bbuf_new();
-    bbuf_reserve(bbuf, block_sz);
-    fread_buf(ifp, bbuf->bytes, block_sz);
+    if (crc64(data, data_sz) != data_crc)
+        tsc_error("CRC64 check failed for nuc block!\n");
 
-    /* Uncompress block with AC. */
-    unsigned char* ac_in = bbuf->bytes;
-    unsigned int ac_in_sz = block_sz;
-    unsigned int ac_out_sz = 0;
-    unsigned char* ac_out = arith_decompress_o0(ac_in, ac_in_sz, &ac_out_sz);
-    //unsigned char* ac_out = arith_decompress_o1(ac_in, ac_in_sz, &ac_out_sz);
-    if (tsc_verbose) tsc_log("Decompressed NUC block with AC: %zu bytes -> %zu bytes\n", ac_in_sz, ac_out_sz);
-    bbuf_free(bbuf);
+    unsigned int residues_sz = 0;
+    unsigned char* residues = arith_decompress_o0(data, data_sz, &residues_sz);
+    free(data);
 
-    /* Decode block. */
-    typedef enum {
-        NUCDEC_MODE_PLAIN,
-        NUCDEC_MODE_CIPHER
-    } nucdec_mode_t;
+    tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%5.2f%%)\n",
+             data_sz, residues_sz, (double)residues_sz/(double)data_sz*100);
 
-    nucdec_mode_t nucdec_mode = NUCDEC_MODE_PLAIN;
-    size_t i = 0;
-    size_t line = 0;
-    size_t field = 0; /* 0: pos, 1: cigar, 2: seq */
-    bool new_line = true;
-    for (i = 0; i < ac_out_sz; i++) {
-        if (ac_out[i] == '\n') {
-            line++;
-            field = 0;
-            new_line = true;
-            continue;
-        }
+    nucdec_decode_block_o0(nucdec, residues, residues_sz, pos, cigar, seq);
 
-        if (new_line && ac_out[i] == 'P') { /* plain text */
-            nucdec_mode = NUCDEC_MODE_PLAIN;
-            continue;
-        } else { /* coded line */
-            nucdec_mode = NUCDEC_MODE_CIPHER;
-            continue;
-        }
+    tsc_vlog("Decoded nuc block\n");
 
-        if (nucdec_mode == NUCDEC_MODE_PLAIN) {
-            if (ac_out[i] == '\t') {
-                field++;
-                continue;
-            }
+    free(residues); /* free memory used for decoded bitstream */
 
-            switch (field) {
-            case 0: pos[line] = 0;
-            case 1: str_append_char(cigar[line], (const char)ac_out[i]);
-            case 2: str_append_char(seq[line], (const char)ac_out[i]);
-            default: tsc_error("Wrong field ID during NUC decoding!\n");
-            }
-        } else { /* NUCDEC_MODE_CIPHER */
-            /* TODO */
-        }
-    }
-    /* TODO: Decode expand() and diff() */
-
-    free((void*)ac_out);
-
-    /* Reset decoder for next block. */
     nucdec_reset(nucdec);
 }
 

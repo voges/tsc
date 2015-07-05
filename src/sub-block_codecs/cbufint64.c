@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "cbufint64.h"
-#include "tsclib.h"
+#include "../tsclib.h"
 #include <string.h>
 
 static void cbufint64_init(cbufint64_t* cbufint64, const size_t sz)

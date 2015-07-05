@@ -8,14 +8,14 @@
 #ifndef TSC_FILECODEC_H
 #define TSC_FILECODEC_H
 
-#include "auxcodec.h"
-#include "nuccodec.h"
-#include "qualcodec.h"
+#include "./sub-block_codecs/auxcodec.h"
+#include "./sub-block_codecs/nuccodec.h"
+#include "./sub-block_codecs/qualcodec.h"
 #include "samparser.h"
 #include "./str/str.h"
 #include <stdio.h>
 
-#define FILECODEC_BLK_LC 3 /*1000000LL*/ /* no. of SAM lines per block */
+#define FILECODEC_BLK_LC 10000LL /* no. of SAM lines per block */
 
 /******************************************************************************
  * Encoder                                                                    *

@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "bbuf.h"
-#include "tsclib.h"
+#include "../tsclib.h"
 #include <string.h>
 
 static void bbuf_init(bbuf_t* bb)

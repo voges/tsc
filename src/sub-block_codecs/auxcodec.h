@@ -8,7 +8,7 @@
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
 
-#include "./str/str.h"
+#include "../str/str.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -24,12 +24,12 @@ auxenc_t* auxenc_new(void);
 void auxenc_free(auxenc_t* auxenc);
 void auxenc_add_record(auxenc_t*      ae,
                        const char*    qname,
-                       const uint64_t flag,
+                       const int64_t  flag,
                        const char*    rname,
-                       const uint64_t mapq,
+                       const int64_t  mapq,
                        const char*    rnext,
-                       const uint64_t pnext,
-                       const uint64_t tlen,
+                       const int64_t  pnext,
+                       const int64_t  tlen,
                        const char*    opt);
 size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
@@ -45,12 +45,12 @@ void auxdec_free(auxdec_t* auxdec);
 void auxdec_decode_block(auxdec_t* auxdec,
                          FILE*     ifp,
                          str_t**   qname,
-                         uint64_t* flag,
+                         int64_t*  flag,
                          str_t**   rname,
-                         uint64_t* mapq,
+                         int64_t*  mapq,
                          str_t**   rnext,
-                         uint64_t* pnext,
-                         uint64_t* tlen,
+                         int64_t*  pnext,
+                         int64_t*  tlen,
                          str_t**   opt);
 
 #endif /* TSC_AUXCODEC_H */

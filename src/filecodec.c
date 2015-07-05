@@ -167,11 +167,11 @@ static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
             (100 * (double)tsc_sz[TSC_QUAL]
              / (double)tsc_sz[TSC_TOTAL]),
             sam_sz[SAM_SEQ], tsc_sz[TSC_NUC],
-            (100 * (double)sam_sz[SAM_SEQ]
-             / (double)tsc_sz[TSC_NUC]),
+            (100 * (double)tsc_sz[TSC_NUC]
+             / (double)sam_sz[SAM_SEQ]),
             sam_sz[SAM_QUAL], tsc_sz[TSC_QUAL],
-            (100 * (double)sam_sz[SAM_QUAL]
-             / (double)tsc_sz[TSC_QUAL]));
+            (100 * (double)tsc_sz[TSC_QUAL]
+             / (double)sam_sz[SAM_QUAL]));
 }
 
 static void fileenc_print_time(long elapsed_total, long elapsed_pred,
@@ -255,12 +255,12 @@ void fileenc_encode(fileenc_t* fileenc)
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_AUX]
                 += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
-            //tsc_sz[TSC_NUC]
-                //+= nucenc_write_block(fileenc->nucenc, fileenc->ofp);
-            //tsc_sz[TSC_QUAL]
-                //+= qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+            tsc_sz[TSC_NUC]
+                += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+            tsc_sz[TSC_QUAL]
+                += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
             gettimeofday(&tv1, NULL);
-            elapsed_pred += tvdiff(tv0, tv1);
+            elapsed_entr += tvdiff(tv0, tv1);
 
             tsc_vlog("Wrote block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
 
@@ -280,17 +280,17 @@ void fileenc_encode(fileenc_t* fileenc)
                           samrecord->int_fields[PNEXT],
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
-        /*
+
         nucenc_add_record(fileenc->nucenc,
                           samrecord->int_fields[POS],
                           samrecord->str_fields[CIGAR],
                           samrecord->str_fields[SEQ]);
         qualenc_add_record(fileenc->qualenc,
                            samrecord->str_fields[QUAL]);
-        */
+
 
         gettimeofday(&tv1, NULL);
-        elapsed_entr += tvdiff(tv0, tv1);
+        elapsed_pred += tvdiff(tv0, tv1);
 
         /* Accumulate input statistics */
         sam_sz[SAM_SEQ] += strlen(samrecord->str_fields[SEQ]);
@@ -316,12 +316,12 @@ void fileenc_encode(fileenc_t* fileenc)
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_AUX]
         += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
-    //tsc_sz[TSC_NUC]
-        //+= nucenc_write_block(fileenc->nucenc, fileenc->ofp);
-    //tsc_sz[TSC_QUAL]
-        //+= qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+    tsc_sz[TSC_NUC]
+        += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+    tsc_sz[TSC_QUAL]
+        += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
     gettimeofday(&tv1, NULL);
-    elapsed_pred += tvdiff(tv0, tv1);
+    elapsed_entr += tvdiff(tv0, tv1);
 
     tsc_vlog("Wrote last block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
 
@@ -506,18 +506,18 @@ void filedec_decode(filedec_t* filedec)
                  (size_t)blkl_cnt);
 
         /* Allocate memory to prepare decoding of the sub-blocks. */
-        str_t**   qname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        uint64_t* flag  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        str_t**   rname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        uint64_t* pos   = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        uint64_t* mapq  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        str_t**   cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**   rnext = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        uint64_t* pnext = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        uint64_t* tlen  = (uint64_t*)tsc_malloc(sizeof(uint64_t) * blkl_cnt);
-        str_t**   seq   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**   qual  = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**   opt   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**  qname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        int64_t* flag  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
+        str_t**  rname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        int64_t* pos   = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
+        int64_t* mapq  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
+        str_t**  cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**  rnext = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        int64_t* pnext = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
+        int64_t* tlen  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
+        str_t**  seq   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**  qual  = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**  opt   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
 
         size_t i = 0;
         for (i = 0; i < blkl_cnt; i++) {
@@ -535,19 +535,27 @@ void filedec_decode(filedec_t* filedec)
 
         auxdec_decode_block(filedec->auxdec, filedec->ifp, qname, flag, rname,
                             mapq, rnext, pnext, tlen, opt);
-        //nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
-        //qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
+        nucdec_decode_block(filedec->nucdec, filedec->ifp, pos, cigar, seq);
+        qualdec_decode_block(filedec->qualdec, filedec->ifp, qual);
 
         gettimeofday(&tv1, NULL);
         elapsed_dec += tvdiff(tv0, tv1);
 
-        /* DUMMIES */
-        for (i = 0; i < blkl_cnt; i++) {
-            pos[i] = 905;
-            str_append_cstr(cigar[i], "cigar");
-            str_append_cstr(seq[i], "seq");
-            str_append_cstr(qual[i], "qual");
-        }
+        /* These are dummies for testing */
+        //for (i = 0; i < blkl_cnt; i++) {
+            //str_append_cstr(qname[i], "qname");
+            //flag[i] = 2146;
+            //str_append_cstr(rname[i], "rname");
+            //pos[i] = 905;
+            //mapq[i] = 3490;
+            //str_append_cstr(cigar[i], "cigar");
+            //str_append_cstr(rnext[i], "rnext");
+            //pnext[i] = 68307;
+            //tlen[i] = 7138;
+            //str_append_cstr(seq[i], "seq");
+            //str_append_cstr(qual[i], "qual");
+            //str_append_cstr(opt[i], "opt");
+        //}
 
         /* Write decoded sub-blocks in correct order to outfile. */
         gettimeofday(&tv0, NULL);
@@ -559,11 +567,11 @@ void filedec_decode(filedec_t* filedec)
             char mapq_cstr[101];  /* this should be enough space */
             char pnext_cstr[101]; /* this should be enough space */
             char tlen_cstr[101];  /* this should be enough space */
-            snprintf(flag_cstr, sizeof(flag_cstr), "%"PRIu64, flag[i]);
-            snprintf(pos_cstr, sizeof(pos_cstr), "%"PRIu64, pos[i]);
-            snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRIu64, mapq[i]);
-            snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu64, pnext[i]);
-            snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRIu64, tlen[i]);
+            snprintf(flag_cstr, sizeof(flag_cstr), "%"PRId64, flag[i]);
+            snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos[i]);
+            snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRId64, mapq[i]);
+            snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRId64, pnext[i]);
+            snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen[i]);
 
             /* Set pointers to C-strings */
             char* sam_fields[12];
@@ -586,7 +594,8 @@ void filedec_decode(filedec_t* filedec)
                 sam_sz += fwrite_buf(filedec->ofp,
                                      (unsigned char*)sam_fields[f],
                                      strlen(sam_fields[f]));
-                sam_sz += fwrite_byte(filedec->ofp, '\t');
+                if (f != 11 && strlen(sam_fields[f + 1]))
+                    sam_sz += fwrite_byte(filedec->ofp, '\t');
             }
             sam_sz += fwrite_byte(filedec->ofp, '\n');
 

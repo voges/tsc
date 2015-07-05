@@ -10,7 +10,7 @@
 
 #include "cbufint64.h"
 #include "cbufstr.h"
-#include "./str/str.h"
+#include "../str/str.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -20,19 +20,19 @@
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct nucenc_t_ {
-    uint32_t     block_lc;   /* no. of records processed in the curr block */
+    size_t       blkl_n;     /* no. of records processed in the curr block */
     uint32_t     block_ln;   /* no. of records where diff() didn't succeed */
     cbufint64_t* pos_cbuf;   /* circular buffer for POSitions              */
     cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs                 */
     cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences              */
     cbufstr_t*   exp_cbuf;   /* circular buffer for EXPanded sequences     */
-    str_t*       out_buf;    /* output string (for the arithmetic coder)   */
+    str_t*       residues;   /* output string (for the arithmetic coder)   */
 } nucenc_t;
 
 nucenc_t* nucenc_new(void);
 void nucenc_free(nucenc_t* nucenc);
 void nucenc_add_record(nucenc_t*      nucenc,
-                       const uint64_t pos,
+                       const int64_t  pos,
                        const char*    cigar,
                        const char*    seq);
 size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp);
@@ -41,18 +41,14 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp);
  * Decoder                                                                    *
  ******************************************************************************/
 typedef struct nucdec_t_ {
-    uint32_t     block_lc;   /* no. of records processed in the curr block */
-    cbufint64_t* pos_cbuf;   /* circular buffer for POSitions              */
-    cbufstr_t*   cigar_cbuf; /* circular buffer for CIGARs                 */
-    cbufstr_t*   seq_cbuf;   /* circular buffer for SEQuences              */
-    cbufstr_t*   exp_cbuf;   /* circular buffer for EXPanded sequences     */
+
 } nucdec_t;
 
 nucdec_t* nucdec_new(void);
 void nucdec_free(nucdec_t* nucdec);
 void nucdec_decode_block(nucdec_t* nucdec,
                          FILE*     ifp,
-                         uint64_t* pos,
+                         int64_t*  pos,
                          str_t**   cigar,
                          str_t**   seq);
 

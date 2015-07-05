@@ -6,11 +6,10 @@
  ******************************************************************************/
 
 #include "auxcodec.h"
-#include "../arithcodec/arithcodec.h"
-#include "bbuf.h"
-#include "./crc64/crc64.h"
-#include "./frw/frw.h"
-#include "tsclib.h"
+#include "../../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../tsclib.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -55,12 +54,12 @@ void auxenc_free(auxenc_t* auxenc)
  */
 static void auxenc_add_record_o0(auxenc_t*      auxenc,
                                  const char*    qname,
-                                 const uint64_t flag,
+                                 const int64_t  flag,
                                  const char*    rname,
-                                 const uint64_t mapq,
+                                 const int64_t  mapq,
                                  const char*    rnext,
-                                 const uint64_t pnext,
-                                 const uint64_t tlen,
+                                 const int64_t  pnext,
+                                 const int64_t  tlen,
                                  const char*    opt)
 {
     char flag_cstr[101];  /* this should be enough space */
@@ -68,10 +67,10 @@ static void auxenc_add_record_o0(auxenc_t*      auxenc,
     char pnext_cstr[101]; /* this should be enough space */
     char tlen_cstr[101];  /* this should be enough space */
 
-    snprintf(flag_cstr, sizeof(flag_cstr), "%"PRIu64, flag);
-    snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRIu64, mapq);
-    snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu64, pnext);
-    snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRIu64, tlen);
+    snprintf(flag_cstr, sizeof(flag_cstr), "%"PRId64, flag);
+    snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRId64, mapq);
+    snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRId64, pnext);
+    snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen);
 
     str_append_cstr(auxenc->residues, qname);
     str_append_cstr(auxenc->residues, "\t");
@@ -89,22 +88,21 @@ static void auxenc_add_record_o0(auxenc_t*      auxenc,
     str_append_cstr(auxenc->residues, "\t");
     str_append_cstr(auxenc->residues, opt);
     str_append_cstr(auxenc->residues, "\n");
-
-    auxenc->blkl_n++;
 }
 
 void auxenc_add_record(auxenc_t*      auxenc,
                        const char*    qname,
-                       const uint64_t flag,
+                       const int64_t  flag,
                        const char*    rname,
-                       const uint64_t mapq,
+                       const int64_t  mapq,
                        const char*    rnext,
-                       const uint64_t pnext,
-                       const uint64_t tlen,
+                       const int64_t  pnext,
+                       const int64_t  tlen,
                        const char*    opt)
 {
     auxenc_add_record_o0(auxenc, qname, flag, rname, mapq, rnext, pnext, tlen,
                          opt);
+    auxenc->blkl_n++;
 }
 
 static void auxenc_reset(auxenc_t* auxenc)
@@ -170,16 +168,22 @@ void auxdec_free(auxdec_t* auxdec)
         tsc_error("Tried to free NULL pointer.\n");
     }
 }
+
+static void auxdec_reset(auxdec_t* auxdec)
+{
+    auxdec_init(auxdec);
+}
+
 static void auxdec_decode_block_o0(auxdec_t*      auxdec,
                                    unsigned char* residues,
                                    size_t         residues_sz,
                                    str_t**        qname,
-                                   uint64_t*      flag,
+                                   int64_t*       flag,
                                    str_t**        rname,
-                                   uint64_t*      mapq,
+                                   int64_t*       mapq,
                                    str_t**        rnext,
-                                   uint64_t*      pnext,
-                                   uint64_t*      tlen,
+                                   int64_t*       pnext,
+                                   int64_t*       tlen,
                                    str_t**        opt)
 {
     size_t i = 0;
@@ -204,22 +208,22 @@ static void auxdec_decode_block_o0(auxdec_t*      auxdec,
                 str_append_cstr(qname[line], (const char*)cstr);
                 break;
             case 1:
-                flag[line] = strtoull((const char*)cstr, NULL, 10);
+                flag[line] = strtoll((const char*)cstr, NULL, 10);
                 break;
             case 2:
                 str_append_cstr(rname[line], (const char*)cstr);
                 break;
             case 3:
-                mapq[line] = strtoull((const char*)cstr, NULL, 10);
+                mapq[line] = strtoll((const char*)cstr, NULL, 10);
                 break;
             case 4:
                 str_append_cstr(rnext[line], (const char*)cstr);
                 break;
             case 5:
-                pnext[line] = strtoull((const char*)cstr, NULL, 10);
+                pnext[line] = strtoll((const char*)cstr, NULL, 10);
                 break;
             case 6:
-                tlen[line] = strtoull((const char*)cstr, NULL, 10);
+                tlen[line] = strtoll((const char*)cstr, NULL, 10);
                 break;
             case 7:
                 /* fall through (all upcoming columns are 'opt') */
@@ -236,12 +240,12 @@ static void auxdec_decode_block_o0(auxdec_t*      auxdec,
 void auxdec_decode_block(auxdec_t* auxdec,
                          FILE*     ifp,
                          str_t**   qname,
-                         uint64_t* flag,
+                         int64_t*  flag,
                          str_t**   rname,
-                         uint64_t* mapq,
+                         int64_t*  mapq,
                          str_t**   rnext,
-                         uint64_t* pnext,
-                         uint64_t* tlen,
+                         int64_t*  pnext,
+                         int64_t*  tlen,
                          str_t**   opt)
 {
     unsigned char  blk_id[8];
@@ -262,8 +266,7 @@ void auxdec_decode_block(auxdec_t* auxdec,
     if (fread_uint64(ifp, &data_crc) != sizeof(data_crc))
         tsc_error("Could not read CRC64 of compressed data!\n");
 
-    tsc_vlog("Reading aux block: %zu lines, %zu data bytes\n", blkl_n,
-             data_sz);
+    tsc_vlog("Reading aux block: %zu lines, %zu data bytes\n", blkl_n, data_sz);
 
     /* Read and check block, then decompress and decode it. */
     data = (unsigned char*)tsc_malloc((size_t)data_sz);
@@ -286,5 +289,7 @@ void auxdec_decode_block(auxdec_t* auxdec,
     tsc_vlog("Decoded aux block\n");
 
     free(residues); /* free memory used for decoded bitstream */
+
+    auxdec_reset(auxdec);
 }
 

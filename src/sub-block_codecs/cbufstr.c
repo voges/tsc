@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "cbufstr.h"
-#include "tsclib.h"
+#include "../tsclib.h"
 
 static void cbufstr_init(cbufstr_t* cbufstr, const size_t sz)
 {
