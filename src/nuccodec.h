@@ -10,7 +10,7 @@
 
 #include "cbufint64.h"
 #include "cbufstr.h"
-#include "str.h"
+#include "./str/str.h"
 #include <stdint.h>
 #include <stdio.h>
 

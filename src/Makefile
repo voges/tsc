@@ -3,10 +3,10 @@ ALIAS       = detsc
 CC          = gcc
 CFLAGS      = -Wall -D _GNU_SOURCE
 INCLUDES    = -I.
-LIBRARIES   = -L./arithcodec -L./ricecodec
+LIBRARIES   = -L../arithcodec -L../ricecodec
 LDFLAGS     = -lm -larithcodec -lricecodec
 SOURCEDIR   = .
-SOURCES     = $(wildcard $(SOURCEDIR)/*.c)
+SOURCES    := $(shell find $(SOURCEDIR) -name '*.c') # find C files recursively
 OBJECTS     = $(SOURCES:.c=.o)
 LN_SF       = ln -sf
 
@@ -27,8 +27,9 @@ $(ALIAS):
 	-$(LN_SF) $(EXEC) $(ALIAS)
 
 %.o: %.c %.h
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	-$(RM) *.o $(EXEC) $(ALIAS)
+	-$(RM) $(EXEC) $(ALIAS)
+	find . -name "*.o" -type f -delete
 

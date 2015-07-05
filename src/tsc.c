@@ -31,7 +31,6 @@ str_t* tsc_in_fname = NULL;
 str_t* tsc_out_fname = NULL;
 FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
-size_t tsc_blk_lc = TSC_BLK_LC_DEFAULT;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 bool tsc_time = false;
@@ -54,19 +53,18 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-b blocksize] [-o output] [-fstv] <file.sam>\n");
-    printf("  Decompress: tsc -d [-o output] [-fstv] <file.tsc>\n");
-    printf("              detsc [-o output] [-fstv] <file.tsc>\n");
-    printf("  Info      : tsc -i [-v] <file.tsc>\n");
-    printf("              detsc -i [-v] <file.tsc>\n");
+    printf("  Compress   : tsc [-o output] [-fstv] <file.sam>\n");
+    printf("  Decompress : tsc -d [-o output] [-fstv] <file.tsc>\n");
+    printf("               detsc [-o output] [-fstv] <file.tsc>\n");
+    printf("  Info       : tsc -i [-v] <file.tsc>\n");
+    printf("               detsc -i [-v] <file.tsc>\n");
     printf("\n");
     printf("Examples (using default preferences):\n");
-    printf("  Compress  : tsc test.sam\n");
-    printf("  Decompress: detsc test.sam.tsc\n");
-    printf("  Info      : detsc -i test.sam.tsc\n");
+    printf("  Compress   : tsc test.sam\n");
+    printf("  Decompress : detsc test.sam.tsc\n");
+    printf("  Info       : detsc -i test.sam.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b, --blocksize   Block size (default: %zu)\n", tsc_blk_lc);
     printf("  -d  --decompress  Decompress\n");
     printf("  -f, --force       Force overwriting of output file(s)\n");
     printf("  -h, --help        Print this help\n");
@@ -84,7 +82,6 @@ static void parse_options(int argc, char *argv[])
     int opt;
 
     static struct option long_options[] = {
-        { "blocksize",  required_argument, NULL, 'b'},
         { "decompress", no_argument,       NULL, 'd'},
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
@@ -97,20 +94,13 @@ static void parse_options(int argc, char *argv[])
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhio:stvV";
+    const char *short_options = "dfhio:stvV";
 
     do {
         int opt_idx = 0;
         opt = getopt_long(argc, argv, short_options, long_options, &opt_idx);
         switch (opt) {
         case -1:
-            break;
-        case 'b':
-            if (atoi(optarg) <= 0)
-                tsc_error("Block size must be greather than zero: %d\n",
-                          atoi(optarg));
-            else
-                tsc_blk_lc = (size_t)atoi(optarg);
             break;
         case 'd':
             tsc_mode = TSC_MODE_DECOMPRESS;
@@ -150,9 +140,9 @@ static void parse_options(int argc, char *argv[])
      * file).
      */
     if (argc - optind > 1)
-        tsc_error("Only one input file allowed.\n");
+        tsc_error("Only one input file allowed\n");
     else if (argc - optind < 1)
-        tsc_error("Input file missing.\n");
+        tsc_error("Input file missing\n");
     else
         opt_input = argv[optind];
 }
@@ -192,6 +182,7 @@ int main(int argc, char* argv[])
     /* If invoked as 'de...', switch to decompressor mode. */
     if (!strncmp(tsc_prog_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
 
+    /* Invoke custom signal handler */
     signal(SIGHUP,  handle_signal);
     signal(SIGQUIT, handle_signal);
     signal(SIGABRT, handle_signal);
@@ -200,12 +191,24 @@ int main(int argc, char* argv[])
     signal(SIGXCPU, handle_signal);
     signal(SIGXFSZ, handle_signal);
 
+    /* Parse command line options and check them for sanity. */
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
     if (opt_flag_stats) tsc_stats = true;
     if (opt_flag_time) tsc_time = true;
     if (opt_flag_verbose) tsc_verbose = true;
 
+    if (tsc_mode == TSC_MODE_COMPRESS) {
+        /* All possible options are legal in this mode. */
+    } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
+        /* All possible options are legal in this mode. */
+    } else { /* TSC_MODE_INFO */
+        /* Options -fost are illegal in this mode. */
+        if (opt_flag_force || opt_output || opt_flag_stats || opt_flag_time)
+            tsc_error("Illegal options detected\n");
+    }
+
+    /* Check, if input file is accessible. */
     if (access((const char*)tsc_in_fname->s, F_OK | R_OK))
         tsc_error("Cannot access input file: %s\n", tsc_in_fname->s);
 
@@ -237,7 +240,7 @@ int main(int argc, char* argv[])
         tsc_in_fp = tsc_fopen((const char*)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char*)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp, tsc_blk_lc);
+        fileenc_t* fileenc = fileenc_new(tsc_in_fp, tsc_out_fp);
         fileenc_encode(fileenc);
         fileenc_free(fileenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);

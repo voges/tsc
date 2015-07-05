@@ -2,7 +2,7 @@
  * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
  * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
  *                                                                            *
- * This file is part of tsc.                                                  *
+ * This file is part of str.                                                  *
  ******************************************************************************/
 
 /*
@@ -10,8 +10,8 @@
  * terminating '\0' byte themselves.
  */
 
-#ifndef TSC_STR_H
-#define TSC_STR_H
+#ifndef STR_H
+#define STR_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -35,5 +35,5 @@ void str_append_char(str_t* str, const char c);
 void str_copy_str(str_t* dest, const str_t* src);
 void str_copy_cstr(str_t* dest, const char* src);
 
-#endif /* TSC_STR_H */
+#endif /* STR_H */
 

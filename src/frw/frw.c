@@ -2,24 +2,27 @@
  * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
  * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
  *                                                                            *
- * This file is part of tsc.                                                  *
+ * This file is part of frw.                                                  *
  ******************************************************************************/
 
 #include "frw.h"
-#include "tsclib.h"
-#include <string.h>
+#include <stdlib.h>
 
 size_t fwrite_byte(FILE* fp, const unsigned char byte)
 {
-    if (fwrite(&byte, 1, 1, fp) != 1)
-        tsc_error("Could not write byte.\n");
+    if (fwrite(&byte, 1, 1, fp) != 1) {
+        fprintf(stderr, "Error: Could not write byte\n");
+        exit(EXIT_FAILURE);
+    }
     return 1;
 }
 
 size_t fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
 {
-    if (fwrite(buf, 1, n, fp) != n)
-        tsc_error("Could not write %d bytes.\n", n);
+    if (fwrite(buf, 1, n, fp) != n) {
+        fprintf(stderr, "Error: Could not write %zu byte(s)\n", n);
+        exit(EXIT_FAILURE);
+    }
     return n;
 }
 
@@ -43,15 +46,6 @@ size_t fwrite_uint64(FILE* fp, const uint64_t qword)
     fwrite_byte(fp, (qword >>  8) & 0xFF);
     fwrite_byte(fp, (qword      ) & 0xFF);
     return sizeof(uint64_t);
-}
-
-size_t fwrite_cstr(FILE* fp, const char* cstr)
-{
-    size_t len = strlen(cstr);
-    unsigned int i = 0;
-    for (i = 0; i < len; i++)
-        fwrite_byte(fp, cstr[i]);
-    return len;
 }
 
 size_t fread_byte(FILE* fp, unsigned char* byte)

@@ -2,11 +2,11 @@
  * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
  * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
  *                                                                            *
- * This file is part of tsc.                                                  *
+ * This file is part of str.                                                  *
  ******************************************************************************/
 
 #include "str.h"
-#include "tsclib.h"
+#include <stdio.h>
 #include <string.h>
 
 static void str_init(str_t* str)
@@ -22,7 +22,8 @@ static void str_init(str_t* str)
 
 str_t* str_new(void)
 {
-    str_t* str = (str_t*)tsc_malloc(sizeof(str_t));
+    str_t* str = (str_t*)malloc(sizeof(str_t));
+    if (!str) abort();
     str_init(str);
     return str;
 }
@@ -37,7 +38,8 @@ void str_free(str_t* str)
         free(str);
         str = NULL;
     } else { /* str == NULL */
-        tsc_error("Tried to free NULL pointer.\n");
+        fprintf(stderr, "Error: Tried to free NULL pointer.\n");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -53,7 +55,8 @@ void str_clear(str_t* str)
 void str_reserve(str_t* str, const size_t sz)
 {
     str->sz = sz;
-    str->s = (char*)tsc_realloc(str->s, str->sz * sizeof(char));
+    str->s = (char*)realloc(str->s, str->sz * sizeof(char));
+    if (!(str->s)) abort();
 }
 
 void str_extend(str_t* str, const size_t ex)
@@ -88,8 +91,11 @@ void str_append_cstr(str_t* str, const char* cstr)
 
 void str_append_cstrn(str_t* str, const char* cstr, const size_t len)
 {
-    if (len > strlen(cstr))
-        tsc_error("Could not append %zu bytes of C-string: %s\n", len, cstr);
+    if (len > strlen(cstr)) {
+        fprintf(stderr, "Error: Tried append %zu bytes of C-string: %s\n", len,
+                cstr);
+        exit(EXIT_FAILURE);
+    }
     str_extend(str, len);
     memcpy(str->s + str->len, cstr, len);
     str->len += len;

@@ -6,10 +6,10 @@
  ******************************************************************************/
 
 #include "auxcodec.h"
-#include "./arithcodec/arithcodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "bbuf.h"
-#include "crc64.h"
-#include "frw.h"
+#include "./crc64/crc64.h"
+#include "./frw/frw.h"
 #include "tsclib.h"
 #include <inttypes.h>
 #include <string.h>
@@ -118,23 +118,24 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     unsigned int in_sz = (unsigned int)auxenc->out->len;
     unsigned int data_sz = 0;
     unsigned char* data = arith_compress_o0(in, in_sz, &data_sz);
-    
+
     if (tsc_verbose)
         tsc_log("Compressed AUX block: %zu bytes -> %zu bytes (%6.2f%%)\n",
                 in_sz, data_sz, (double)data_sz / (double)in_sz*100);
 
     /* Compute CRC64. */
     uint64_t data_crc = crc64(data, data_sz);
-    
+
     /* Write compressed block. */
-    blk_sz += fwrite_cstr(ofp, "AUX-----");
+    unsigned char blk_id[8] = "AUX----"; blk_id[7] = '\0';
+    blk_sz += fwrite_buf(ofp, blk_id, sizeof(blk_id));
     blk_sz += fwrite_uint64(ofp, (uint64_t)auxenc->blkl_cnt);
     blk_sz += fwrite_uint64(ofp, (uint64_t)data_sz);
     blk_sz += fwrite_uint64(ofp, (uint64_t)data_crc);
     blk_sz += fwrite_buf(ofp, data, data_sz);
 
     if (tsc_verbose)
-        tsc_log("\tWrote AUX block: %zu lines, %zu data bytes\n",
+        tsc_log("Wrote AUX block: %zu lines, %zu data bytes\n",
                 auxenc->blkl_cnt, data_sz);
 
     auxenc_reset(auxenc); /* reset encoder for next block */
@@ -179,7 +180,7 @@ void auxdec_decode_block(auxdec_t* auxdec, FILE* ifp, str_t** aux)
     /* Read and check block header. */
     if (fread_buf(ifp, blk_id, sizeof(blk_id)) != sizeof(blk_id))
         tsc_error("Could not read block ID!\n");
-    if (strncmp("AUX-----", (const char*)blk_id, sizeof(blk_id)))
+    if (strncmp("AUX----", (const char*)blk_id, 7))
         tsc_error("Wrong block ID: %s\n", blk_id);
     if (fread_uint64(ifp, &blkl_cnt) != sizeof(blkl_cnt))
         tsc_error("Could not read no. of lines in block!\n");

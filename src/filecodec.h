@@ -12,8 +12,10 @@
 #include "nuccodec.h"
 #include "qualcodec.h"
 #include "samparser.h"
-#include "str.h"
+#include "./str/str.h"
 #include <stdio.h>
+
+#define FILECODEC_BLK_LC 3 /*1000000LL*/ /* no. of SAM lines per block */
 
 /******************************************************************************
  * Encoder                                                                    *
@@ -21,42 +23,13 @@
 typedef struct fileenc_t_ {
     FILE*        ifp;
     FILE*        ofp;
-    size_t       blk_lc; /* number of lines in a block */
     samparser_t* samparser;
     auxenc_t*    auxenc;
     nucenc_t*    nucenc;
     qualenc_t*   qualenc;
-
-    /* Input statistics. */
-    size_t in_sz[12];
-    enum {
-        IN_QNAME,
-        IN_FLAG,
-        IN_RNAME,
-        IN_POS,
-        IN_MAPQ,
-        IN_CIGAR,
-        IN_RNEXT,
-        IN_PNEXT,
-        IN_TLEN,
-        IN_SEQ,
-        IN_QUAL,
-        IN_OPT
-    };
-
-    /* Output statistics. */
-    size_t out_sz[6];
-    enum {
-        OUT_TOTAL, /* total no. of bytes written                 */
-        OUT_FF,    /* total no. of bytes written for file format */
-        OUT_SH,    /* total no. of bytes written for SAM header  */
-        OUT_AUX,   /* total no. of bytes written by auxenc       */
-        OUT_NUC,   /* total no. of bytes written by nucenc       */
-        OUT_QUAL   /* total no. of bytes written by qualenc      */
-    };
 } fileenc_t;
 
-fileenc_t* fileenc_new(FILE* ifp, FILE* ofp, const size_t blk_lc);
+fileenc_t* fileenc_new(FILE* ifp, FILE* ofp);
 void fileenc_free(fileenc_t* fileenc);
 void fileenc_encode(fileenc_t* fileenc);
 

@@ -6,10 +6,10 @@
  ******************************************************************************/
 
 #include "qualcodec.h"
-#include "./arithcodec/arithcodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "bbuf.h"
-#include "frw.h"
-#include "./ricecodec/ricecodec.h"
+#include "./frw/frw.h"
+#include "../ricecodec/ricecodec.h"
 #include "tsclib.h"
 #include <float.h>
 #include <math.h>
@@ -312,7 +312,9 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
     size_t data_byte_cnt = 0;
     size_t byte_cnt = 0;
 
-    header_byte_cnt += fwrite_cstr(ofp, "QUAL----");
+    unsigned char blk_id[8] = "QUAL---"; blk_id[7] = '\0';
+
+    header_byte_cnt += fwrite_buf(ofp, blk_id, sizeof(blk_id));
     header_byte_cnt += fwrite_uint32(ofp, qualenc->block_lc);
 
     /* Compress block with AC or Rice coder. */

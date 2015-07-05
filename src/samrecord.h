@@ -8,7 +8,6 @@
 #ifndef TSC_SAMRECORD_H
 #define TSC_SAMRECORD_H
 
-#include "str.h"
 #include "tsclib.h"
 #include <stdint.h>
 

@@ -6,9 +6,9 @@
  ******************************************************************************/
 
 #include "nuccodec.h"
-#include "./arithcodec/arithcodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "bbuf.h"
-#include "frw.h"
+#include "./frw/frw.h"
 #include "tsclib.h"
 #include <ctype.h>
 #include <float.h>
@@ -330,7 +330,9 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     size_t data_byte_cnt = 0;
     size_t byte_cnt = 0;
 
-    header_byte_cnt += fwrite_cstr(ofp, "NUC-----");
+    unsigned char blk_id[8] = "NUC----"; blk_id[7] = '\0';
+
+    header_byte_cnt += fwrite_buf(ofp, blk_id, sizeof(blk_id));
     header_byte_cnt += fwrite_uint32(ofp, nucenc->block_lc);
 
     /* Compress block with AC. */

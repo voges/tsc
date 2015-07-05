@@ -8,7 +8,7 @@
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
 
-#include "str.h"
+#include "./str/str.h"
 #include <stdint.h>
 #include <stdio.h>
 

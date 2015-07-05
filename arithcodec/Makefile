@@ -1,4 +1,4 @@
-EXEC        = rice
+EXEC        = arith
 CC          = gcc
 CFLAGS      = -Wall
 INCLUDES    = #-I
@@ -12,22 +12,23 @@ OBJECTS     = $(SOURCES:.c=.o)
 
 default: all
 
-all: CFLAGS += -O2
+all: CFLAGS += -O2 -D TEST_MAIN
 all: $(EXEC)
 
-debug: CFLAGS += -g -O0
+debug: CFLAGS += -g -O0 -D TEST_MAIN
 debug: clean $(EXEC)
 
-lib: $(OBJECTS)
-	ar r libricecodec.a ricecodec.o
-	ranlib libricecodec.a
+lib: CFLAGS += -O2
+lib: clean $(OBJECTS)
+	$(AR) r libarithcodec.a arithcodec.o
+	ranlib libarithcodec.a
 
-$(EXEC): $(OBJECTS)
+$(EXEC): $(OBJECTS) 
 	$(CC) $(INCLUDES) $(LIBRARIES) -o $@ $(OBJECTS) $(LDFLAGS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	-$(RM) *.o $(EXEC) $(ALIAS)
+	-$(RM) *.o *.a $(EXEC) $(ALIAS)
 
