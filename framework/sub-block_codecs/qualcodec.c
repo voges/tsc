@@ -1,9 +1,20 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
+
+/*
+ * Qual encoder: Fall-through to entropy coder
+ *
+ * Qual block format:
+ *   unsigned char  blk_id[8] : "qual---" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
 
 #include "qualcodec.h"
 #include "../arithcodec/arithcodec.h"
@@ -13,17 +24,10 @@
 #include <string.h>
 
 /*
- * Qual block format:
- *   unsigned char  blk_id[8] : "qual---" + '\0'
- *   uint64_t       blkl_n    : no. of lines in block
- *   uint64_t       data_sz   : data size
- *   uint64_t       data_crc  : CRC64 of compressed data
- *   unsigned char* data      : data
+ * Encoder
+ * -----------------------------------------------------------------------------
  */
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
 static void qualenc_init(qualenc_t* qualenc)
 {
     qualenc->blkl_n = 0;
@@ -50,22 +54,15 @@ void qualenc_free(qualenc_t* qualenc)
 
 static void qualenc_reset(qualenc_t* qualenc)
 {
-    qualenc_init(qualenc);
     str_clear(qualenc->residues);
-}
-
-/*
- * qualenc_add_record_o0: Fall-trough to entropy coder
- */
-static void qualenc_add_record_o0(qualenc_t* qualenc, const char* qual)
-{
-    str_append_cstr(qualenc->residues, qual);
-    str_append_cstr(qualenc->residues, "\n");
+    qualenc_init(qualenc);
 }
 
 void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
-    qualenc_add_record_o0(qualenc, qual);
+    str_append_cstr(qualenc->residues, qual);
+    str_append_cstr(qualenc->residues, "\n");
+
     qualenc->blkl_n++;
 }
 
@@ -102,9 +99,11 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
     return blk_sz;
 }
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
 static void qualdec_init(qualdec_t* qualdec)
 {
 
@@ -132,7 +131,7 @@ static void qualdec_reset(qualdec_t* qualdec)
     qualdec_init(qualdec);
 }
 
-static void qualdec_decode_block_o0(qualdec_t*     qualdec,
+static void qualdec_decode_residues(qualdec_t*     qualdec,
                                     unsigned char* residues,
                                     size_t         residues_sz,
                                     str_t**        qual)
@@ -185,7 +184,7 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
     tsc_vlog("Decompressed qual block: %zu bytes -> %zu bytes (%5.2f%%)\n",
              data_sz, residues_sz, (double)residues_sz/(double)data_sz*100);
 
-    qualdec_decode_block_o0(qualdec, residues, residues_sz, qual);
+    qualdec_decode_residues(qualdec, residues, residues_sz, qual);
 
     tsc_vlog("Decoded qual block\n");
 

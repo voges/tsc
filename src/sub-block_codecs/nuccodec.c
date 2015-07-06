@@ -1,24 +1,14 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
-
-#include "nuccodec.h"
-#include "../../arithcodec/arithcodec.h"
-#include "bbuf.h"
-#include "../crc64/crc64.h"
-#include "../frw/frw.h"
-#include "../tsclib.h"
-#include <ctype.h>
-#include <float.h>
-#include <inttypes.h>
-#include <math.h>
-#include <string.h>
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 /*
- * Nuc block format:
+ * Nuc o0 encoder: Fall-through to entropy coder
+ *
+ * Nuc o0 block format:
  *   unsigned char  blk_id[8] : "nuc----" + '\0'
  *   uint64_t       blkl_n    : no. of lines in block
  *   uint64_t       data_sz   : data size
@@ -26,9 +16,139 @@
  *   unsigned char* data      : data
  */
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/*
+ * Nuc o1 encoder: Differential coding with short-time memory reference
+ * (patent pending)
+ *
+ * Nuc o1 block format:
+ *   unsigned char  blk_id[8] : "nuc----" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
+
+#include "nuccodec.h"
+
+#ifdef NUCCODEC_O0
+
+#include "../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../frw/frw.h"
+#include "../tsclib.h"
+#include <inttypes.h>
+#include <string.h>
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
+#include "../arithcodec/arithcodec.h"
+#include "bbuf.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../frw/frw.h"
+#include <ctype.h>
+#include <float.h>
+#include <inttypes.h>
+#include <math.h>
+#include <string.h>
+
+#endif /* NUCCODEC_O1 */
+
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef NUCCODEC_O0
+
+static void nucenc_init(nucenc_t* nucenc)
+{
+    nucenc->blkl_n = 0;
+}
+
+nucenc_t* nucenc_new(void)
+{
+    nucenc_t* nucenc = (nucenc_t*)tsc_malloc(sizeof(nucenc_t));
+    nucenc->residues = str_new();
+    nucenc_init(nucenc);
+    return nucenc;
+}
+
+void nucenc_free(nucenc_t* nucenc)
+{
+    if (nucenc != NULL) {
+        str_free(nucenc->residues);
+        free(nucenc);
+        nucenc = NULL;
+    } else { /* nucenc == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void nucenc_reset(nucenc_t* nucenc)
+{
+    str_clear(nucenc->residues);
+    nucenc_init(nucenc);
+}
+
+void nucenc_add_record(nucenc_t*      nucenc,
+                       const int64_t  pos,
+                       const char*    cigar,
+                       const char*    seq)
+{
+    char pos_cstr[101];
+    snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos);
+
+    str_append_cstr(nucenc->residues, pos_cstr);
+    str_append_cstr(nucenc->residues, "\t");
+    str_append_cstr(nucenc->residues, cigar);
+    str_append_cstr(nucenc->residues, "\t");
+    str_append_cstr(nucenc->residues, seq);
+    str_append_cstr(nucenc->residues, "\n");
+
+    nucenc->blkl_n++;
+}
+
+size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
+{
+    size_t blk_sz = 0;
+
+    /* Compress whole block with an entropy coder */
+    unsigned char* residues = (unsigned char*)nucenc->residues->s;
+    unsigned int residues_sz = (unsigned int)nucenc->residues->len;
+    unsigned int data_sz = 0;
+    unsigned char* data = arith_compress_o0(residues, residues_sz, &data_sz);
+
+    tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+             residues_sz, data_sz, (double)data_sz / (double)residues_sz*100);
+
+    /* Compute CRC64 */
+    uint64_t data_crc = crc64(data, data_sz);
+
+    /* Write compressed block */
+    unsigned char blk_id[8] = "nuc----"; blk_id[7] = '\0';
+    blk_sz += fwrite_buf(ofp, blk_id, sizeof(blk_id));
+    blk_sz += fwrite_uint64(ofp, (uint64_t)nucenc->blkl_n);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_sz);
+    blk_sz += fwrite_uint64(ofp, (uint64_t)data_crc);
+    blk_sz += fwrite_buf(ofp, data, data_sz);
+
+    tsc_vlog("Wrote nuc block: %zu lines, %zu data bytes\n",
+             nucenc->blkl_n, data_sz);
+
+    nucenc_reset(nucenc); /* reset encoder for next block */
+    free(data); /* free memory used for encoded bitstream */
+
+    return blk_sz;
+}
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
 static void nucenc_init(nucenc_t* nucenc)
 {
     nucenc->blkl_n = 0;
@@ -85,7 +205,7 @@ static void nucenc_reset(nucenc_t* nucenc)
     cbufstr_clear(nucenc->seq_cbuf);
     cbufstr_clear(nucenc->exp_cbuf);
 
-    str_clear(nucenc->pos_res);
+    bbuf_clear(nucenc->pos_res);
     str_clear(nucenc->cigar_res);
     str_clear(nucenc->seq_res);
 
@@ -204,10 +324,10 @@ static double nucenc_entropy(str_t* seq)
     return h;
 }
 
-static void nucenc_add_record_o1(nucenc_t*      nucenc,
-                                 const uint64_t pos,
-                                 const char*    cigar,
-                                 const char*    seq)
+static void nucenc_add_record(nucenc_t*      nucenc,
+                              const int64_t  pos,
+                              const char*    cigar,
+                              const char*    seq)
 {
     /* Allocate memory for encoding. */
     str_t* exp = str_new();      /* expanded current sequence */
@@ -316,36 +436,7 @@ static void nucenc_add_record_o1(nucenc_t*      nucenc,
     nucenc->blkl_n++;
 }
 
-/*
- * nucenc_add_record_o0: Fall-trough to entropy coder
- */
-static void nucenc_add_record_o0(nucenc_t*      nucenc,
-                                 const int64_t  pos,
-                                 const char*    cigar,
-                                 const char*    seq)
-{
-    char pos_cstr[101];
-    snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos);
-
-    str_append_cstr(nucenc->residues, pos_cstr);
-    str_append_cstr(nucenc->residues, "\t");
-    str_append_cstr(nucenc->residues, cigar);
-    str_append_cstr(nucenc->residues, "\t");
-    str_append_cstr(nucenc->residues, seq);
-    str_append_cstr(nucenc->residues, "\n");
-}
-
-void nucenc_add_record(nucenc_t*      nucenc,
-                       const int64_t  pos,
-                       const char*    cigar,
-                       const char*    seq)
-{
-    nucenc_add_record_o0(nucenc, pos, cigar, seq);
-    /*nucenc_add_record_o1(nucenc, pos, cigar, seq);*/
-    nucenc->blkl_n++;
-}
-
-static size_t nucenc_write_block_o0(nucenc_t* nucenc, FILE* ofp)
+static size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
 {
     size_t blk_sz = 0;
 
@@ -378,15 +469,15 @@ static size_t nucenc_write_block_o0(nucenc_t* nucenc, FILE* ofp)
     return blk_sz;
 }
 
-size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
-{
-    return nucenc_write_block_o0(nucenc, ofp);
-    /*return nucenc_write_block_o1(nucenc, ofp);*/
-}
+#endif /* NUCCODEC_O1 */
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef NUCCODEC_O0
+
 static void nucdec_init(nucdec_t* nucdec)
 {
 
@@ -414,7 +505,7 @@ static void nucdec_reset(nucdec_t* nucdec)
     nucdec_init(nucdec);
 }
 
-static void nucdec_decode_block_o0(nucdec_t*      nucdec,
+static void nucdec_decode_residues(nucdec_t*      nucdec,
                                    unsigned char* residues,
                                    size_t         residues_sz,
                                    int64_t*       pos,
@@ -480,7 +571,9 @@ void nucdec_decode_block(nucdec_t* nucdec,
 
     tsc_vlog("Reading nuc block: %zu lines, %zu data bytes\n", blkl_n, data_sz);
 
-    /* Read and check block, then decompress and decode it. */
+    /* Read and check block, then decompress it and decode the prediction
+     * residues.
+     */
     data = (unsigned char*)tsc_malloc((size_t)data_sz);
     if (fread_buf(ifp, data, data_sz) != data_sz)
         tsc_error("Could not read nuc block!\n");
@@ -495,7 +588,7 @@ void nucdec_decode_block(nucdec_t* nucdec,
     tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%5.2f%%)\n",
              data_sz, residues_sz, (double)residues_sz/(double)data_sz*100);
 
-    nucdec_decode_block_o0(nucdec, residues, residues_sz, pos, cigar, seq);
+    nucdec_decode_residues(nucdec, residues, residues_sz, pos, cigar, seq);
 
     tsc_vlog("Decoded nuc block\n");
 
@@ -503,4 +596,56 @@ void nucdec_decode_block(nucdec_t* nucdec,
 
     nucdec_reset(nucdec);
 }
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
+static void nucdec_init(nucdec_t* nucdec)
+{
+
+}
+
+nucdec_t* nucdec_new(void)
+{
+    nucdec_t* nucdec = (nucdec_t*)tsc_malloc(sizeof(nucdec_t));
+    nucdec_init(nucdec);
+    return nucdec;
+}
+
+void nucdec_free(nucdec_t* nucdec)
+{
+    if (nucdec != NULL) {
+        free(nucdec);
+        nucdec = NULL;
+    } else { /* nucdec == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void nucdec_reset(nucdec_t* nucdec)
+{
+    nucdec_init(nucdec);
+}
+
+static void nucdec_decode_residues(nucdec_t*      nucdec,
+                                   unsigned char* residues,
+                                   size_t         residues_sz,
+                                   int64_t*       pos,
+                                   str_t**        cigar,
+                                   str_t**        seq)
+{
+
+}
+
+void nucdec_decode_block(nucdec_t* nucdec,
+                         FILE*     ifp,
+                         int64_t*  pos,
+                         str_t**   cigar,
+                         str_t**   seq)
+{
+
+}
+
+#endif /* NUCCODEC_O1 */
 

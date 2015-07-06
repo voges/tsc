@@ -1,9 +1,9 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
@@ -12,9 +12,11 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
 typedef struct auxenc_t_ {
     size_t blkl_n;   /* no. of records processed in the curr block        */
     str_t* residues; /* prediction residues (passed to the entropy coder) */
@@ -33,9 +35,11 @@ void auxenc_add_record(auxenc_t*      auxenc,
                        const char*    opt);
 size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp);
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
 typedef struct auxdec_t_ {
 
 } auxdec_t;

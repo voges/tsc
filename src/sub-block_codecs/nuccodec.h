@@ -1,32 +1,54 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 #ifndef TSC_NUCCODEC_H
 #define TSC_NUCCODEC_H
 
-#include "bbuf.h"
-#include "cbufint64.h"
-#include "cbufstr.h"
+#define NUCCODEC_O0
+//#define NUCCODEC_O1
+
 #include "../str/str.h"
 #include <stdint.h>
 #include <stdio.h>
 
-#define NUCCODEC_WINDOW_SZ 100 /* needed by o1 codec */
+#ifdef NUCCODEC_O0
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/* #include <...> */
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
+#include "bbuf.h"
+#include "cbufint64.h"
+#include "cbufstr.h"
+#define NUCCODEC_WINDOW_SZ 100
+
+#endif /* NUCCODEC_O1 */
+
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef NUCCODEC_O0
+
+typedef struct nucenc_t_ {
+    size_t blkl_n;   /* no. of records processed in the curr block */
+    str_t* residues; /* prediction residues (passed to the entropy coder) */
+} nucenc_t;
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
 typedef struct nucenc_t_ {
     size_t blkl_n;   /* no. of records processed in the curr block */
 
-    /* Needed by o0 codec */
-    str_t* residues; /* prediction residues (passed to the entropy coder) */
-
-    /* Needed by o1 codec */
     size_t       diff_fail_n; /* no. of records where diff() didn't succeed */
 
     cbufint64_t* pos_cbuf;    /* circular buffer for POSitions          */
@@ -39,6 +61,8 @@ typedef struct nucenc_t_ {
     str_t*       seq_res;     /* sequence prediction residues */
 } nucenc_t;
 
+#endif /* NUCCODEC_O1 */
+
 nucenc_t* nucenc_new(void);
 void nucenc_free(nucenc_t* nucenc);
 void nucenc_add_record(nucenc_t*      nucenc,
@@ -47,12 +71,26 @@ void nucenc_add_record(nucenc_t*      nucenc,
                        const char*    seq);
 size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp);
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef NUCCODEC_O0
+
 typedef struct nucdec_t_ {
 
 } nucdec_t;
+
+#endif /* NUCCODEC_O0 */
+
+#ifdef NUCCODEC_O1
+
+typedef struct nucdec_t_ {
+
+} nucdec_t;
+
+#endif /* NUCCODEC_O1 */
 
 nucdec_t* nucdec_new(void);
 void nucdec_free(nucdec_t* nucdec);

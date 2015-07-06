@@ -1,9 +1,9 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 #ifndef TSC_NUCCODEC_H
 #define TSC_NUCCODEC_H
@@ -12,11 +12,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
 typedef struct nucenc_t_ {
-    size_t blkl_n;   /* no. of records processed in the curr block        */
+    size_t blkl_n;   /* no. of records processed in the curr block */
     str_t* residues; /* prediction residues (passed to the entropy coder) */
 } nucenc_t;
 
@@ -28,9 +30,11 @@ void nucenc_add_record(nucenc_t*      nucenc,
                        const char*    seq);
 size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp);
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
 typedef struct nucdec_t_ {
 
 } nucdec_t;

@@ -13,4 +13,8 @@ src/arithcodec/arith
 src/detsc
 src/ricecodec/rice
 src/tsc
+framework/arithcodec/arith
+framework/detsc
+framework/ricecodec/rice
+framework/tsc
 

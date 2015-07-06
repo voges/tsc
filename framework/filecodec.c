@@ -1,17 +1,9 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
-
-#include "filecodec.h"
-#include "./frw/frw.h"
-#include "tsclib.h"
-#include "version.h"
-#include <inttypes.h>
-#include <string.h>
-#include <sys/time.h>
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 /*
  * File format:
@@ -74,6 +66,14 @@
  *   uint64_t pos_max : largest position contained in block
  *   uint64_t offset  : fp offset from beginning of file to block
  */
+
+#include "filecodec.h"
+#include "./frw/frw.h"
+#include "tsclib.h"
+#include "version.h"
+#include <inttypes.h>
+#include <string.h>
+#include <sys/time.h>
 
 /* Linear SAM field indices */
 enum { SAM_QNAME, SAM_FLAG, SAM_RNAME, SAM_POS, SAM_MAPQ, SAM_CIGAR,

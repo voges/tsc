@@ -1,22 +1,14 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
-
-#include "qualcodec.h"
-#include "../../arithcodec/arithcodec.h"
-#include "../crc64/crc64.h"
-#include "../frw/frw.h"
-#include "../../ricecodec/ricecodec.h"
-#include "../tsclib.h"
-#include <float.h>
-#include <math.h>
-#include <string.h>
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 /*
- * Qual block format:
+ * Qual o0 encoder: Fall-through to entropy coder
+ *
+ * Qual o0 block format:
  *   unsigned char  blk_id[8] : "qual---" + '\0'
  *   uint64_t       blkl_n    : no. of lines in block
  *   uint64_t       data_sz   : data size
@@ -24,9 +16,156 @@
  *   unsigned char* data      : data
  */
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/*
+ * Qual o1 encoder: "String matching" (patent pending)
+ *
+ * Qual o1 block format:
+ *   unsigned char  blk_id[8] : "qual---" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
+
+/*
+ * Qual o2 encoder: Markov model + "line context"
+ *
+ * Qual o2 block format:
+ *   unsigned char  blk_id[8] : "qual---" + '\0'
+ *   uint64_t       blkl_n    : no. of lines in block
+ *   uint64_t       data_sz   : data size
+ *   uint64_t       data_crc  : CRC64 of compressed data
+ *   unsigned char* data      : data
+ */
+
+#include "qualcodec.h"
+
+#ifdef QUALCODEC_O0
+
+#include "../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../tsclib.h"
+#include <string.h>
+
+#endif /* QUALCODEC_O0 */
+
+#ifdef QUALCODEC_O1
+
+#include "../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../ricecodec/ricecodec.h"
+#include "../tsclib.h"
+#include <float.h>
+#include <math.h>
+#include <string.h>
+
+#endif /* QUALCODEC_O1 */
+
+#ifdef QUALCODEC_O2
+
+#include "../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../ricecodec/ricecodec.h"
+#include "../tsclib.h"
+#include <float.h>
+#include <math.h>
+#include <string.h>
+
+#endif /* QUALCODEC_O2 */
+
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef QUALCODEC_O0
+
+static void qualenc_init(qualenc_t* qualenc)
+{
+    qualenc->blkl_n = 0;
+}
+
+qualenc_t* qualenc_new(void)
+{
+    qualenc_t* qualenc = (qualenc_t*)tsc_malloc(sizeof(qualenc_t));
+    qualenc->residues = str_new();
+    qualenc_init(qualenc);
+    return qualenc;
+}
+
+void qualenc_free(qualenc_t* qualenc)
+{
+    if (qualenc != NULL) {
+        str_free(qualenc->residues);
+        free(qualenc);
+        qualenc = NULL;
+    } else { /* qualenc == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void qualenc_reset(qualenc_t* qualenc)
+{
+    str_clear(qualenc->residues);
+    qualenc_init(qualenc);
+}
+
+void qualenc_add_record(qualenc_t* qualenc, const char* qual)
+{
+    str_append_cstr(qualenc->residues, qual);
+    str_append_cstr(qualenc->residues, "\n");
+
+    qualenc->blkl_n++;
+}
+
+#endif /* QUALCODEC_O0 */
+
+#ifdef QUALCODEC_O1
+
+static void qualenc_init(qualenc_t* qualenc)
+{
+    qualenc->blkl_n = 0;
+}
+
+qualenc_t* qualenc_new(void)
+{
+    qualenc_t* qualenc = (qualenc_t*)tsc_malloc(sizeof(qualenc_t));
+    qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
+    qualenc->residues = str_new();
+    qualenc_init(qualenc);
+    return qualenc;
+}
+
+void qualenc_free(qualenc_t* qualenc)
+{
+    if (qualenc != NULL) {
+        cbufstr_free(qualenc->qual_cbuf);
+        str_free(qualenc->residues);
+        free(qualenc);
+        qualenc = NULL;
+    } else { /* qualenc == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void qualenc_reset(qualenc_t* qualenc)
+{
+    cbufstr_clear(qualenc->qual_cbuf);
+    str_clear(qualenc->residues);
+    qualenc_init(qualenc);
+}
+
+static int qualenc_match(str_t* ref, str_t* mem)
+{
+    char* match = strstr(ref->s, mem->s);
+    if (match == NULL) return -1;
+    int pos = match - ref->s;
+    return pos;
+}
+
 static void qualenc_init_tables(qualenc_t* qualenc)
 {
     size_t i = 0, j = 0;
@@ -40,68 +179,7 @@ static void qualenc_init_tables(qualenc_t* qualenc)
     }
 }
 
-static void qualenc_init(qualenc_t* qualenc)
-{
-    qualenc->blkl_n = 0;
-    qualenc_init_tables(qualenc);
-}
-
-qualenc_t* qualenc_new(void)
-{
-    qualenc_t* qualenc = (qualenc_t*)tsc_malloc(sizeof(qualenc_t));
-    qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
-    qualenc->residues = str_new();
-    qualenc->qual_cbuf_len = cbufint64_new(QUALCODEC_WINDOW_SZ);
-    qualenc->qual_cbuf_mu = cbufint64_new(QUALCODEC_WINDOW_SZ);
-    qualenc->qual_cbuf_var = cbufint64_new(QUALCODEC_WINDOW_SZ);
-    qualenc_init(qualenc);
-    return qualenc;
-}
-
-void qualenc_free(qualenc_t* qualenc)
-{
-    if (qualenc != NULL) {
-        cbufstr_free(qualenc->qual_cbuf);
-        str_free(qualenc->residues);
-        cbufint64_free(qualenc->qual_cbuf_len);
-        cbufint64_free(qualenc->qual_cbuf_mu);
-        cbufint64_free(qualenc->qual_cbuf_var);
-        free((void*)qualenc);
-        qualenc = NULL;
-    } else { /* qualenc == NULL */
-        tsc_error("Tried to free NULL pointer.\n");
-    }
-}
-
-static void qualenc_reset(qualenc_t* qualenc)
-{
-    qualenc->blkl_n = 0;
-    cbufstr_clear(qualenc->qual_cbuf);
-    str_clear(qualenc->residues);
-    cbufint64_clear(qualenc->qual_cbuf_len);
-    cbufint64_clear(qualenc->qual_cbuf_mu);
-    cbufint64_clear(qualenc->qual_cbuf_var);
-    qualenc_init_tables(qualenc);
-}
-
-static int qualenc_match(str_t* ref, str_t* mem)
-{
-    char* match = strstr(ref->s, mem->s);
-    if (match == NULL) return -1;
-    int pos = match - ref->s;
-    return pos;
-}
-
-/*
- * qualenc_add_record_o0: Fall-trough to entropy coder
- */
-static void qualenc_add_record_o0(qualenc_t* qualenc, const char* qual)
-{
-    str_append_cstr(qualenc->residues, qual);
-    str_append_cstr(qualenc->residues, "\n");
-}
-
-static void qualenc_add_record_o1(qualenc_t* qualenc, const char* qual)
+void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
     /* String matching. */
 
@@ -177,6 +255,60 @@ static void qualenc_add_record_o1(qualenc_t* qualenc, const char* qual)
     qualenc->blkl_n++;
 }
 
+#endif /* QUALCODEC_O1 */
+
+#ifdef QUALCODEC_O2
+
+static void qualenc_init(qualenc_t* qualenc)
+{
+    qualenc->blkl_n = 0;
+}
+
+qualenc_t* qualenc_new(void)
+{
+    qualenc_t* qualenc = (qualenc_t*)tsc_malloc(sizeof(qualenc_t));
+
+    qualenc->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
+    qualenc->residues = str_new();
+
+    qualenc->qual_cbuf_len = cbufint64_new(QUALCODEC_WINDOW_SZ);
+    qualenc->qual_cbuf_mu = cbufint64_new(QUALCODEC_WINDOW_SZ);
+    qualenc->qual_cbuf_var = cbufint64_new(QUALCODEC_WINDOW_SZ);
+
+    qualenc_init(qualenc);
+
+    return qualenc;
+}
+
+void qualenc_free(qualenc_t* qualenc)
+{
+    if (qualenc != NULL) {
+        cbufstr_free(qualenc->qual_cbuf);
+        str_free(qualenc->residues);
+
+        cbufint64_free(qualenc->qual_cbuf_len);
+        cbufint64_free(qualenc->qual_cbuf_mu);
+        cbufint64_free(qualenc->qual_cbuf_var);
+
+        free(qualenc);
+        qualenc = NULL;
+    } else { /* qualenc == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void qualenc_reset(qualenc_t* qualenc)
+{
+    cbufstr_clear(qualenc->qual_cbuf);
+    str_clear(qualenc->residues);
+
+    cbufint64_clear(qualenc->qual_cbuf_len);
+    cbufint64_clear(qualenc->qual_cbuf_mu);
+    cbufint64_clear(qualenc->qual_cbuf_var);
+
+    qualenc_init(qualenc);
+}
+
 static int qualenc_mu(const char* qual)
 {
     size_t len = strlen(qual);
@@ -197,7 +329,7 @@ static int qualenc_var(const char* qual)
     return (int)(var / (double)len);
 }
 
-static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
+void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
     /* Line context. */
 
@@ -303,13 +435,7 @@ static void qualenc_add_record_o2(qualenc_t* qualenc, const char* qual)
     qualenc->blkl_n++;
 }
 
-void qualenc_add_record(qualenc_t* qualenc, const char* qual)
-{
-    qualenc_add_record_o0(qualenc, qual);
-    /*qualenc_add_record_o1(qualenc, qual);*/
-    /*qualenc_add_record_o2(qualenc, qual);*/
-    qualenc->blkl_n++;
-}
+#endif /* QUALCODEC_O2 */
 
 size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
 {
@@ -344,9 +470,13 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
     return blk_sz;
 }
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
+#ifdef QUALCODEC_O0
+
 static void qualdec_init(qualdec_t* qualdec)
 {
 
@@ -374,7 +504,7 @@ static void qualdec_reset(qualdec_t* qualdec)
     qualdec_init(qualdec);
 }
 
-static void qualdec_decode_block_o0(qualdec_t*     qualdec,
+static void qualdec_decode_residues(qualdec_t*     qualdec,
                                     unsigned char* residues,
                                     size_t         residues_sz,
                                     str_t**        qual)
@@ -388,6 +518,86 @@ static void qualdec_decode_block_o0(qualdec_t*     qualdec,
             line++;
     }
 }
+
+#endif /* QUALCODEC_O0 */
+
+#ifdef QUALCODEC_O1
+
+static void qualdec_init(qualdec_t* qualdec)
+{
+
+}
+
+qualdec_t* qualdec_new(void)
+{
+    qualdec_t* qualdec = (qualdec_t*)tsc_malloc(sizeof(qualdec_t));
+    qualdec_init(qualdec);
+    return qualdec;
+}
+
+void qualdec_free(qualdec_t* qualdec)
+{
+    if (qualdec != NULL) {
+        free(qualdec);
+        qualdec = NULL;
+    } else { /* qualdec == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void qualdec_reset(qualdec_t* qualdec)
+{
+    qualdec_init(qualdec);
+}
+
+static void qualdec_decode_residues(qualdec_t*     qualdec,
+                                    unsigned char* residues,
+                                    size_t         residues_sz,
+                                    str_t**        qual)
+{
+
+}
+
+#endif /* QUALCODEC_O1 */
+
+#ifdef QUALCODEC_O2
+
+static void qualdec_init(qualdec_t* qualdec)
+{
+
+}
+
+qualdec_t* qualdec_new(void)
+{
+    qualdec_t* qualdec = (qualdec_t*)tsc_malloc(sizeof(qualdec_t));
+    qualdec_init(qualdec);
+    return qualdec;
+}
+
+void qualdec_free(qualdec_t* qualdec)
+{
+    if (qualdec != NULL) {
+        free(qualdec);
+        qualdec = NULL;
+    } else { /* qualdec == NULL */
+        tsc_error("Tried to free NULL pointer.\n");
+    }
+}
+
+static void qualdec_reset(qualdec_t* qualdec)
+{
+    qualdec_init(qualdec);
+}
+
+static void qualdec_decode_residues(qualdec_t*     qualdec,
+                                    unsigned char* residues,
+                                    size_t         residues_sz,
+                                    str_t**        qual)
+{
+
+}
+
+#endif /* QUALCODEC_O2 */
 
 void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
 {
@@ -427,7 +637,7 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
     tsc_vlog("Decompressed qual block: %zu bytes -> %zu bytes (%5.2f%%)\n",
              data_sz, residues_sz, (double)residues_sz/(double)data_sz*100);
 
-    qualdec_decode_block_o0(qualdec, residues, residues_sz, qual);
+    qualdec_decode_residues(qualdec, residues, residues_sz, qual);
 
     tsc_vlog("Decoded qual block\n");
 

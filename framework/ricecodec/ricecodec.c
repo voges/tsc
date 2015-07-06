@@ -1,9 +1,9 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of ricecodec.                                            *
- ******************************************************************************/
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 /*
  * Note it is up to the calling code to ensure that no overruns on input and
@@ -40,9 +40,11 @@ static void ricecodec_init(ricecodec_t* rc, size_t in_size)
     rc->eof = false;
 }
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
 static int codelen(unsigned char x, int k)
 {
     int m = 1 << k;
@@ -130,9 +132,11 @@ unsigned char* rice_compress(unsigned char* in,
     return out;
 }
 
-/******************************************************************************
- * Decoder                                                                    *
- ******************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
 static int get_bit(ricecodec_t* rc, unsigned char* in)
 {
     if (!(rc->bbuf_filled)) {

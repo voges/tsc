@@ -2,9 +2,9 @@ EXEC        = tsc
 ALIAS       = detsc
 CC          = gcc
 CFLAGS      = -Wall -D _GNU_SOURCE
-INCLUDES    = -I.
-LIBRARIES   = -L../arithcodec -L../ricecodec
-LDFLAGS     = -lm -larithcodec -lricecodec
+INCLUDES    = #-I.
+LIBRARIES   = #-L.
+LDFLAGS     = -lm
 SOURCEDIR   = .
 SOURCES    := $(shell find $(SOURCEDIR) -name '*.c') # find C files recursively
 OBJECTS     = $(SOURCES:.c=.o)

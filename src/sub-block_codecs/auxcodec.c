@@ -1,17 +1,9 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of tsc.                                                  *
- ******************************************************************************/
-
-#include "auxcodec.h"
-#include "../../arithcodec/arithcodec.h"
-#include "../crc64/crc64.h"
-#include "../frw/frw.h"
-#include "../tsclib.h"
-#include <inttypes.h>
-#include <string.h>
+/*
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ *
+ * This file is part of tsc.
+ */
 
 /*
  * Aux block format:
@@ -22,9 +14,19 @@
  *   unsigned char* data      : data
  */
 
-/******************************************************************************
- * Encoder                                                                    *
- ******************************************************************************/
+#include "auxcodec.h"
+#include "../arithcodec/arithcodec.h"
+#include "../crc64/crc64.h"
+#include "../frw/frw.h"
+#include "../tsclib.h"
+#include <inttypes.h>
+#include <string.h>
+
+/*
+ * Encoder
+ * -----------------------------------------------------------------------------
+ */
+
 static void auxenc_init(auxenc_t* auxenc)
 {
     auxenc->blkl_n = 0;
@@ -58,15 +60,15 @@ static void auxenc_reset(auxenc_t* auxenc)
 /*
  * auxenc_add_record_o0: Fall-trough to entropy coder
  */
-static void auxenc_add_record_o0(auxenc_t*      auxenc,
-                                 const char*    qname,
-                                 const int64_t  flag,
-                                 const char*    rname,
-                                 const int64_t  mapq,
-                                 const char*    rnext,
-                                 const int64_t  pnext,
-                                 const int64_t  tlen,
-                                 const char*    opt)
+void auxenc_add_record(auxenc_t*     auxenc,
+                       const char*   qname,
+                       const int64_t flag,
+                       const char*   rname,
+                       const int64_t mapq,
+                       const char*   rnext,
+                       const int64_t pnext,
+                       const int64_t tlen,
+                       const char*   opt)
 {
     char flag_cstr[101];  /* this should be enough space */
     char mapq_cstr[101];  /* this should be enough space */
@@ -94,20 +96,7 @@ static void auxenc_add_record_o0(auxenc_t*      auxenc,
     str_append_cstr(auxenc->residues, "\t");
     str_append_cstr(auxenc->residues, opt);
     str_append_cstr(auxenc->residues, "\n");
-}
 
-void auxenc_add_record(auxenc_t*      auxenc,
-                       const char*    qname,
-                       const int64_t  flag,
-                       const char*    rname,
-                       const int64_t  mapq,
-                       const char*    rnext,
-                       const int64_t  pnext,
-                       const int64_t  tlen,
-                       const char*    opt)
-{
-    auxenc_add_record_o0(auxenc, qname, flag, rname, mapq, rnext, pnext, tlen,
-                         opt);
     auxenc->blkl_n++;
 }
 
@@ -144,9 +133,11 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     return blk_sz;
 }
 
-/*****************************************************************************
- * Decoder                                                                   *
- *****************************************************************************/
+/*
+ * Decoder
+ * -----------------------------------------------------------------------------
+ */
+
 static void auxdec_init(auxdec_t* auxdec)
 {
 
@@ -174,7 +165,7 @@ static void auxdec_reset(auxdec_t* auxdec)
     auxdec_init(auxdec);
 }
 
-static void auxdec_decode_block_o0(auxdec_t*      auxdec,
+static void auxdec_decode_residues(auxdec_t*      auxdec,
                                    unsigned char* residues,
                                    size_t         residues_sz,
                                    str_t**        qname,
@@ -268,7 +259,9 @@ void auxdec_decode_block(auxdec_t* auxdec,
 
     tsc_vlog("Reading aux block: %zu lines, %zu data bytes\n", blkl_n, data_sz);
 
-    /* Read and check block, then decompress and decode it. */
+    /* Read and check block, then decompress it and decode the prediction
+     * residues.
+     */
     data = (unsigned char*)tsc_malloc((size_t)data_sz);
     if (fread_buf(ifp, data, data_sz) != data_sz)
         tsc_error("Could not read aux block!\n");
@@ -283,7 +276,7 @@ void auxdec_decode_block(auxdec_t* auxdec,
     tsc_vlog("Decompressed aux block: %zu bytes -> %zu bytes (%5.2f%%)\n",
              data_sz, residues_sz, (double)residues_sz/(double)data_sz*100);
 
-    auxdec_decode_block_o0(auxdec, residues, residues_sz, qname, flag, rname,
+    auxdec_decode_residues(auxdec, residues, residues_sz, qname, flag, rname,
                            mapq, rnext, pnext, tlen, opt);
 
     tsc_vlog("Decoded aux block\n");

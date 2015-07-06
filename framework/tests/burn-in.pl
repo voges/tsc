@@ -17,7 +17,7 @@ while (my $file = readdir(DIR)) {
     my $file_com = $file.".tsc";
     my $file_dec = $file_com.".sam";
     my $com = `$tsc $file -o $file_com -f 1>/dev/null`;
-    my $dec = `$tsc -d $file_com -o $file_dec -f 1>/dev/null`;
+    my $dec = `$tsc -d  $file_com -o $file_dec -f 1>/dev/null`;
 
     # Check correctness of decoded file.
     my $ret = `diff $file $file_dec`;
