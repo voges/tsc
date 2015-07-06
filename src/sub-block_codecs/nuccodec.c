@@ -32,34 +32,64 @@
 static void nucenc_init(nucenc_t* nucenc)
 {
     nucenc->blkl_n = 0;
-    nucenc->block_ln = 0;
+    nucenc->diff_fail_n = 0;
 }
 
 nucenc_t* nucenc_new(void)
 {
     nucenc_t* nucenc = (nucenc_t*)tsc_malloc(sizeof(nucenc_t));
+
+    nucenc->residues = str_new();
+
     nucenc->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
     nucenc->cigar_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucenc->seq_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
     nucenc->exp_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
-    nucenc->residues = str_new();
+
+    nucenc->pos_res = bbuf_new();
+    nucenc->cigar_res = str_new();
+    nucenc->seq_res = str_new();
+
     nucenc_init(nucenc);
+
     return nucenc;
 }
 
 void nucenc_free(nucenc_t* nucenc)
 {
     if (nucenc != NULL) {
+        str_free(nucenc->residues);
+
         cbufint64_free(nucenc->pos_cbuf);
         cbufstr_free(nucenc->cigar_cbuf);
         cbufstr_free(nucenc->seq_cbuf);
         cbufstr_free(nucenc->exp_cbuf);
-        str_free(nucenc->residues);
-        free((void*)nucenc);
+
+        bbuf_free(nucenc->pos_res);
+        str_free(nucenc->cigar_res);
+        str_free(nucenc->seq_res);
+
+        free(nucenc);
         nucenc = NULL;
     } else { /* nucenc == NULL */
         tsc_error("Tried to free NULL pointer.\n");
     }
+}
+
+static void nucenc_reset(nucenc_t* nucenc)
+{
+    str_clear(nucenc->residues);
+
+    cbufint64_clear(nucenc->pos_cbuf);
+    cbufstr_clear(nucenc->cigar_cbuf);
+    cbufstr_clear(nucenc->seq_cbuf);
+    cbufstr_clear(nucenc->exp_cbuf);
+
+    str_clear(nucenc->pos_res);
+    str_clear(nucenc->cigar_res);
+    str_clear(nucenc->seq_res);
+
+    nucenc_init(nucenc);
 }
 
 static void nucenc_expand(str_t* exp, uint64_t pos, const char* cigar, const char* seq)
@@ -315,18 +345,7 @@ void nucenc_add_record(nucenc_t*      nucenc,
     nucenc->blkl_n++;
 }
 
-static void nucenc_reset(nucenc_t* nucenc)
-{
-    nucenc->blkl_n = 0;
-    nucenc->block_ln = 0;
-    cbufint64_clear(nucenc->pos_cbuf);
-    cbufstr_clear(nucenc->cigar_cbuf);
-    cbufstr_clear(nucenc->seq_cbuf);
-    cbufstr_clear(nucenc->exp_cbuf);
-    str_clear(nucenc->residues);
-}
-
-size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
+static size_t nucenc_write_block_o0(nucenc_t* nucenc, FILE* ofp)
 {
     size_t blk_sz = 0;
 
@@ -357,6 +376,12 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     free(data); /* free memory used for encoded bitstream */
 
     return blk_sz;
+}
+
+size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
+{
+    return nucenc_write_block_o0(nucenc, ofp);
+    /*return nucenc_write_block_o1(nucenc, ofp);*/
 }
 
 /******************************************************************************

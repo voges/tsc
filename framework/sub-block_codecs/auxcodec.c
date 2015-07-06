@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "auxcodec.h"
-#include "../../arithcodec/arithcodec.h"
+#include "../arithcodec/arithcodec.h"
 #include "../crc64/crc64.h"
 #include "../frw/frw.h"
 #include "../tsclib.h"

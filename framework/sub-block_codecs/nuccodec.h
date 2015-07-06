@@ -8,35 +8,16 @@
 #ifndef TSC_NUCCODEC_H
 #define TSC_NUCCODEC_H
 
-#include "bbuf.h"
-#include "cbufint64.h"
-#include "cbufstr.h"
 #include "../str/str.h"
 #include <stdint.h>
 #include <stdio.h>
-
-#define NUCCODEC_WINDOW_SZ 100 /* needed by o1 codec */
 
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
 typedef struct nucenc_t_ {
-    size_t blkl_n;   /* no. of records processed in the curr block */
-
-    /* Needed by o0 codec */
+    size_t blkl_n;   /* no. of records processed in the curr block        */
     str_t* residues; /* prediction residues (passed to the entropy coder) */
-
-    /* Needed by o1 codec */
-    size_t       diff_fail_n; /* no. of records where diff() didn't succeed */
-
-    cbufint64_t* pos_cbuf;    /* circular buffer for POSitions          */
-    cbufstr_t*   cigar_cbuf;  /* circular buffer for CIGARs             */
-    cbufstr_t*   seq_cbuf;    /* circular buffer for SEQuences          */
-    cbufstr_t*   exp_cbuf;    /* circular buffer for EXPanded sequences */
-
-    bbuf_t*      pos_res;     /* position prediction residues */
-    str_t*       cigar_res;   /* cigar prediction residues    */
-    str_t*       seq_res;     /* sequence prediction residues */
 } nucenc_t;
 
 nucenc_t* nucenc_new(void);
