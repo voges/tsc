@@ -20,22 +20,14 @@
  * Qual o1 encoder: "String matching" (patent pending)
  *
  * Qual o1 block format:
- *   unsigned char  blk_id[8] : "qual---" + '\0'
- *   uint64_t       blkl_n    : no. of lines in block
- *   uint64_t       data_sz   : data size
- *   uint64_t       data_crc  : CRC64 of compressed data
- *   unsigned char* data      : data
+ *   see o0
  */
 
 /*
  * Qual o2 encoder: Markov model + "line context"
  *
  * Qual o2 block format:
- *   unsigned char  blk_id[8] : "qual---" + '\0'
- *   uint64_t       blkl_n    : no. of lines in block
- *   uint64_t       data_sz   : data size
- *   uint64_t       data_crc  : CRC64 of compressed data
- *   unsigned char* data      : data
+ *   see o0
  */
 
 #include "qualcodec.h"
@@ -57,9 +49,11 @@
 #include "../frw/frw.h"
 #include "../ricecodec/ricecodec.h"
 #include "../tsclib.h"
-#include <float.h>
-#include <math.h>
+#include <limits.h>
 #include <string.h>
+
+#define QUALCODEC_EMPTY -126
+#define QUALCODEC_LINEBREAK -125
 
 #endif /* QUALCODEC_O1 */
 
@@ -75,6 +69,18 @@
 #include <string.h>
 
 #endif /* QUALCODEC_O2 */
+
+#ifdef QUALCODEC_O1
+
+static int qualcodec_match(str_t* ref, str_t* mem)
+{
+    char* match = strstr(ref->s, mem->s);
+    if (match == NULL) return -1;
+    int pos = match - ref->s;
+    return pos;
+}
+
+#endif /* QUALCODEC_O1 */
 
 /*
  * Encoder
@@ -158,101 +164,103 @@ static void qualenc_reset(qualenc_t* qualenc)
     qualenc_init(qualenc);
 }
 
-static int qualenc_match(str_t* ref, str_t* mem)
-{
-    char* match = strstr(ref->s, mem->s);
-    if (match == NULL) return -1;
-    int pos = match - ref->s;
-    return pos;
-}
-
-static void qualenc_init_tables(qualenc_t* qualenc)
-{
-    size_t i = 0, j = 0;
-    char pred_init = 0;
-    for (i = 0; i < QUALCODEC_TABLE_SZ; i++) {
-        qualenc->pred[i] = pred_init++;
-        if (pred_init == QUALCODEC_RANGE) pred_init = 0;
-        for (j = 0; j < QUALCODEC_RANGE; j++) {
-            qualenc->freq[i][j] = 0;
-        }
-    }
-}
-
 void qualenc_add_record(qualenc_t* qualenc, const char* qual)
 {
-    /* String matching. */
+    /* We assume 33 <= qual[i] <= 126. Prediction residues thus can range from
+     * 33-126 = -93 up to 126. For all computations we can thus use (signed)
+     * char's.
+     * We need to take special care of empty quality score lines (only
+     * containing '*'). As '*' might also be an ordinary quality score, we
+     * store empty lines with decimal value -126.
+     */
 
-    if (qual[0] != '*' && qualenc->blkl_n > 0) {
-        /* QUAL exists and this is not the first line in the current block.
-         * Encode it!
-         */
-        const size_t N = 3;
-        size_t i = 0;
+    size_t N = QUALCODEC_MATCH_LEN;
 
-        /* Add first N quality characters to output buffer. */
-        for (i = 0; i < N; i++) str_append_char(qualenc->residues, qual[i]);
+    if (qual[0] == '*' && qual[1] == '\0')
+        goto qualcodec_empty; /* retain all empty qual lines */
+    if (qualenc->blkl_n == 0)
+        goto qualcodec_retain; /* first line in block */
 
-        str_t* mem = str_new();
-        size_t qual_len = strlen(qual);
+    /* Predict the first N symbols using the first N symbols from the previous
+     * line.
+     */
+    str_t* prev = cbufstr_top(qualenc->qual_cbuf);
+    if (prev->len < N) goto qualcodec_retain;
 
-        size_t j = 0;
-        for (i = N; i < qual_len; i++) {
-            /* Get memory values. */
-            str_clear(mem);
-            for (j = N; j > 0; j--) str_append_char(mem, qual[i - j]);
-
-            /* Search all matches of mem in the circular buffer. */
-            str_t* matches = str_new();
-            size_t cbuf_idx = 0;
-            size_t cbuf_n = qualenc->qual_cbuf->n;
-
-            do {
-                /* Get quality line from buffer. */
-                str_t* ref = cbufstr_get(qualenc->qual_cbuf, cbuf_idx++);
-
-                /* Search for match of mem. */
-                int match_pos = qualenc_match(ref, mem);
-                if (match_pos >= 0) str_append_char(matches, ref->s[match_pos]);
-            } while (cbuf_idx < cbuf_n);
-
-            /* Compute the prediction error and write it to output
-             * buffer.
-             */
-            if (matches->len == 0) {
-                /* Did not find any matches. Just write qual[i] to output. */
-                str_append_char(qualenc->residues, qual[i]);
-            } else {
-                /* Compute mean prediction value. */
-                int pred = 0;
-                size_t m = 0;
-                for (m = 0; m < matches->len; m++) pred += (int)(matches->s[m]);
-                pred = (int)round((double)pred / (double)matches->len);
-                char err = qual[i] - (char)pred;
-                str_append_char(qualenc->residues, err);
-            }
-
-            str_free(matches);
-        }
-        str_free(mem);
-        str_append_cstr(qualenc->residues, "\n");
-
-        /* Push QUAL to circular buffer. */
-        cbufstr_push(qualenc->qual_cbuf, qual);
-    } else {
-        /* QUAL is not present or this is the first line in the current
-         * block.
-         */
-
-        /* Output record .*/
-        str_append_cstr(qualenc->residues, qual);
-        str_append_cstr(qualenc->residues, "\n");
-
-        /* If this quality line is present, add it to circular buffer. */
-        if (qual[0] != '*') cbufstr_push(qualenc->qual_cbuf, qual);
+    size_t i = 0;
+    for (i = 0; i < N; i++) {
+        str_append_char(qualenc->residues, (qual[i] - prev->s[i]));
     }
 
+    /* Predict all other symbols by trying to find substrings. */
+    str_t* mem = str_new();
+
+    for (i = N; i < strlen(qual); i++) {
+        /* Collect memory values */
+        str_clear(mem);
+        size_t j = N;
+        for (j = N; j > 0; j--)
+            str_append_char(mem, qual[i - j]);
+
+        /* Search all matches of mem in the circular buffer and store the
+         * corresponding predictions.
+         */
+        str_t* matches = str_new();
+        size_t cbuf_idx = 0;
+        size_t cbuf_n = qualenc->qual_cbuf->n;
+
+        do {
+            str_t* ref = cbufstr_get(qualenc->qual_cbuf, cbuf_idx++);
+
+            int match_pos = qualcodec_match(ref, mem);
+            if (match_pos >= 0)
+                str_append_char(matches, ref->s[match_pos]);
+        } while (cbuf_idx < cbuf_n);
+
+        /* Compute the prediction residue and write it to the output buffer. */
+        if (matches->len == 0) {
+            /* Did not find any matches. Just write qual[i] to output. */
+            str_append_char(qualenc->residues, qual[i]);
+        } else {
+            /* Compute mean prediction value */
+            int pred = 0;
+            size_t m = 0;
+            for (m = 0; m < matches->len; m++)
+                pred += (int)(matches->s[m]);
+            pred = (int)pred/(int)(matches->len); /* implicitly rounding down */
+            char err = qual[i] - (char)pred;
+            str_append_char(qualenc->residues, err);
+        }
+
+        str_free(matches);
+    }
+    str_append_char(qualenc->residues, (char)QUALCODEC_LINEBREAK);
+
+    str_free(mem);
+
+    cbufstr_push(qualenc->qual_cbuf, qual);
+
     qualenc->blkl_n++;
+
+    return;
+
+qualcodec_empty:
+    str_append_char(qualenc->residues, (char)QUALCODEC_EMPTY);
+    str_append_char(qualenc->residues, (char)QUALCODEC_LINEBREAK);
+
+    qualenc->blkl_n++;
+
+    return;
+
+qualcodec_retain:
+    str_append_cstr(qualenc->residues, qual);
+    str_append_char(qualenc->residues, (char)QUALCODEC_LINEBREAK);
+
+    cbufstr_push(qualenc->qual_cbuf, qual);
+
+    qualenc->blkl_n++;
+
+    return;
 }
 
 #endif /* QUALCODEC_O1 */
@@ -307,6 +315,19 @@ static void qualenc_reset(qualenc_t* qualenc)
     cbufint64_clear(qualenc->qual_cbuf_var);
 
     qualenc_init(qualenc);
+}
+
+static void qualenc_init_tables(qualenc_t* qualenc)
+{
+    size_t i = 0, j = 0;
+    char pred_init = 0;
+    for (i = 0; i < QUALCODEC_TABLE_SZ; i++) {
+        qualenc->pred[i] = pred_init++;
+        if (pred_init == QUALCODEC_RANGE) pred_init = 0;
+        for (j = 0; j < QUALCODEC_RANGE; j++) {
+            qualenc->freq[i][j] = 0;
+        }
+    }
 }
 
 static int qualenc_mu(const char* qual)
@@ -531,6 +552,7 @@ static void qualdec_init(qualdec_t* qualdec)
 qualdec_t* qualdec_new(void)
 {
     qualdec_t* qualdec = (qualdec_t*)tsc_malloc(sizeof(qualdec_t));
+    qualdec->qual_cbuf = cbufstr_new(QUALCODEC_WINDOW_SZ);
     qualdec_init(qualdec);
     return qualdec;
 }
@@ -538,6 +560,7 @@ qualdec_t* qualdec_new(void)
 void qualdec_free(qualdec_t* qualdec)
 {
     if (qualdec != NULL) {
+        cbufstr_free(qualdec->qual_cbuf);
         free(qualdec);
         qualdec = NULL;
     } else { /* qualdec == NULL */
@@ -547,6 +570,7 @@ void qualdec_free(qualdec_t* qualdec)
 
 static void qualdec_reset(qualdec_t* qualdec)
 {
+    cbufstr_clear(qualdec->qual_cbuf);
     qualdec_init(qualdec);
 }
 
@@ -555,7 +579,102 @@ static void qualdec_decode_residues(qualdec_t*     qualdec,
                                     size_t         residues_sz,
                                     str_t**        qual)
 {
+    size_t N = QUALCODEC_MATCH_LEN;
 
+    size_t line_cnt = 0;
+    size_t col_cnt = 0;
+    size_t i = 0;
+
+    while (i < residues_sz) {
+        if ((char)residues[i] == (char)QUALCODEC_LINEBREAK) {
+            cbufstr_push(qualdec->qual_cbuf, qual[line_cnt]->s);
+            line_cnt++;
+            col_cnt = 0;
+            i++;
+            continue;
+        }
+
+        if ((char)residues[i] == (char)QUALCODEC_EMPTY) {
+            str_append_char(qual[line_cnt], '*');
+            line_cnt++;
+            col_cnt = 0;
+            i += 2; /* skip next QUALCODEC_LINEBREAK */
+            continue;
+        }
+
+        if (line_cnt == 0) {
+            str_append_char(qual[line_cnt], (const char)residues[i]);
+            col_cnt++;
+            i++;
+            continue;
+        }
+
+        /* Predict the first N symbols using the first N symbols from the
+         * previous line.
+         */
+        if (col_cnt < N) {
+            str_t* prev = cbufstr_top(qualdec->qual_cbuf);
+            if (prev->len < N) {
+                str_append_char(qual[line_cnt], (const char)residues[i]);
+                col_cnt++;
+                i++;
+                continue;
+            }
+
+            str_append_char(qual[line_cnt], (char)residues[i]+prev->s[col_cnt]);
+
+            col_cnt++;
+            i++;
+            continue;
+        }
+
+        /* Predict all other symbols by trying to find substrings. */
+
+        /* Collect memory values */
+        str_t* mem = str_new();
+        size_t j = N;
+        for (j = N; j > 0; j--)
+            str_append_char(mem, qual[line_cnt]->s[col_cnt - j]);
+
+        /* Search all matches of mem in the circular buffer and store the
+         * corresponding predictions.
+         */
+        str_t* matches = str_new();
+        size_t cbuf_idx = 0;
+        size_t cbuf_n = qualdec->qual_cbuf->n;
+
+        do {
+            str_t* ref = cbufstr_get(qualdec->qual_cbuf, cbuf_idx++);
+
+            int match_pos = qualcodec_match(ref, mem);
+            if (match_pos >= 0)
+                str_append_char(matches, ref->s[match_pos]);
+        } while (cbuf_idx < cbuf_n);
+
+        str_free(mem);
+
+        /* Compute the prediction residue and write it to output buffer. */
+        if (matches->len == 0) {
+            /* Did not find any matches. Just write residues[i] to output. */
+            str_append_char(qual[line_cnt], (const char)residues[i]);
+        } else {
+            /* Compute mean prediction value */
+            int pred = 0;
+            size_t m = 0;
+            for (m = 0; m < matches->len; m++)
+                pred += (int)(matches->s[m]);
+            pred = (int)pred/(int)(matches->len); /* implicitly rounding down */
+            char q = residues[i] + (char)pred;
+            str_append_char(qual[line_cnt], q);
+        }
+
+        str_free(matches);
+
+        col_cnt++;
+        i++;
+    }
+
+    qualdec_reset(qualdec);
 }
 
 #endif /* QUALCODEC_O1 */

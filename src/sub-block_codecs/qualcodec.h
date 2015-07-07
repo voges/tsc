@@ -8,8 +8,8 @@
 #ifndef TSC_QUALCODEC_H
 #define TSC_QUALCODEC_H
 
-#define QUALCODEC_O0
-//#define QUALCODEC_O1
+//#define QUALCODEC_O0
+#define QUALCODEC_O1
 //#define QUALCODEC_O2
 
 #include <stdio.h>
@@ -23,19 +23,19 @@
 
 #ifdef QUALCODEC_O1
 
+#include "cbufstr.h"
+#define QUALCODEC_WINDOW_SZ 10
+#define QUALCODEC_MATCH_LEN 1
+
+#endif /* QUALCODEC_O1 */
+
+#ifdef QUALCODEC_O2
+
 #include "cbufint64.h"
 #include "cbufstr.h"
 #define QUALCODEC_WINDOW_SZ 100
 
-#endif /* QUALCODEC_O1 */
-
-#ifdef QUALCODEC_O1
-
-#include "cbufint64.h"
-#include "cbufstr.h"
-#define QUALCODEC_WINDOW_SZ 100
-
-#endif /* QUALCODEC_O1 */
+#endif /* QUALCODEC_O2 */
 
 /*
  * Encoder
@@ -104,7 +104,7 @@ typedef struct qualdec_t_ {
 #ifdef QUALCODEC_O1
 
 typedef struct qualdec_t_ {
-
+    cbufstr_t* qual_cbuf;
 } qualdec_t;
 
 #endif /* QUALCODEC_O1 */

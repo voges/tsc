@@ -362,11 +362,11 @@ void fileenc_encode(fileenc_t* fileenc)
                                  + tsc_sz[TSC_NUC]
                                  + tsc_sz[TSC_QUAL]
                                  + tsc_sz[TSC_AUX];
-    tsc_vlog("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
-             tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
-             blk_cnt);
-    tsc_vlog("Took %ld us ~= %.4f s\n", elapsed_total,
-             (double)elapsed_total / 1000000);
+    tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
+            tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
+            blk_cnt);
+    tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
+            (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics and/or timing info. */
     if (tsc_stats) fileenc_print_stats(sam_sz, tsc_sz, blk_cnt, line_cnt);
@@ -634,11 +634,11 @@ void filedec_decode(filedec_t* filedec)
     elapsed_total += tvdiff(tt0, tt1);
 
     /* Print summary */
-    tsc_vlog("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
-             "%.2f GiB\n",
+    tsc_log("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
+            "%.2f GiB\n",
              line_cnt, (size_t)blk_cnt, sam_sz, ((double)sam_sz / GB));
-    tsc_vlog("Took %ld us ~= %.4f s\n", elapsed_total,
-             (double)elapsed_total / 1000000);
+    tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
+            (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics. */
     if (tsc_stats)
