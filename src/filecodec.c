@@ -143,7 +143,7 @@ static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
             "\t  Nuc (pos+cigar+seq)   : %12zu (%6.2f%%)\n"
             "\t  Qual                  : %12zu (%6.2f%%)\n"
             "\tCompression ratios                read /      written\n"
-            "\t  Nuc                   : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)   : %12zu / %12zu (%6.2f%%)\n"
             "\t  Qual                  : %12zu / %12zu (%6.2f%%)\n"
             "\n",
             blk_cnt,
