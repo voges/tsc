@@ -92,8 +92,8 @@ void str_append_cstr(str_t* str, const char* cstr)
 void str_append_cstrn(str_t* str, const char* cstr, const size_t len)
 {
     if (len > strlen(cstr)) {
-        fprintf(stderr, "Error: Tried append %zu bytes of C-string: %s\n", len,
-                cstr);
+        fprintf(stderr, "Error: Tried to append %zu bytes of C-string: %s\n",
+                len, cstr);
         exit(EXIT_FAILURE);
     }
     str_extend(str, len);

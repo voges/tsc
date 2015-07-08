@@ -8,8 +8,8 @@
 #ifndef TSC_NUCCODEC_H
 #define TSC_NUCCODEC_H
 
-#define NUCCODEC_O0
-//#define NUCCODEC_O1
+//#define NUCCODEC_O0
+#define NUCCODEC_O1
 
 #include "../str/str.h"
 #include <stdint.h>
@@ -26,7 +26,9 @@
 #include "bbuf.h"
 #include "cbufint64.h"
 #include "cbufstr.h"
-#define NUCCODEC_WINDOW_SZ 100
+#include <stdbool.h>
+
+#define NUCCODEC_WINDOW_SZ 10
 
 #endif /* NUCCODEC_O1 */
 
@@ -47,18 +49,16 @@ typedef struct nucenc_t_ {
 #ifdef NUCCODEC_O1
 
 typedef struct nucenc_t_ {
-    size_t blkl_n;   /* no. of records processed in the curr block */
-
-    size_t       diff_fail_n; /* no. of records where diff() didn't succeed */
+    size_t blkl_n; /* no. of records processed in the curr block        */
+    bool first;    /* 'false', if first line has not been processed yet */
 
     cbufint64_t* pos_cbuf;    /* circular buffer for POSitions          */
     cbufstr_t*   cigar_cbuf;  /* circular buffer for CIGARs             */
-    cbufstr_t*   seq_cbuf;    /* circular buffer for SEQuences          */
     cbufstr_t*   exp_cbuf;    /* circular buffer for EXPanded sequences */
 
-    bbuf_t*      pos_res;     /* position prediction residues */
-    str_t*       cigar_res;   /* cigar prediction residues    */
-    str_t*       seq_res;     /* sequence prediction residues */
+    bbuf_t*      pos_residues;     /* position prediction residues */
+    str_t*       cigar_residues;   /* CIGAR prediction residues    */
+    str_t*       seq_residues;     /* sequence prediction residues */
 } nucenc_t;
 
 #endif /* NUCCODEC_O1 */

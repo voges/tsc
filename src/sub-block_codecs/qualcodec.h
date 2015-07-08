@@ -8,8 +8,8 @@
 #ifndef TSC_QUALCODEC_H
 #define TSC_QUALCODEC_H
 
-//#define QUALCODEC_O0
-#define QUALCODEC_O1
+#define QUALCODEC_O0
+//#define QUALCODEC_O1
 //#define QUALCODEC_O2
 
 #include <stdio.h>

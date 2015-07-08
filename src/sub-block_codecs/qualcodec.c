@@ -172,6 +172,8 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
      * We need to take special care of empty quality score lines (only
      * containing '*'). As '*' might also be an ordinary quality score, we
      * store empty lines with decimal value -126.
+     * Linebreaks are stored as decimal -125, as prediction residues might
+     * occupy the value '\n'.
      */
 
     size_t N = QUALCODEC_MATCH_LEN;
@@ -181,9 +183,11 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
     if (qualenc->blkl_n == 0)
         goto qualcodec_retain; /* first line in block */
 
-    /* Predict the first N symbols using the first N symbols from the previous
+    /*
+     * Predict the first N symbols using the first N symbols from the previous
      * line.
      */
+
     str_t* prev = cbufstr_top(qualenc->qual_cbuf);
     if (prev->len < N) goto qualcodec_retain;
 
@@ -192,7 +196,10 @@ void qualenc_add_record(qualenc_t* qualenc, const char* qual)
         str_append_char(qualenc->residues, (qual[i] - prev->s[i]));
     }
 
-    /* Predict all other symbols by trying to find substrings. */
+    /*
+     * Predict all other symbols by trying to find substrings.
+     */
+
     str_t* mem = str_new();
 
     for (i = N; i < strlen(qual); i++) {
@@ -609,9 +616,11 @@ static void qualdec_decode_residues(qualdec_t*     qualdec,
             continue;
         }
 
-        /* Predict the first N symbols using the first N symbols from the
+        /*
+         * Predict the first N symbols using the first N symbols from the
          * previous line.
          */
+
         if (col_cnt < N) {
             str_t* prev = cbufstr_top(qualdec->qual_cbuf);
             if (prev->len < N) {
@@ -628,7 +637,9 @@ static void qualdec_decode_residues(qualdec_t*     qualdec,
             continue;
         }
 
-        /* Predict all other symbols by trying to find substrings. */
+        /*
+         * Predict all other symbols by trying to find substrings.
+         */
 
         /* Collect memory values */
         str_t* mem = str_new();
