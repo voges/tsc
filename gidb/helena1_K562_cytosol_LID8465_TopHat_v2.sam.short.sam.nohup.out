@@ -1,0 +1,28 @@
+tsc: Compressing: K562_cytosol_LID8465_TopHat_v2.sam.short.sam
+tsc: Wrote 139345899 bytes ~= 0.13 GiB (999914 line(s) in 50 block(s))
+tsc: Took 30943206 us ~= 30.9432 s
+tsc: 
+        Compression Statistics:
+        -----------------------
+        Number of blocks        :           50
+        Number of lines         :       999914
+        Bytes written           :    139345899 (100.00%)
+          File format           :         2452 (  0.00%)
+          SAM header            :         3576 (  0.00%)
+          Aux (everything else) :     92298632 ( 66.24%)
+          Nuc (pos+cigar+seq)   :     15736822 ( 11.29%)
+          Qual                  :     31304417 ( 22.47%)
+        Compression ratios                read /      written
+          Nuc (pos+cigar+seq)   :     75993464 /     15736822 ( 20.71%)
+          Qual                  :     75993464 /     31304417 ( 41.19%)
+
+tsc: 
+        Timing Statistics:
+        ------------------
+        Total time elapsed :     30943206 us (100.00%)
+        Predictive Coding  :     26625257 us ( 86.05%)
+        Entropy Coding     :      2793129 us (  9.03%)
+        Remaining          :      1524820 us (  4.93%)                                                                                
+                                                                                                                                      
+tsc: Finished: K562_cytosol_LID8465_TopHat_v2.sam.short.sam.tsc
+

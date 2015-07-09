@@ -1,0 +1,28 @@
+tsc: Compressing: /data/genome/cancercells/360b4736-6c5e-48df-af58-c1cf51609350/tmp/HCC1954.mix1.n80t20.sam.short.sam
+tsc: Wrote 228972746 bytes ~= 0.21 GiB (999891 line(s) in 50 block(s))
+tsc: Took 27927124 us ~= 27.9271 s
+tsc: 
+        Compression Statistics:
+        -----------------------
+        Number of blocks        :           50
+        Number of lines         :       999891
+        Bytes written           :    228972746 (100.00%)
+          File format           :         2452 (  0.00%)
+          SAM header            :        23461 (  0.01%)
+          Aux (everything else) :    147836783 ( 64.57%)
+          Nuc (pos+cigar+seq)   :     35001148 ( 15.29%)
+          Qual                  :     46108902 ( 20.14%)
+        Compression ratios                read /      written
+          Nuc (pos+cigar+seq)   :    100988991 /     35001148 ( 34.66%)
+          Qual                  :    100988991 /     46108902 ( 45.66%)
+
+tsc: 
+        Timing Statistics:
+        ------------------
+        Total time elapsed :     27927124 us (100.00%)
+        Predictive Coding  :     14163171 us ( 50.71%)
+        Entropy Coding     :      4323216 us ( 15.48%)
+        Remaining          :      9440737 us ( 33.80%)
+
+tsc: Finished: /data/genome/cancercells/360b4736-6c5e-48df-af58-c1cf51609350/tmp/HCC1954.mix1.n80t20.sam.short.sam.tsc
+

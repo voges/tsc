@@ -1,0 +1,27 @@
+tsc: Compressing: /data/genome/human/illumina/ERP001960/tmp/NA12878_S1.sam
+tsc: Wrote 235309519110 bytes ~= 219.15 GiB (1582771014 line(s) in 79139 block(s))
+tsc: Took 66820930381 us ~= 66820.9304 s
+tsc: 
+	Compression Statistics:
+	-----------------------
+	Number of blocks        :        79139
+	Number of lines         :   1582771014
+	Bytes written           : 235309519110 (100.00%)
+	  File format           :      3798724 (  0.00%)
+	  SAM header            :          696 (  0.00%)
+	  Aux (everything else) : 132471535978 ( 56.30%)
+	  Nuc (pos+cigar+seq)   :  28547578120 ( 12.13%)
+	  Qual                  :  74286605592 ( 31.57%)
+	Compression ratios                read /      written
+	  Nuc (pos+cigar+seq)   : 159859872414 /  28547578120 ( 17.86%)
+	  Qual                  : 159859872414 /  74286605592 ( 46.47%)
+
+tsc: 
+	Timing Statistics:
+	------------------
+	Total time elapsed :  66820930381 us (100.00%)
+	Predictive Coding  :  58572428778 us ( 87.66%)
+	Entropy Coding     :   6243013640 us (  9.34%)
+	Remaining          :   2005487963 us (  3.00%)
+
+tsc: Finished: /data/genome/human/illumina/ERP001960/tmp/NA12878_S1.sam.tsc
