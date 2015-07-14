@@ -28,7 +28,7 @@
 #include "cbufstr.h"
 #include <stdbool.h>
 
-#define NUCCODEC_WINDOW_SZ 10
+#define NUCCODEC_WINDOW_SZ 2
 
 #endif /* NUCCODEC_O1 */
 

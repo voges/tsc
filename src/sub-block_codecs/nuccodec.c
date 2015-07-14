@@ -167,6 +167,8 @@ static void nucenc_init(nucenc_t* nucenc)
 
 nucenc_t* nucenc_new(void)
 {
+    tsc_log("Nucenc window size: %d\n", NUCCODEC_WINDOW_SZ);
+
     nucenc_t* nucenc = (nucenc_t*)tsc_malloc(sizeof(nucenc_t));
 
     nucenc->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);

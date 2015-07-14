@@ -15,7 +15,7 @@
 #include "./str/str.h"
 #include <stdio.h>
 
-#define FILECODEC_BLK_LC 20000LL /* no. of SAM lines per block */
+#define FILECODEC_BLK_LC 10000LL /* no. of SAM lines per block */
 
 /*
  * Encoder

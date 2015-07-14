@@ -94,6 +94,34 @@ static long tvdiff(struct timeval tv0, struct timeval tv1)
     return (tv1.tv_sec - tv0.tv_sec) * 1000000 + tv1.tv_usec - tv0.tv_usec;
 }
 
+static size_t ndigits(int64_t x)
+{
+    /* Ugly, but fast */
+    size_t n = 0;
+    if (x < 0) n++;
+    x = abs(x);
+
+    if (x < 10) return n+1;
+    if (x < 100) return n+2;
+    if (x < 1000) return n+3;
+    if (x < 10000) return n+4;
+    if (x < 100000) return n+5;
+    if (x < 1000000) return n+6;
+    if (x < 10000000) return n+7;
+    if (x < 100000000) return n+8;
+    if (x < 1000000000) return n+9;
+    if (x < 10000000000) return n+10;
+    if (x < 100000000000) return n+11;
+    if (x < 1000000000000) return n+12;
+    if (x < 10000000000000) return n+13;
+    if (x < 100000000000000) return n+14;
+    if (x < 1000000000000000) return n+15;
+    if (x < 10000000000000000) return n+16;
+    if (x < 100000000000000000) return n+17;
+    if (x < 1000000000000000000) return n+18;
+    return n+19; /* INT64_MAX: 2^63 - 1 = 9223372036854775807 */
+}
+
 /******************************************************************************
  * Encoder                                                                    *
  ******************************************************************************/
@@ -131,65 +159,90 @@ void fileenc_free(fileenc_t* fileenc)
 static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
                                 const size_t blk_cnt, const size_t line_cnt)
 {
+    size_t sam_total_sz = sam_sz[SAM_QNAME]+sam_sz[SAM_FLAG]+sam_sz[SAM_RNAME]
+                          +sam_sz[SAM_POS]+sam_sz[SAM_MAPQ]+sam_sz[SAM_CIGAR]
+                          +sam_sz[SAM_RNEXT]+sam_sz[SAM_PNEXT]+sam_sz[SAM_TLEN]
+                          +sam_sz[SAM_SEQ]+sam_sz[SAM_QUAL]+sam_sz[SAM_OPT];
+    size_t sam_aux_sz = sam_sz[SAM_QNAME]+sam_sz[SAM_FLAG]+sam_sz[SAM_RNAME]
+                        +sam_sz[SAM_MAPQ]+sam_sz[SAM_RNEXT]+sam_sz[SAM_PNEXT]
+                        +sam_sz[SAM_TLEN]+sam_sz[SAM_OPT];
+    size_t sam_nuc_sz = sam_sz[SAM_POS]+sam_sz[SAM_CIGAR]+sam_sz[SAM_SEQ];
+
     tsc_log("\n"
             "\tCompression Statistics:\n"
             "\t-----------------------\n"
-            "\tNumber of blocks        : %12zu\n"
-            "\tNumber of lines         : %12zu\n"
-            "\tBytes written           : %12zu (%6.2f%%)\n"
-            "\t  File format           : %12zu (%6.2f%%)\n"
-            "\t  SAM header            : %12zu (%6.2f%%)\n"
-            "\t  Aux (everything else) : %12zu (%6.2f%%)\n"
-            "\t  Nuc (pos+cigar+seq)   : %12zu (%6.2f%%)\n"
-            "\t  Qual                  : %12zu (%6.2f%%)\n"
-            "\tCompression ratios                read /      written\n"
-            "\t  Nuc (pos+cigar+seq)   : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual                  : %12zu / %12zu (%6.2f%%)\n"
+            "\tNumber of blocks          : %12zu\n"
+            "\tNumber of lines           : %12zu\n"
+            "\tNumber of lines per block : %12zu\n"
+            "\tTsc file size             : %12zu (%6.2f%%)\n"
+            "\t  File format             : %12zu (%6.2f%%)\n"
+            "\t  SAM header              : %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)   : %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)     : %12zu (%6.2f%%)\n"
+            "\t  Qual                    : %12zu (%6.2f%%)\n"
+            "\tCompression ratios                  read /      written\n"
+            "\t  Total                   : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)   : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)     : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Qual                    : %12zu / %12zu (%6.2f%%)\n"
             "\n",
             blk_cnt,
             line_cnt,
+            FILECODEC_BLK_LC,
             tsc_sz[TSC_TOTAL],
-            (100 * (double)tsc_sz[TSC_TOTAL]
-             / (double)tsc_sz[TSC_TOTAL]),
+            (100 * (double)tsc_sz[TSC_TOTAL] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_FF],
-            (100 * (double)tsc_sz[TSC_FF]
-             / (double)tsc_sz[TSC_TOTAL]),
+            (100 * (double)tsc_sz[TSC_FF] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_SH],
-            (100 * (double)tsc_sz[TSC_SH]
-             / (double)tsc_sz[TSC_TOTAL]),
+            (100 * (double)tsc_sz[TSC_SH] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_AUX],
-            (100 * (double)tsc_sz[TSC_AUX]
-             / (double)tsc_sz[TSC_TOTAL]),
+            (100 * (double)tsc_sz[TSC_AUX] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_NUC],
-            (100 * (double)tsc_sz[TSC_NUC]
-             / (double)tsc_sz[TSC_TOTAL]),
+            (100 * (double)tsc_sz[TSC_NUC] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_QUAL],
-            (100 * (double)tsc_sz[TSC_QUAL]
-             / (double)tsc_sz[TSC_TOTAL]),
-            sam_sz[SAM_SEQ], tsc_sz[TSC_NUC],
-            (100 * (double)tsc_sz[TSC_NUC]
-             / (double)sam_sz[SAM_SEQ]),
-            sam_sz[SAM_QUAL], tsc_sz[TSC_QUAL],
-            (100 * (double)tsc_sz[TSC_QUAL]
-             / (double)sam_sz[SAM_QUAL]));
+            (100 * (double)tsc_sz[TSC_QUAL] / (double)tsc_sz[TSC_TOTAL]),
+            sam_total_sz,
+            tsc_sz[TSC_TOTAL],
+            (100*(double)tsc_sz[TSC_TOTAL]/(double)sam_total_sz),
+            sam_aux_sz,
+            tsc_sz[TSC_AUX],
+            (100*(double)tsc_sz[TSC_AUX]/(double)sam_aux_sz),
+            sam_nuc_sz,
+            tsc_sz[TSC_NUC],
+            (100*(double)tsc_sz[TSC_NUC]/(double)sam_nuc_sz),
+            sam_sz[SAM_QUAL],
+            tsc_sz[TSC_QUAL],
+            (100*(double)tsc_sz[TSC_QUAL]/(double)sam_sz[SAM_QUAL]));
 }
 
 static void fileenc_print_time(long elapsed_total, long elapsed_pred,
-                               long elapsed_entr)
+                               long elapsed_entr, long elapsed_stat)
 {
     tsc_log("\n"
-            "\tTiming Statistics:\n"
-            "\t------------------\n"
-            "\tTotal time elapsed : %12ld us (%6.2f%%)\n"
-            "\tPredictive Coding  : %12ld us (%6.2f%%)\n"
-            "\tEntropy Coding     : %12ld us (%6.2f%%)\n"
-            "\tRemaining          : %12ld us (%6.2f%%)\n"
+            "\tCompression Timing Statistics:\n"
+            "\t------------------------------\n"
+            "\tTotal time elapsed           : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tPredictive Coding            : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tEntropy Coding               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tStatistics                   : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tRemaining (incl. SAM parser) : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n",
-            elapsed_total, (100*(double)elapsed_total/(double)elapsed_total),
-            elapsed_pred , (100*(double)elapsed_pred/(double)elapsed_total),
-            elapsed_entr, (100*(double)elapsed_entr/(double)elapsed_total),
-            elapsed_total-elapsed_pred-elapsed_entr,
-            (100*(double)(elapsed_total-elapsed_pred-elapsed_entr)/
+            elapsed_total,
+            (double)elapsed_total / (double)1000000,
+            (100*(double)elapsed_total/(double)elapsed_total),
+            elapsed_pred,
+            (double)elapsed_pred / (double)1000000,
+            (100*(double)elapsed_pred/(double)elapsed_total),
+            elapsed_entr,
+            (double)elapsed_entr / (double)1000000,
+            (100*(double)elapsed_entr/(double)elapsed_total),
+            elapsed_stat,
+            (double)elapsed_stat / (double)1000000,
+            (100*(double)elapsed_stat/(double)elapsed_total),
+            elapsed_total-elapsed_pred-elapsed_entr-elapsed_stat,
+            (double)(elapsed_total-elapsed_pred-elapsed_entr-elapsed_stat)
+            / (double)1000000,
+            (100*(double)(elapsed_total-elapsed_pred-elapsed_entr-elapsed_stat)/
             (double)elapsed_total));
 }
 
@@ -201,6 +254,7 @@ void fileenc_encode(fileenc_t* fileenc)
     long elapsed_total = 0;  /* total time used for encoding    */
     long elapsed_pred  = 0;  /* time used for predictive coding */
     long elapsed_entr  = 0;  /* time used for entropy coding    */
+    long elapsed_stat  = 0;  /* time used for statistics        */
 
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
@@ -280,7 +334,6 @@ void fileenc_encode(fileenc_t* fileenc)
                           samrecord->int_fields[PNEXT],
                           samrecord->int_fields[TLEN],
                           samrecord->str_fields[OPT]);
-
         nucenc_add_record(fileenc->nucenc,
                           samrecord->int_fields[POS],
                           samrecord->str_fields[CIGAR],
@@ -288,13 +341,27 @@ void fileenc_encode(fileenc_t* fileenc)
         qualenc_add_record(fileenc->qualenc,
                            samrecord->str_fields[QUAL]);
 
-
         gettimeofday(&tv1, NULL);
         elapsed_pred += tvdiff(tv0, tv1);
 
         /* Accumulate input statistics */
-        sam_sz[SAM_SEQ] += strlen(samrecord->str_fields[SEQ]);
-        sam_sz[SAM_QUAL] += strlen(samrecord->str_fields[QUAL]);
+        gettimeofday(&tv0, NULL);
+
+        sam_sz[SAM_QNAME] += strlen(samrecord->str_fields[QNAME]);
+        sam_sz[SAM_FLAG]  += ndigits(samrecord->int_fields[FLAG]);
+        sam_sz[SAM_RNAME] += strlen(samrecord->str_fields[RNAME]);
+        sam_sz[SAM_POS]   += ndigits(samrecord->int_fields[POS]);
+        sam_sz[SAM_MAPQ]  += ndigits(samrecord->int_fields[MAPQ]);
+        sam_sz[SAM_CIGAR] += strlen(samrecord->str_fields[CIGAR]);
+        sam_sz[SAM_RNEXT] += strlen(samrecord->str_fields[RNEXT]);
+        sam_sz[SAM_PNEXT] += ndigits(samrecord->int_fields[PNEXT]);
+        sam_sz[SAM_TLEN]  += ndigits(samrecord->int_fields[TLEN]);;
+        sam_sz[SAM_SEQ]   += strlen(samrecord->str_fields[SEQ]);
+        sam_sz[SAM_QUAL]  += strlen(samrecord->str_fields[QUAL]);
+        sam_sz[SAM_OPT]   += strlen(samrecord->str_fields[OPT]);
+
+        gettimeofday(&tv1, NULL);
+        elapsed_stat += tvdiff(tv0, tv1);
 
         blkl_cnt++;
         line_cnt++;
@@ -365,12 +432,15 @@ void fileenc_encode(fileenc_t* fileenc)
     tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
             tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
             blk_cnt);
-    tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
+    tsc_log("Took %ld us ~= %.2f s\n", elapsed_total,
             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics and/or timing info. */
-    if (tsc_stats) fileenc_print_stats(sam_sz, tsc_sz, blk_cnt, line_cnt);
-    if (tsc_time) fileenc_print_time(elapsed_total, elapsed_pred, elapsed_entr);
+    if (tsc_stats)
+        fileenc_print_stats(sam_sz, tsc_sz, blk_cnt, line_cnt);
+    if (tsc_time)
+        fileenc_print_time(elapsed_total, elapsed_pred, elapsed_entr,
+                           elapsed_stat);
 }
 
 /******************************************************************************
@@ -415,9 +485,7 @@ static void filedec_print_stats(filedec_t* filedec, const size_t blk_cnt,
             "\tSAM records (lines) processed : %12zu\n"
             "\tTotal bytes written           : %12zu\n"
             "\n",
-            blk_cnt,
-            line_cnt,
-            sam_sz);
+            blk_cnt, line_cnt, sam_sz);
 }
 
 static void filedec_print_time(long elapsed_total, long elapsed_dec,
@@ -637,7 +705,7 @@ void filedec_decode(filedec_t* filedec)
     tsc_log("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
             "%.2f GiB\n",
              line_cnt, (size_t)blk_cnt, sam_sz, ((double)sam_sz / GB));
-    tsc_log("Took %ld us ~= %.4f s\n", elapsed_total,
+    tsc_log("Took %ld us ~= %.2f s\n", elapsed_total,
             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics. */
