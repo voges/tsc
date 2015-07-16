@@ -46,7 +46,7 @@ typedef struct filedec_t_ {
 
 filedec_t* filedec_new(FILE* ifp, FILE* ofp);
 void filedec_free(filedec_t* filedec);
-void filedec_decode(filedec_t* filedec);
+void filedec_decode(filedec_t* filedec, str_t* region);
 void filedec_info(filedec_t* filedec);
 
 #endif /* TSC_FILECODEC_H */

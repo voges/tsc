@@ -52,7 +52,7 @@
  *
  * Sub-block format:
  * -----------------
- *   Defined by dedicated sub-block codec (e.g. qualcodec)
+ *   Defined by dedicated sub-block codec (e.g. 'qualcodec')
  *
  * LUT header format:
  * ------------------
@@ -171,20 +171,20 @@ static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
     tsc_log("\n"
             "\tCompression Statistics:\n"
             "\t-----------------------\n"
-            "\tNumber of blocks          : %12zu\n"
-            "\tNumber of lines           : %12zu\n"
-            "\tNumber of lines per block : %12zu\n"
-            "\tTsc file size             : %12zu (%6.2f%%)\n"
-            "\t  File format             : %12zu (%6.2f%%)\n"
-            "\t  SAM header              : %12zu (%6.2f%%)\n"
-            "\t  Aux (everything else)   : %12zu (%6.2f%%)\n"
-            "\t  Nuc (pos+cigar+seq)     : %12zu (%6.2f%%)\n"
-            "\t  Qual                    : %12zu (%6.2f%%)\n"
-            "\tCompression ratios                  read /      written\n"
-            "\t  Total                   : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Aux (everything else)   : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Nuc (pos+cigar+seq)     : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual                    : %12zu / %12zu (%6.2f%%)\n"
+            "\tNumber of blocks         : %12zu\n"
+            "\tNumber of lines          : %12zu\n"
+            "\tNumber of lines per block: %12zu\n"
+            "\tTsc file size            : %12zu (%6.2f%%)\n"
+            "\t  File format            : %12zu (%6.2f%%)\n"
+            "\t  SAM header             : %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)  : %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)    : %12zu (%6.2f%%)\n"
+            "\t  Qual                   : %12zu (%6.2f%%)\n"
+            "\tCompression ratios                 read /      written\n"
+            "\t  Total                  : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)  : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)    : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Qual                   : %12zu / %12zu (%6.2f%%)\n"
             "\n",
             blk_cnt,
             line_cnt,
@@ -221,11 +221,11 @@ static void fileenc_print_time(long elapsed_total, long elapsed_pred,
     tsc_log("\n"
             "\tCompression Timing Statistics:\n"
             "\t------------------------------\n"
-            "\tTotal time elapsed           : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tPredictive Coding            : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tEntropy Coding               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tStatistics                   : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tRemaining (incl. SAM parser) : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tTotal time elapsed          : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tPredictive Coding           : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tEntropy Coding              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tStatistics                  : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tRemaining (incl. SAM parser): %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n",
             elapsed_total,
             (double)elapsed_total / (double)1000000,
@@ -481,9 +481,9 @@ static void filedec_print_stats(filedec_t* filedec, const size_t blk_cnt,
     tsc_log("\n"
             "\tDecompression Statistics:\n"
             "\t-------------------------\n"
-            "\tNumber of blocks decoded      : %12zu\n"
-            "\tSAM records (lines) processed : %12zu\n"
-            "\tTotal bytes written           : %12zu\n"
+            "\tNumber of blocks decoded     : %12zu\n"
+            "\tSAM records (lines) processed: %12zu\n"
+            "\tTotal bytes written          : %12zu\n"
             "\n",
             blk_cnt, line_cnt, sam_sz);
 }
@@ -494,10 +494,10 @@ static void filedec_print_time(long elapsed_total, long elapsed_dec,
     tsc_log("\n"
             "\tTiming Statistics:\n"
             "\t------------------\n"
-            "\tTotal time elapsed : %12ld us (%6.2f%%)\n"
-            "\tDecoding           : %12ld us (%6.2f%%)\n"
-            "\tWriting            : %12ld us (%6.2f%%)\n"
-            "\tRemaining          : %12ld us (%6.2f%%)\n"
+            "\tTotal time elapsed: %12ld us (%6.2f%%)\n"
+            "\tDecoding          : %12ld us (%6.2f%%)\n"
+            "\tWriting           : %12ld us (%6.2f%%)\n"
+            "\tRemaining         : %12ld us (%6.2f%%)\n"
             "\n",
             elapsed_total, (100*(double)elapsed_total/(double)elapsed_total),
             elapsed_dec , (100*(double)elapsed_dec/(double)elapsed_total),
@@ -507,7 +507,7 @@ static void filedec_print_time(long elapsed_total, long elapsed_dec,
             (double)elapsed_total));
 }
 
-void filedec_decode(filedec_t* filedec)
+void filedec_decode(filedec_t* filedec, str_t* region)
 {
     size_t sam_sz      = 0; /* total no. of bytes written   */
     size_t line_cnt    = 0; /* line counter                 */
@@ -546,6 +546,19 @@ void filedec_decode(filedec_t* filedec)
     magic[3] = '\0';
     tsc_vlog("Format: %s %s\n", magic, version);
     tsc_vlog("Block size: %zu\n", (size_t)blk_lc);
+
+    /* Seek to region */
+    uint64_t region_offset = 0;
+    if (region) {
+        /* TODO: parse region string */
+        //region_offset;
+        tsc_vlog("Chromosome (rname): \n");
+        tsc_vlog("Start: %"PRIu64"\n", 2);
+        tsc_vlog("End: %"PRIu64"\n", 3);
+        tsc_vlog("Blocks to decompress:\n");
+    } else {
+        region_offset = 0;
+    }
 
     /* SAM header */
     uint64_t       header_sz;

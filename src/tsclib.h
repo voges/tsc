@@ -38,6 +38,7 @@ extern str_t* tsc_prog_name;
 extern str_t* tsc_version;
 extern str_t* tsc_in_fname;
 extern str_t* tsc_out_fname;
+extern str_t* tsc_region;
 extern FILE* tsc_in_fp;
 extern FILE* tsc_out_fp;
 extern tsc_mode_t tsc_mode;

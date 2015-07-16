@@ -19,6 +19,7 @@
 /* Options/flags from getopt */
 static const char* opt_input = NULL;
 static const char* opt_output = NULL;
+static const char* opt_region = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
 static bool opt_flag_time = false;
@@ -29,6 +30,7 @@ str_t* tsc_prog_name = NULL;
 str_t* tsc_version = NULL;
 str_t* tsc_in_fname = NULL;
 str_t* tsc_out_fname = NULL;
+str_t* tsc_region = NULL;
 FILE* tsc_in_fp = NULL;
 FILE* tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
@@ -53,11 +55,11 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress   : tsc [-o output] [-fstv] <file.sam>\n");
-    printf("  Decompress : tsc -d [-o output] [-fstv] <file.tsc>\n");
-    printf("               detsc [-o output] [-fstv] <file.tsc>\n");
-    printf("  Info       : tsc -i [-v] <file.tsc>\n");
-    printf("               detsc -i [-v] <file.tsc>\n");
+    printf("  Compress  : tsc [-o output] [-fstv] <file.sam>\n");
+    printf("  Decompress: tsc -d [-o output] [-r region] [-fstv] <file.tsc>\n");
+    printf("              detsc [-o output] [-r region] [-fstv] <file.tsc>\n");
+    printf("  Info      : tsc -i [-v] <file.tsc>\n");
+    printf("              detsc -i [-v] <file.tsc>\n");
     printf("\n");
     printf("Options:\n");
     printf("  -d  --decompress  Decompress\n");
@@ -65,6 +67,7 @@ static void print_help(void)
     printf("  -h, --help        Print this help\n");
     printf("  -i, --info        Print information about tsc file\n");
     printf("  -o, --output      Specify output file\n");
+    printf("  -r, --region      Specify region to solely decompress\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
     printf("  -t, --time        Print (de-)compression timing statistics\n");
     printf("  -v, --verbose     Let tsc be verbose\n");
@@ -82,6 +85,7 @@ static void parse_options(int argc, char *argv[])
         { "help",       no_argument,       NULL, 'h'},
         { "info",       no_argument,       NULL, 'i'},
         { "output",     required_argument, NULL, 'o'},
+        { "region",     required_argument, NULL, 'r'},
         { "stats",      no_argument,       NULL, 's'},
         { "time",       no_argument,       NULL, 't'},
         { "verbose",    no_argument,       NULL, 'v'},
@@ -89,7 +93,7 @@ static void parse_options(int argc, char *argv[])
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "dfhio:stvV";
+    const char *short_options = "dfhio:r:stvV";
 
     do {
         int opt_idx = 0;
@@ -112,6 +116,9 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'o':
             opt_output = optarg;
+            break;
+        case 'r':
+            opt_region = optarg;
             break;
         case 's':
             opt_flag_stats = true;
@@ -166,6 +173,7 @@ int main(int argc, char* argv[])
     str_copy_cstr(tsc_version, VERSION);
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
+    tsc_region = str_new();
 
     /* Determine program name. Truncate path if needed. */
     const char* prog_name = argv[0];
@@ -189,18 +197,22 @@ int main(int argc, char* argv[])
     /* Parse command line options and check them for sanity. */
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
+    if (opt_region) str_copy_cstr(tsc_region, opt_region);
     if (opt_flag_stats) tsc_stats = true;
     if (opt_flag_time) tsc_time = true;
     if (opt_flag_verbose) tsc_verbose = true;
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
-        /* All possible options are legal in this mode. */
+        /* Option -r is illegal in this mode. */
+        if (opt_region)
+            tsc_error("Illegal option(s) detected\n");
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
         /* All possible options are legal in this mode. */
     } else { /* TSC_MODE_INFO */
-        /* Options -fost are illegal in this mode. */
-        if (opt_flag_force || opt_output || opt_flag_stats || opt_flag_time)
-            tsc_error("Illegal options detected\n");
+        /* Options -forst are illegal in this mode. */
+        if (opt_flag_force || opt_output || opt_region || opt_flag_stats
+                || opt_flag_time)
+            tsc_error("Illegal option(s) detected\n");
     }
 
     /* Check, if input file is accessible. */
@@ -270,9 +282,19 @@ int main(int argc, char* argv[])
         /* Invoke decompressor */
         tsc_in_fp = tsc_fopen((const char*)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen((const char*)tsc_out_fname->s, "w");
-        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
+
         filedec_t* filedec = filedec_new(tsc_in_fp, tsc_out_fp);
-        filedec_decode(filedec);
+
+        if (tsc_region->len) {
+            tsc_log("Decompressing region: %s, %s\n", tsc_in_fname->s,
+                    tsc_region->s);
+            filedec_decode(filedec, tsc_region);
+        }
+        else {
+            tsc_log("Decompressing file: %s\n", tsc_in_fname->s);
+            filedec_decode(filedec, NULL);
+        }
+
         filedec_free(filedec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
         tsc_fclose(tsc_in_fp);
@@ -296,6 +318,7 @@ int main(int argc, char* argv[])
     str_free(tsc_version);
     str_free(tsc_in_fname);
     str_free(tsc_out_fname);
+    str_free(tsc_region);
 
     return EXIT_SUCCESS;
 }
