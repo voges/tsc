@@ -11,8 +11,8 @@
  *   * Tsc stores the SAM header as plain ASCII text.
  *   * This example is using dedicated aux-, nuc-, and qualcodecs which generate
  *     so-called 'sub-blocks'.
- *   * For fast random-access a LUT (look-up table) containing (amongst others)
- *     64-bit offsets to the block headers, is stored at the end of the file.
+ *   * For fast random-access, the position of the next block is stored in each
+ *     block header.
  *
  *
  *   [File header               ]
@@ -26,45 +26,33 @@
  *     [Sub-block (n-1).1 (aux) ]
  *     [Sub-block (n-1).2 (nuc) ]
  *     [Sub-block (n-1).3 (qual)]
- *   [LUT header                ]
- *     [LUT entry 0             ]
- *     ...
- *     [LUT entry n-1           ]
- *
  *
  * File header format:
  * -------------------
- *   unsigned char magic[6]   : "tsc--" + '\0'
- *   unsigned char version[6] : VERSION + '\0'
- *   uint64_t      blk_lc     : no. of lines per block
- *   uint64_t      blk_n      : number of blocks
- *   uint64_t      lut_pos    : LUT position
+ *   unsigned char fh_magic[6]   : "tsc--" + '\0'
+ *   unsigned char fh_version[6] : VERSION + '\0'
+ *   uint64_t      fh_blk_lc     : no. of lines per block
+ *   uint64_t      fh_blk_n      : number of blocks
  *
  * SAM header format:
  * ------------------
- *   uint64_t       header_sz : header size
- *   unsigned char* header    : header data
+ *   uint64_t       sh_sz   : SAM header size
+ *   unsigned char* sh_data : SAM header data
  *
  * Block header format:
  * --------------------
- *   uint64_t blk_cnt  : block count, starting with 0
- *   uint64_t blkl_cnt : no. of lines in block
+ *   uint64_t bh_fpos     : fp offset to the beginning of -this- block
+ *   uint64_t bh_fpos_nxt : fp offset to the beginning of the -next- block
+ *                          (the last block has all zeros here)
+ *   uint64_t bh_blk_cnt  : block count, starting with 0
+ *   uint64_t bh_line_cnt : no. of lines in block
+ *   uint64_t bh_chr_cnt  : chromosome number
+ *   uint64_t bh_pos_min  : smallest position contained in block
+ *   uint64_t bh_pos_max  : largest position contained in block
  *
  * Sub-block format:
  * -----------------
  *   Defined by dedicated sub-block codec (e.g. 'qualcodec')
- *
- * LUT header format:
- * ------------------
- *   unsigned char lut_magic[8] : "lut----" + '\0'
- *   uint64_t      lut_sz       : LUT size
- *
- * LUT entry format:
- * -----------------
- *   uint64_t blk_cnt : block count (identical to blk_cnt in block header)
- *   uint64_t pos_min : smallest position contained in block
- *   uint64_t pos_max : largest position contained in block
- *   uint64_t offset  : fp offset from beginning of file to block
  */
 
 #include "filecodec.h"
@@ -251,6 +239,7 @@ void fileenc_encode(fileenc_t* fileenc)
     size_t sam_sz[12] = {0}; /* SAM statistics                  */
     size_t tsc_sz[6]  = {0}; /* tsc statistics                  */
     size_t line_cnt = 0;     /* line counter                    */
+    uint64_t fpos_prev = 0;  /* fp offset of the previous block */
     long elapsed_total = 0;  /* total time used for encoding    */
     long elapsed_pred  = 0;  /* time used for predictive coding */
     long elapsed_entr  = 0;  /* time used for entropy coding    */
@@ -259,51 +248,66 @@ void fileenc_encode(fileenc_t* fileenc)
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
 
-    uint64_t blk_cnt  = 0; /* for the block header */
-    uint64_t blkl_cnt = 0; /* for the block header */
+    /* File header variables */
+    unsigned char fh_magic[6]   = "tsc--"; fh_magic[5] = '\0';
+    unsigned char fh_version[6] = VERSION; fh_version[5] = '\0';
+    uint64_t      fh_blk_lc     = (uint64_t)FILECODEC_BLK_LC;
+    uint64_t      fh_blk_n      = 0; /* keep this free for now */
 
-    uint64_t* lut = (uint64_t*)malloc(0);
-    size_t lut_sz = 0; /* for the LUT header */
-    size_t lut_itr = 0;
-
-    /* File header */
-    unsigned char magic[6]   = "tsc--"; magic[5] = '\0';
-    unsigned char version[6] = VERSION; version[5] = '\0';
-    uint64_t      blk_lc     = (uint64_t)FILECODEC_BLK_LC;
-    uint64_t      blk_n      = (uint64_t)0; /* keep this free for now */
-    uint64_t      lut_pos    = (uint64_t)0; /* keep this free for now */
-
-    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, magic, sizeof(magic));
-    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, version, sizeof(version));
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blk_lc);
-    fseek(fileenc->ofp, sizeof(blk_n) + sizeof(lut_pos), SEEK_CUR);
+    /* Write file header */
+    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, fh_magic, sizeof(fh_magic));
+    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, fh_version, sizeof(fh_version));
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, fh_blk_lc);
+    fseek(fileenc->ofp, sizeof(fh_blk_n), SEEK_CUR);
 
     tsc_vlog("Format: tsc %s\n", VERSION);
-    tsc_vlog("Block size: %zu lines\n", blk_lc);
+    tsc_vlog("Block size: %zu lines\n", fh_blk_lc);
 
-    /* SAM header */
-    uint64_t       header_sz = (uint64_t)fileenc->samparser->head->len;
-    unsigned char* header    = (unsigned char*)fileenc->samparser->head->s;
+    /* SAM header variables */
+    uint64_t       sh_sz = (uint64_t)fileenc->samparser->head->len;
+    unsigned char* sh_data = (unsigned char*)fileenc->samparser->head->s;
 
-    tsc_sz[TSC_SH] += fwrite_uint64(fileenc->ofp, header_sz);
-    tsc_sz[TSC_SH] += fwrite_buf(fileenc->ofp, header, header_sz);
+    /* Write SAM header */
+    tsc_sz[TSC_SH] += fwrite_uint64(fileenc->ofp, sh_sz);
+    tsc_sz[TSC_SH] += fwrite_buf(fileenc->ofp, sh_data, sh_sz);
 
     tsc_vlog("Wrote SAM header\n");
 
+    /* Block header variables */
+    uint64_t bh_fpos     = 0;
+    uint64_t bh_fpos_nxt = 0;
+    uint64_t bh_blk_cnt  = 0;
+    uint64_t bh_line_cnt = 0;
+    uint64_t bh_chr_cnt  = 0;
+    uint64_t bh_pos_min  = 0;
+    uint64_t bh_pos_max  = 0;
+
     samrecord_t* samrecord = &(fileenc->samparser->curr);
     while (samparser_next(fileenc->samparser)) {
-        if (blkl_cnt >= FILECODEC_BLK_LC) {
-            /* Retain information for LUT entry */
-            lut_sz += 4 * sizeof(uint64_t);
-            lut = (uint64_t*)tsc_realloc(lut, lut_sz);
-            lut[lut_itr++] = blk_cnt;
-            lut[lut_itr++] = 0; /* pos_min */
-            lut[lut_itr++] = 0; /* pos_max */
-            lut[lut_itr++] = (uint64_t)ftell(fileenc->ofp);
+        if (bh_line_cnt >= fh_blk_lc) {
+            /* Store the file pointer offset of this block in the previous
+             * block header.
+             */
+            uint64_t fpos_curr = (uint64_t)ftell(fileenc->ofp);
 
-            /* Block header */
-            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blk_cnt);
-            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blkl_cnt);
+            if (bh_blk_cnt > 0) {
+                fseek(fileenc->ofp, (long)fpos_prev, SEEK_SET);
+                fseek(fileenc->ofp, (long)sizeof(bh_fpos), SEEK_CUR);
+                tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, fpos_curr);
+                fseek(fileenc->ofp, (long)fpos_curr, SEEK_SET);
+            }
+
+            fpos_prev = fpos_curr;
+
+            /* Write block header */
+            bh_fpos = (uint64_t)ftell(fileenc->ofp);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_fpos);
+            fseek(fileenc->ofp, (long)sizeof(bh_fpos_nxt), SEEK_CUR);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_blk_cnt);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_line_cnt);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_chr_cnt);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_pos_min);
+            tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_pos_max);
 
             /* Sub-blocks */
             gettimeofday(&tv0, NULL);
@@ -316,10 +320,10 @@ void fileenc_encode(fileenc_t* fileenc)
             gettimeofday(&tv1, NULL);
             elapsed_entr += tvdiff(tv0, tv1);
 
-            tsc_vlog("Wrote block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+            tsc_vlog("Wrote block %zu: %zu line(s)\n", bh_blk_cnt, bh_line_cnt);
 
-            blk_cnt++;
-            blkl_cnt = 0;
+            bh_blk_cnt++;
+            bh_line_cnt = 0;
         }
 
         /* Add records to encoders */
@@ -363,21 +367,33 @@ void fileenc_encode(fileenc_t* fileenc)
         gettimeofday(&tv1, NULL);
         elapsed_stat += tvdiff(tv0, tv1);
 
-        blkl_cnt++;
+        bh_line_cnt++;
         line_cnt++;
     }
 
-    /* Retain information for LUT entry */
-    lut_sz += 4 * sizeof(uint64_t);
-    lut = (uint64_t*)tsc_realloc(lut, lut_sz);
-    lut[lut_itr++] = blk_cnt;
-    lut[lut_itr++] = 0; /* pos_min */
-    lut[lut_itr++] = 0; /* pos_max */
-    lut[lut_itr++] = (uint64_t)ftell(fileenc->ofp);
+    /* Store the file pointer offset of this block in the previous
+     * block header.
+     */
+    uint64_t fpos_curr = (uint64_t)ftell(fileenc->ofp);
 
-    /* Block header (last) */
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blk_cnt);
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blkl_cnt);
+    if (bh_blk_cnt > 0) {
+        fseek(fileenc->ofp, (long)fpos_prev, SEEK_SET);
+        fseek(fileenc->ofp, (long)sizeof(bh_fpos), SEEK_CUR);
+        tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, fpos_curr);
+        fseek(fileenc->ofp, (long)fpos_curr, SEEK_SET);
+    }
+
+    fpos_prev = fpos_curr;
+
+    /* Write block header (last)*/
+    bh_fpos = (uint64_t)ftell(fileenc->ofp);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_fpos);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, 0); /* last block header */
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_blk_cnt);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_line_cnt);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_chr_cnt);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_pos_min);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, bh_pos_max);
 
     /* Sub-blocks (last) */
     gettimeofday(&tv0, NULL);
@@ -390,54 +406,34 @@ void fileenc_encode(fileenc_t* fileenc)
     gettimeofday(&tv1, NULL);
     elapsed_entr += tvdiff(tv0, tv1);
 
-    tsc_vlog("Wrote last block %zu: %zu line(s)\n", blk_cnt, blkl_cnt);
+    tsc_vlog("Wrote last block %zu: %zu line(s)\n", bh_blk_cnt, bh_line_cnt);
 
-    blk_cnt++;
+    fh_blk_n = ++bh_blk_cnt;
 
-    /* Complete file header with LUT information. */
-    lut_pos = (uint64_t)ftell(fileenc->ofp);
-    fseek(fileenc->ofp, sizeof(magic)+sizeof(version)+sizeof(blk_lc), SEEK_SET);
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, blk_cnt);
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, lut_pos);
-    fseek(fileenc->ofp, 0, SEEK_END);
-
-    /* LUT header */
-    unsigned char lut_magic[8] = "lut----"; lut_magic[7] = '\0';
-    //uint64_t      lut_sz       = (uint64_t)lut_itr * sizeof(uint64_t);
-
-    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, lut_magic, sizeof(lut_magic));
-    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, lut_sz);
-
-    tsc_vlog("Wrote LUT header\n");
-
-    /* LUT entries */
-    tsc_sz[TSC_FF] += fwrite_buf(fileenc->ofp, (unsigned char*)lut, lut_sz);
-    if (!lut) {
-        tsc_error("Tried to free NULL pointer!\n");
-    } else {
-        free(lut);
-        lut = NULL;
-    }
-
-    tsc_vlog("Wrote LUT entries\n");
+    /* Complete file header */
+    fseek(fileenc->ofp,
+          (long)(sizeof(fh_magic)+sizeof(fh_version)+sizeof(fh_blk_lc)),
+          SEEK_SET);
+    tsc_sz[TSC_FF] += fwrite_uint64(fileenc->ofp, fh_blk_n);
+    fseek(fileenc->ofp, (long)0, SEEK_END);
 
     /* Print summary */
     gettimeofday(&tt1, NULL);
     elapsed_total = tvdiff(tt0, tt1);
     tsc_sz[TSC_TOTAL] = tsc_sz[TSC_FF]
-                                 + tsc_sz[TSC_SH]
-                                 + tsc_sz[TSC_NUC]
-                                 + tsc_sz[TSC_QUAL]
-                                 + tsc_sz[TSC_AUX];
+                      + tsc_sz[TSC_SH]
+                      + tsc_sz[TSC_NUC]
+                      + tsc_sz[TSC_QUAL]
+                      + tsc_sz[TSC_AUX];
     tsc_log("Wrote %zu bytes ~= %.2f GiB (%zu line(s) in %zu block(s))\n",
             tsc_sz[TSC_TOTAL], ((double)tsc_sz[TSC_TOTAL] / GB), line_cnt,
-            blk_cnt);
+            fh_blk_n);
     tsc_log("Took %ld us ~= %.2f s\n", elapsed_total,
             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics and/or timing info. */
     if (tsc_stats)
-        fileenc_print_stats(sam_sz, tsc_sz, blk_cnt, line_cnt);
+        fileenc_print_stats(sam_sz, tsc_sz, fh_blk_n, line_cnt);
     if (tsc_time)
         fileenc_print_time(elapsed_total, elapsed_pred, elapsed_entr,
                            elapsed_stat);
@@ -518,34 +514,30 @@ void filedec_decode(filedec_t* filedec, str_t* region)
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
 
-    uint64_t blk_cnt;  /* for the block header */
-    uint64_t blkl_cnt; /* for the block header */
+    /* File header variables */
+    unsigned char fh_magic[6];
+    unsigned char fh_version[6];
+    uint64_t      fh_blk_lc;
+    uint64_t      fh_blk_n;
 
-    /* File header */
-    unsigned char magic[6];
-    unsigned char version[6];
-    uint64_t      blk_lc;
-    uint64_t      blk_n;
-    uint64_t      lut_pos;
-
-    if (fread_buf(filedec->ifp, magic, sizeof(magic)) != sizeof(magic))
+    /* Read file header */
+    if (fread_buf(filedec->ifp, fh_magic, sizeof(fh_magic)) != sizeof(fh_magic))
         tsc_error("Failed to read magic!\n");
-    if (fread_buf(filedec->ifp, version, sizeof(version)) != sizeof(version))
+    if (fread_buf(filedec->ifp, fh_version, sizeof(fh_version))
+            != sizeof(fh_version))
         tsc_error("Failed to read version!\n");
-    if (fread_uint64(filedec->ifp, &blk_lc) != sizeof(blk_lc))
+    if (fread_uint64(filedec->ifp, &fh_blk_lc) != sizeof(fh_blk_lc))
         tsc_error("Failed to read no. of lines per block!\n");
-    if (fread_uint64(filedec->ifp, &blk_n) != sizeof(blk_n))
+    if (fread_uint64(filedec->ifp, &fh_blk_n) != sizeof(fh_blk_n))
         tsc_error("Failed to read number of blocks!\n");
-    if (fread_uint64(filedec->ifp, &lut_pos) != sizeof(lut_pos))
-        tsc_error("Failed to read LUT position!\n");
 
-    if (strncmp((const char*)version, (const char*)tsc_version->s,
-                sizeof(version)))
-        tsc_error("File was compressed with another version: %s\n", version);
+    if (strncmp((const char*)fh_version, (const char*)tsc_version->s,
+                sizeof(fh_version)))
+        tsc_error("File was compressed with another version: %s\n", fh_version);
 
-    magic[3] = '\0';
-    tsc_vlog("Format: %s %s\n", magic, version);
-    tsc_vlog("Block size: %zu\n", (size_t)blk_lc);
+    fh_magic[3] = '\0';
+    tsc_vlog("Format: %s %s\n", fh_magic, fh_version);
+    tsc_vlog("Block size: %"PRIu64"\n", fh_blk_lc);
 
     /* Seek to region */
     uint64_t region_offset = 0;
@@ -560,55 +552,67 @@ void filedec_decode(filedec_t* filedec, str_t* region)
         region_offset = 0;
     }
 
-    /* SAM header */
-    uint64_t       header_sz;
-    unsigned char* header;
+    /* SAM header variables */
+    uint64_t       sh_sz;
+    unsigned char* sh_data;
 
-    if (fread_uint64(filedec->ifp, &header_sz) != sizeof(header_sz))
+    /* Read SAM header */
+    if (fread_uint64(filedec->ifp, &sh_sz) != sizeof(sh_sz))
         tsc_error("Failed to read SAM header size!\n");
-    header = (unsigned char*)tsc_malloc((size_t)header_sz);
-    if (fread_buf(filedec->ifp, header, header_sz) != header_sz)
+    sh_data = (unsigned char*)tsc_malloc((size_t)sh_sz);
+    if (fread_buf(filedec->ifp, sh_data, sh_sz) != sh_sz)
         tsc_error("Failed to read SAM header!\n");
-    sam_sz += fwrite_buf(filedec->ofp, header, header_sz);
-    free(header);
+    sam_sz += fwrite_buf(filedec->ofp, sh_data, sh_sz);
+    free(sh_data);
 
     tsc_vlog("Read SAM header\n");
 
-    size_t i = 0;
-    for (i = 0; i < blk_n; i++) {
-        /* Block header */
-        if (fread_uint64(filedec->ifp, &blk_cnt) != sizeof(blk_cnt))
-            tsc_error("Failed to read block count!\n");
-        if (fread_uint64(filedec->ifp, &blkl_cnt) != sizeof(blkl_cnt))
-            tsc_error("Failed to read no. of lines in block %zu!\n",
-                      (size_t)blk_cnt);
+    /* Block header variables */
+    uint64_t bh_fpos;
+    uint64_t bh_fpos_nxt;
+    uint64_t bh_blk_cnt;
+    uint64_t bh_line_cnt;
+    uint64_t bh_chr_cnt;
+    uint64_t bh_pos_min;
+    uint64_t bh_pos_max;
 
-        tsc_vlog("Decoding block %zu: %zu lines\n", (size_t)blk_cnt,
-                 (size_t)blkl_cnt);
+    size_t i = 0;
+    for (i = 0; i < fh_blk_n; i++) {
+        /* Read block header */
+        fread_uint64(filedec->ifp, &bh_fpos);
+        fread_uint64(filedec->ifp, &bh_fpos_nxt);
+        fread_uint64(filedec->ifp, &bh_blk_cnt);
+        fread_uint64(filedec->ifp, &bh_line_cnt);
+        fread_uint64(filedec->ifp, &bh_chr_cnt);
+        fread_uint64(filedec->ifp, &bh_pos_min);
+        fread_uint64(filedec->ifp, &bh_pos_max);
+
+        tsc_vlog("Decoding block %"PRIu64": %"PRIu64" lines\n", bh_blk_cnt,
+                 bh_line_cnt);
 
         /* Allocate memory to prepare decoding of the sub-blocks. */
-        str_t**  qname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        int64_t* flag  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
-        str_t**  rname = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        int64_t* pos   = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
-        int64_t* mapq  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
-        str_t**  cigar = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**  rnext = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        int64_t* pnext = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
-        int64_t* tlen  = (int64_t*)tsc_malloc(sizeof(int64_t) * blkl_cnt);
-        str_t**  seq   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**  qual  = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
-        str_t**  opt   = (str_t**)tsc_malloc(sizeof(str_t*) * blkl_cnt);
+        str_t**  qname = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        int64_t* flag  = (int64_t*)tsc_malloc(sizeof(int64_t) * bh_line_cnt);
+        str_t**  rname = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        int64_t* pos   = (int64_t*)tsc_malloc(sizeof(int64_t) * bh_line_cnt);
+        int64_t* mapq  = (int64_t*)tsc_malloc(sizeof(int64_t) * bh_line_cnt);
+        str_t**  cigar = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        str_t**  rnext = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        int64_t* pnext = (int64_t*)tsc_malloc(sizeof(int64_t) * bh_line_cnt);
+        int64_t* tlen  = (int64_t*)tsc_malloc(sizeof(int64_t) * bh_line_cnt);
+        str_t**  seq   = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        str_t**  qual  = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
+        str_t**  opt   = (str_t**)tsc_malloc(sizeof(str_t*) * bh_line_cnt);
 
-        size_t i = 0;
-        for (i = 0; i < blkl_cnt; i++) {
-            qname[i] = str_new();
-            rname[i] = str_new();
-            cigar[i] = str_new();
-            rnext[i] = str_new();
-            seq[i] = str_new();
-            qual[i] = str_new();
-            opt[i] = str_new();
+        size_t l = 0;
+        for (l = 0; l < bh_line_cnt; l++) {
+            qname[l] = str_new();
+            rname[l] = str_new();
+            cigar[l] = str_new();
+            rnext[l] = str_new();
+            seq[l]   = str_new();
+            qual[l]  = str_new();
+            opt[l]   = str_new();
         }
 
         /* Decode sub-blocks */
@@ -641,33 +645,33 @@ void filedec_decode(filedec_t* filedec, str_t* region)
         /* Write decoded sub-blocks in correct order to outfile. */
         gettimeofday(&tv0, NULL);
 
-        for (i = 0; i < blkl_cnt; i++) {
+        for (l = 0; l < bh_line_cnt; l++) {
             /* Convert int-fields to C-strings */
             char flag_cstr[101];  /* this should be enough space */
             char pos_cstr[101];   /* this should be enough space */
             char mapq_cstr[101];  /* this should be enough space */
             char pnext_cstr[101]; /* this should be enough space */
             char tlen_cstr[101];  /* this should be enough space */
-            snprintf(flag_cstr, sizeof(flag_cstr), "%"PRId64, flag[i]);
-            snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos[i]);
-            snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRId64, mapq[i]);
-            snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRId64, pnext[i]);
-            snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen[i]);
+            snprintf(flag_cstr, sizeof(flag_cstr), "%"PRId64, flag[l]);
+            snprintf(pos_cstr, sizeof(pos_cstr), "%"PRId64, pos[l]);
+            snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRId64, mapq[l]);
+            snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRId64, pnext[l]);
+            snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen[l]);
 
             /* Set pointers to C-strings */
             char* sam_fields[12];
-            sam_fields[SAM_QNAME] = qname[i]->s;
+            sam_fields[SAM_QNAME] = qname[l]->s;
             sam_fields[SAM_FLAG]  = flag_cstr;
-            sam_fields[SAM_RNAME] = rname[i]->s;
+            sam_fields[SAM_RNAME] = rname[l]->s;
             sam_fields[SAM_POS]   = pos_cstr;
             sam_fields[SAM_MAPQ]  = mapq_cstr;
-            sam_fields[SAM_CIGAR] = cigar[i]->s;
-            sam_fields[SAM_RNEXT] = rnext[i]->s;
+            sam_fields[SAM_CIGAR] = cigar[l]->s;
+            sam_fields[SAM_RNEXT] = rnext[l]->s;
             sam_fields[SAM_PNEXT] = pnext_cstr;
             sam_fields[SAM_TLEN]  = tlen_cstr;
-            sam_fields[SAM_SEQ]   = seq[i]->s;
-            sam_fields[SAM_QUAL]  = qual[i]->s;
-            sam_fields[SAM_OPT]   = opt[i]->s;
+            sam_fields[SAM_SEQ]   = seq[l]->s;
+            sam_fields[SAM_QUAL]  = qual[l]->s;
+            sam_fields[SAM_OPT]   = opt[l]->s;
 
             /* Write data to file */
             size_t f = 0;
@@ -681,13 +685,13 @@ void filedec_decode(filedec_t* filedec, str_t* region)
             sam_sz += fwrite_byte(filedec->ofp, '\n');
 
             /* Free the memory used for the current line. */
-            str_free(qname[i]);
-            str_free(rname[i]);
-            str_free(cigar[i]);
-            str_free(rnext[i]);
-            str_free(seq[i]);
-            str_free(qual[i]);
-            str_free(opt[i]);
+            str_free(qname[l]);
+            str_free(rname[l]);
+            str_free(cigar[l]);
+            str_free(rnext[l]);
+            str_free(seq[l]);
+            str_free(qual[l]);
+            str_free(opt[l]);
         }
 
         gettimeofday(&tv1, NULL);
@@ -707,8 +711,7 @@ void filedec_decode(filedec_t* filedec, str_t* region)
         free(qual);
         free(opt);
 
-        line_cnt += blkl_cnt;
-        blk_cnt++;
+        line_cnt += bh_line_cnt;
     }
 
     gettimeofday(&tt1, NULL);
@@ -717,13 +720,13 @@ void filedec_decode(filedec_t* filedec, str_t* region)
     /* Print summary */
     tsc_log("Decoded %zu line(s) in %zu block(s) and wrote %zu bytes ~= "
             "%.2f GiB\n",
-             line_cnt, (size_t)blk_cnt, sam_sz, ((double)sam_sz / GB));
+             line_cnt, (size_t)fh_blk_n, sam_sz, ((double)sam_sz / GB));
     tsc_log("Took %ld us ~= %.2f s\n", elapsed_total,
             (double)elapsed_total / 1000000);
 
     /* If selected by the user, print detailed statistics. */
     if (tsc_stats)
-        filedec_print_stats(filedec, (size_t)blk_cnt, line_cnt, sam_sz);
+        filedec_print_stats(filedec, (size_t)fh_blk_n, line_cnt, sam_sz);
     if (tsc_time)
         filedec_print_time(elapsed_total, elapsed_dec, elapsed_wrt);
 }
@@ -731,67 +734,74 @@ void filedec_decode(filedec_t* filedec, str_t* region)
 void filedec_info(filedec_t* filedec)
 {
     /* File header */
-    unsigned char magic[6];
-    unsigned char version[6];
-    uint64_t      blk_lc;
-    uint64_t      blk_n;
-    uint64_t      lut_pos;
+    unsigned char fh_magic[6];
+    unsigned char fh_version[6];
+    uint64_t      fh_blk_lc;
+    uint64_t      fh_blk_n;
 
-    if (fread_buf(filedec->ifp, magic, sizeof(magic)) != sizeof(magic))
+    if (fread_buf(filedec->ifp, fh_magic, sizeof(fh_magic)) != sizeof(fh_magic))
         tsc_error("Failed to read magic!\n");
-    if (fread_buf(filedec->ifp, version, sizeof(version)) != sizeof(version))
+    if (fread_buf(filedec->ifp, fh_version, sizeof(fh_version))
+            != sizeof(fh_version))
         tsc_error("Failed to read version!\n");
-    if (fread_uint64(filedec->ifp, &blk_lc) != sizeof(blk_lc))
+    if (fread_uint64(filedec->ifp, &fh_blk_lc) != sizeof(fh_blk_lc))
         tsc_error("Failed to read no. of lines per block!\n");
-    if (fread_uint64(filedec->ifp, &blk_n) != sizeof(blk_n))
+    if (fread_uint64(filedec->ifp, &fh_blk_n) != sizeof(fh_blk_n))
         tsc_error("Failed to read number of blocks!\n");
-    if (fread_uint64(filedec->ifp, &lut_pos) != sizeof(lut_pos))
-        tsc_error("Failed to read LUT position!\n");
 
-    if (strncmp((const char*)version, (const char*)tsc_version->s,
-                sizeof(version)))
-        tsc_error("File was compressed with another version: %s\n", version);
+    if (strncmp((const char*)fh_version, (const char*)tsc_version->s,
+                sizeof(fh_version)))
+        tsc_error("File was compressed with another version: %s\n", fh_version);
 
-    magic[3] = '\0';
-    tsc_log("Format: %s %s\n", magic, version);
-    tsc_log("Block size: %zu\n", (size_t)blk_lc);
-    tsc_log("Number of blocks: %zu\n", (size_t)blk_n);
+    fh_magic[3] = '\0';
+    tsc_log("Format: %s %s\n", fh_magic, fh_version);
+    tsc_log("Block size: %"PRIu64"\n", fh_blk_lc);
+    tsc_log("Number of blocks: %"PRIu64"\n", fh_blk_n);
 
-    /* Seek to LUT position */
-    fseek(filedec->ifp, (long)lut_pos, SEEK_SET);
+    /* Skip SAM header */
+    uint64_t sh_sz = 0;
+    if (fread_uint64(filedec->ifp, &sh_sz) != sizeof(sh_sz))
+        tsc_error("Failed to read SAM header size!\n");
+    fseek(filedec->ifp, (long)sh_sz, SEEK_CUR);
 
-    /* LUT header */
-    unsigned char lut_magic[8];
-    uint64_t      lut_sz;
-
-    if (fread_buf(filedec->ifp, lut_magic, sizeof(lut_magic))
-        != sizeof(lut_magic))
-        tsc_error("Failed to read LUT magic!\n");
-    if (fread_uint64(filedec->ifp, &lut_sz) != sizeof(lut_sz))
-        tsc_error("Failed to read LUT size!\n");
-
-    if (strncmp((const char*)lut_magic, "lut----", 7))
-        tsc_error("Wrong LUT magic!\n");
-
-    /* Block LUT entries */
-    uint64_t* lut = (uint64_t*)tsc_malloc(lut_sz);
-
-    if (fread_buf(filedec->ifp, (unsigned char*)lut, lut_sz) != lut_sz)
-        tsc_error("Failed to read LUT entries!\n");
+    /* Block header variables */
+    uint64_t bh_fpos     = 0;
+    uint64_t bh_fpos_nxt = 0;
+    uint64_t bh_blk_cnt  = 0;
+    uint64_t bh_line_cnt = 0;
+    uint64_t bh_chr_cnt  = 0;
+    uint64_t bh_pos_min  = 0;
+    uint64_t bh_pos_max  = 0;
 
     tsc_log("\n"
-            "\tLUT:\n"
+            "\tInfo:\n"
             "\t----\n"
-            "\t     blk_cnt       pos_min       pos_max        offset\n");
+            "\t        fpos      fpos_nxt       blk_cnt      line_cnt"
+            "       chr_cnt       pos_min       pos_max\n");
 
-    size_t lut_itr = 0;
-    while (lut_itr < (lut_sz / sizeof(uint64_t))) {
+    while (1) {
+        fread_uint64(filedec->ifp, &bh_fpos);
+        fread_uint64(filedec->ifp, &bh_fpos_nxt);
+        fread_uint64(filedec->ifp, &bh_blk_cnt);
+        fread_uint64(filedec->ifp, &bh_line_cnt);
+        fread_uint64(filedec->ifp, &bh_chr_cnt);
+        fread_uint64(filedec->ifp, &bh_pos_min);
+        fread_uint64(filedec->ifp, &bh_pos_max);
+
         printf("\t");
-        printf("%12"PRIu64"  ", lut[lut_itr++]);
-        printf("%12"PRIu64"  ", lut[lut_itr++]);
-        printf("%12"PRIu64"  ", lut[lut_itr++]);
-        printf("%12"PRIu64"  ", lut[lut_itr++]);
+        printf("%12"PRIu64"  ", bh_fpos);
+        printf("%12"PRIu64"  ", bh_fpos_nxt);
+        printf("%12"PRIu64"  ", bh_blk_cnt);
+        printf("%12"PRIu64"  ", bh_line_cnt);
+        printf("%12"PRIu64"  ", bh_chr_cnt);
+        printf("%12"PRIu64"  ", bh_pos_min);
+        printf("%12"PRIu64"  ", bh_pos_max);
         printf("\n");
+
+        if (bh_fpos_nxt)
+            fseek(filedec->ifp, (long)bh_fpos_nxt, SEEK_SET);
+        else
+            break;
     }
     printf("\n");
 }
