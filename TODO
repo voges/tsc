@@ -1,0 +1,5 @@
+- Include mapping quality into 'nuccodec'
+- Add decompression speed measurement in 'filecodec'
+- Check for memory leaks with Valgrind
+- Compare (de-)compression speeds of 'ricecodec', 'arithcodec', and the gzip codec
+

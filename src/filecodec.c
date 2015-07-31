@@ -145,7 +145,8 @@ void fileenc_free(fileenc_t* fileenc)
 }
 
 static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
-                                const size_t blk_cnt, const size_t line_cnt)
+                                const size_t blk_cnt, const size_t line_cnt,
+                                const long elapsed_total)
 {
     size_t sam_total_sz = sam_sz[SAM_QNAME]+sam_sz[SAM_FLAG]+sam_sz[SAM_RNAME]
                           +sam_sz[SAM_POS]+sam_sz[SAM_MAPQ]+sam_sz[SAM_CIGAR]
@@ -159,24 +160,26 @@ static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
     tsc_log("\n"
             "\tCompression Statistics:\n"
             "\t-----------------------\n"
-            "\tNumber of blocks         : %12zu\n"
-            "\tNumber of lines          : %12zu\n"
-            "\tNumber of lines per block: %12zu\n"
-            "\tTsc file size            : %12zu (%6.2f%%)\n"
-            "\t  File format            : %12zu (%6.2f%%)\n"
-            "\t  SAM header             : %12zu (%6.2f%%)\n"
-            "\t  Aux (everything else)  : %12zu (%6.2f%%)\n"
-            "\t  Nuc (pos+cigar+seq)    : %12zu (%6.2f%%)\n"
-            "\t  Qual                   : %12zu (%6.2f%%)\n"
-            "\tCompression ratios                 read /      written\n"
-            "\t  Total                  : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Aux (everything else)  : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Nuc (pos+cigar+seq)    : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual                   : %12zu / %12zu (%6.2f%%)\n"
+            "\tNumber of blocks             : %12zu\n"
+            "\tNumber of lines              : %12zu\n"
+            "\tNumber of lines per block    : %12zu\n"
+            "\tCompression speed (MiB/s)    : %12.2f\n"
+            "\tTsc file size                : %12zu (%6.2f%%)\n"
+            "\t  File format                : %12zu (%6.2f%%)\n"
+            "\t  SAM header                 : %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)      : %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)        : %12zu (%6.2f%%)\n"
+            "\t  Qual                       : %12zu (%6.2f%%)\n"
+            "\tCompression ratios                     read /      written\n"
+            "\t  Total                      : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Aux (everything else)      : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Nuc (pos+cigar+seq)        : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Qual                       : %12zu / %12zu (%6.2f%%)\n"
             "\n",
             blk_cnt,
             line_cnt,
             FILECODEC_BLK_LC,
+            (sam_total_sz / MB) / ((double)elapsed_total / (double)1000000),
             tsc_sz[TSC_TOTAL],
             (100 * (double)tsc_sz[TSC_TOTAL] / (double)tsc_sz[TSC_TOTAL]),
             tsc_sz[TSC_FF],
@@ -203,8 +206,10 @@ static void fileenc_print_stats(const size_t* sam_sz, const size_t* tsc_sz,
             (100*(double)tsc_sz[TSC_QUAL]/(double)sam_sz[SAM_QUAL]));
 }
 
-static void fileenc_print_time(long elapsed_total, long elapsed_pred,
-                               long elapsed_entr, long elapsed_stat)
+static void fileenc_print_time(const long elapsed_total,
+                               const long elapsed_pred,
+                               const long elapsed_entr,
+                               const long elapsed_stat)
 {
     tsc_log("\n"
             "\tCompression Timing Statistics:\n"
@@ -433,7 +438,7 @@ void fileenc_encode(fileenc_t* fileenc)
 
     /* If selected by the user, print detailed statistics and/or timing info. */
     if (tsc_stats)
-        fileenc_print_stats(sam_sz, tsc_sz, fh_blk_n, line_cnt);
+        fileenc_print_stats(sam_sz, tsc_sz, fh_blk_n, line_cnt, elapsed_total);
     if (tsc_time)
         fileenc_print_time(elapsed_total, elapsed_pred, elapsed_entr,
                            elapsed_stat);
