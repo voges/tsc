@@ -24,6 +24,7 @@
     #define DEBUG(c,...) do { } while (false)
 #endif
 
+/* Binary prefixes */
 #define KB 1024LL
 #define MB (KB*1024LL)
 #define GB (MB*1024LL)

@@ -473,7 +473,7 @@ size_t qualenc_write_block(qualenc_t* qualenc, FILE* ofp)
     unsigned char* residues = (unsigned char*)qualenc->residues->s;
     unsigned int residues_sz = (unsigned int)qualenc->residues->len;
     unsigned int data_sz = 0;
-    unsigned char* data = arith_compress_o0(residues, residues_sz, &data_sz);
+    unsigned char* data = arith_compress_o1(residues, residues_sz, &data_sz);
 
     tsc_vlog("Compressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
              residues_sz, data_sz, (double)data_sz / (double)residues_sz*100);
@@ -761,7 +761,7 @@ void qualdec_decode_block(qualdec_t* qualdec, FILE* ifp, str_t** qual)
         tsc_error("CRC64 check failed for qual block!\n");
 
     unsigned int residues_sz = 0;
-    unsigned char* residues = arith_decompress_o0(data, data_sz, &residues_sz);
+    unsigned char* residues = arith_decompress_o1(data, data_sz, &residues_sz);
     free(data);
 
     tsc_vlog("Decompressed qual block: %zu bytes -> %zu bytes (%5.2f%%)\n",

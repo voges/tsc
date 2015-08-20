@@ -502,7 +502,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int seq_residues_sz = (unsigned int)nucenc->seq_residues->len;
     unsigned int seq_residues_data_sz = 0;
     unsigned char* seq_residues_data
-                        = arith_compress_o0(seq_residues, seq_residues_sz,
+                        = arith_compress_o1(seq_residues, seq_residues_sz,
                                             &seq_residues_data_sz);
 
     tsc_vlog("Compressed nuc-seq block: %zu bytes -> %zu bytes (%6.2f%%)\n",
@@ -522,13 +522,13 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     blk_sz += fwrite_buf(ofp, blk_id, sizeof(blk_id));
     blk_sz += fwrite_uint64(ofp, (uint64_t)nucenc->blkl_n);
 
-    blk_sz += fwrite_uint64(ofp, (uint64_t)pos_residues_data_sz);
-    blk_sz += fwrite_uint64(ofp, (uint64_t)pos_residues_data_crc);
-    blk_sz += fwrite_buf(ofp, pos_residues_data, pos_residues_data_sz);
+    //blk_sz += fwrite_uint64(ofp, (uint64_t)pos_residues_data_sz);
+    //blk_sz += fwrite_uint64(ofp, (uint64_t)pos_residues_data_crc);
+    //blk_sz += fwrite_buf(ofp, pos_residues_data, pos_residues_data_sz);
 
-    blk_sz += fwrite_uint64(ofp, (uint64_t)cigar_residues_data_sz);
-    blk_sz += fwrite_uint64(ofp, (uint64_t)cigar_residues_data_crc);
-    blk_sz += fwrite_buf(ofp, cigar_residues_data, cigar_residues_data_sz);
+    //blk_sz += fwrite_uint64(ofp, (uint64_t)cigar_residues_data_sz);
+    //blk_sz += fwrite_uint64(ofp, (uint64_t)cigar_residues_data_crc);
+    //blk_sz += fwrite_buf(ofp, cigar_residues_data, cigar_residues_data_sz);
 
     blk_sz += fwrite_uint64(ofp, (uint64_t)seq_residues_data_sz);
     blk_sz += fwrite_uint64(ofp, (uint64_t)seq_residues_data_crc);

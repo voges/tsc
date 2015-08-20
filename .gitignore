@@ -8,7 +8,10 @@
 # Created by Dolphin file manager
 .directory
 
-# Ignore some dedicated executables
+# Doxygen documentation
+src/doxygen
+
+# Executables
 src/arithcodec/arith
 src/detsc
 src/ricecodec/rice
