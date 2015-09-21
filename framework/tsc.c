@@ -53,11 +53,11 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress   : tsc [-o output] [-fstv] <file.sam>\n");
-    printf("  Decompress : tsc -d [-o output] [-fstv] <file.tsc>\n");
-    printf("               detsc [-o output] [-fstv] <file.tsc>\n");
-    printf("  Info       : tsc -i [-v] <file.tsc>\n");
-    printf("               detsc -i [-v] <file.tsc>\n");
+    printf("  Compress  : tsc [-o output] [-fstv] <file.sam>\n");
+    printf("  Decompress: tsc -d [-o output] [-fstv] <file.tsc>\n");
+    printf("              detsc [-o output] [-fstv] <file.tsc>\n");
+    printf("  Info      : tsc -i [-v] <file.tsc>\n");
+    printf("              detsc -i [-v] <file.tsc>\n");
     printf("\n");
     printf("Options:\n");
     printf("  -d  --decompress  Decompress\n");

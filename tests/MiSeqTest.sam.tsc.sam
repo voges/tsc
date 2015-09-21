@@ -1,4 +1,0 @@
-@HD	VN:1.3	SO:coordinate
-@PG	ID:Illumina.SecondaryAnalysis.SortedToBamConverter
-@SQ	SN:EcoliDH10B.fa	LN:4686137	M5:28d8562f2f99c047d792346835b20031
-@RG	ID:_5_1	PL:ILLUMINA	SM:DH10B_Sample1
