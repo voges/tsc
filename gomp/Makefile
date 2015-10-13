@@ -1,5 +1,5 @@
-EXEC        = tsc
-ALIAS       = detsc
+EXEC        = gomp
+ALIAS       = degomp
 CC          = gcc
 CFLAGS      = -Wall -D _GNU_SOURCE
 INCLUDES    = #-I.
