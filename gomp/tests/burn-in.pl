@@ -9,7 +9,7 @@ opendir(DIR, $dir) or die $!;
 
 while (my $file = readdir(DIR)) {
     next if ($file =~ m/^\./);
-    next if !($file =~ m/.*\.sam$/); # only SAM files
+    next if !($file =~ m/.*\.sam$/); # Only SAM files
     $file = $dir."/".$file;
     print "Testing tsc with $file ...";
 
@@ -19,7 +19,7 @@ while (my $file = readdir(DIR)) {
     my $com = `$tsc $file -o $file_com -f 1>/dev/null`;
     my $dec = `$tsc -d  $file_com -o $file_dec -f 1>/dev/null`;
 
-    # Check correctness of decoded file.
+    # Check correctness of decoded file
     my $ret = `diff $file $file_dec`;
     if ($ret eq "") {
         print " passed\n";

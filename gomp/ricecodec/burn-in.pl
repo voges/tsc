@@ -42,7 +42,8 @@ cleanup();
 
 exit 0;
 
-sub cleanup {
+sub cleanup
+{
     unlink $fn or warn "Could not unlink $fn: $!";
     unlink $fn_enc or warn "Could not unlink $fn_enc: $!";
     unlink $fn_dec or warn "Could not unlink $fn_dec: $!";

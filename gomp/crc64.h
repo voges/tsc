@@ -20,10 +20,13 @@
  * along with gomp. If not, see <http: *www.gnu.org/licenses/>
  */
 
-#ifndef GOMP_VERSION_H
-#define GOMP_VERSION_H
+#ifndef GOMP_CRC64_H
+#define GOMP_CRC64_H
 
-#define VERSION "01.00" /* This must be exactly five (5) characters */
+#include <stdint.h>
+#include <stdlib.h>
 
-#endif /* GOMP_VERSION_H */
+uint64_t crc64(const unsigned char* buf, size_t size);
+
+#endif /* GOMP_CRC64_H */
 
