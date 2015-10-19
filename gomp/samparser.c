@@ -1,8 +1,24 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <voges@tnt.uni-hannover.de>
+ */
+
+/*
+ * This file is part of gomp.
  *
- * This file is part of tsc.
+ * Gomp is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Gomp is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
 /*
@@ -42,11 +58,11 @@
 #include "samparser.h"
 #include <string.h>
 
-static void samparser_init(samparser_t* samparser, FILE* fp)
+static void samparser_init(samparser_t *samparser, FILE *fp)
 {
     samparser->fp = fp;
 
-    /* Read the SAM header. */
+    /* Read the SAM header */
     while (fgets(samparser->curr.line, sizeof(samparser->curr.line),
                  samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
@@ -59,34 +75,35 @@ static void samparser_init(samparser_t* samparser, FILE* fp)
     }
 }
 
-samparser_t* samparser_new(FILE* fp)
+samparser_t * samparser_new(FILE *fp)
 {
-    samparser_t* samparser = (samparser_t*)tsc_malloc(sizeof(samparser_t));
+    samparser_t *samparser = (samparser_t *)gomp_malloc(sizeof(samparser_t));
     samparser->head = str_new();
     samparser_init(samparser, fp);
     return samparser;
 }
 
-void samparser_free(samparser_t* samparser)
+void samparser_free(samparser_t *samparser)
 {
     if (samparser != NULL) {
         str_free(samparser->head);
         free(samparser);
         samparser = NULL;
     } else { /* samparser == NULL */
-        tsc_error("Tried to free NULL pointer.\n");
+        gomp_error("Tried to free NULL pointer.\n");
     }
 }
 
-static void samparser_parse(samparser_t* samparser)
+static void samparser_parse(samparser_t *samparser)
 {
     size_t l = strlen(samparser->curr.line) - 1;
 
-    while (l && (samparser->curr.line[l] == '\r'
-                 || samparser->curr.line[l] == '\n'))
+    while (l && (samparser->curr.line[l] == '\r' 
+           || samparser->curr.line[l] == '\n')) {
         samparser->curr.line[l--] = '\0';
+    }
 
-    char* c = samparser->curr.str_fields[0] = samparser->curr.line;
+    char *c = samparser->curr.str_fields[0] = samparser->curr.line;
     int f = 1, sfc = 1, ifc = 0;
 
     while (*c) {
@@ -105,9 +122,9 @@ static void samparser_parse(samparser_t* samparser)
     if (f == 11) samparser->curr.str_fields[sfc++] = c;
 }
 
-bool samparser_next(samparser_t* samparser)
+bool samparser_next(samparser_t *samparser)
 {
-    /* Try to read and parse next line. */
+    /* Try to read and parse next line */
     if (fgets(samparser->curr.line, sizeof(samparser->curr.line),
               samparser->fp)) {
         if (*(samparser->curr.line) == '@')

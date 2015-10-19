@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
  * Contact: Jan Voges <voges@tnt.uni-hannover.de>
  */
 
@@ -17,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with gomp. If not, see <http: *www.gnu.org/licenses/>
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
 #include "gomplib.h"
@@ -32,33 +33,36 @@
 #include <unistd.h>
 
 /* Options/flags from getopt */
-static const char* opt_input = NULL;
-static const char* opt_output = NULL;
+static const char *opt_input = NULL;
+static const char *opt_output = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
 static bool opt_flag_time = false;
 static bool opt_flag_verbose = false;
 
 /* Initializing global vars from 'gomplib.h' */
-str_t* gomp_prog_name = NULL;
-str_t* gomp_version = NULL;
-str_t* gomp_in_fname = NULL;
-str_t* gomp_out_fname = NULL;
-FILE* gomp_in_fp = NULL;
-FILE* gomp_out_fp = NULL;
-gomp_mode_t gomp_mode = gomp_MODE_COMPRESS;
+str_t *gomp_prog_name = NULL;
+str_t *gomp_version = NULL;
+str_t *gomp_in_fname = NULL;
+str_t *gomp_out_fname = NULL;
+FILE *gomp_in_fp = NULL;
+FILE *gomp_out_fp = NULL;
+gomp_mode_t gomp_mode = GOMP_MODE_COMPRESS;
+gomp_in_fmt_t gomp_in_fmt = GOMP_MODE_FQ;
 bool gomp_stats = false;
 bool gomp_time = false;
 bool gomp_verbose = false;
 
 static void print_version(void)
 {
-    printf("%s %s (framework)\n", gomp_prog_name->s, gomp_version->s);
+    printf("%s %s\n", gomp_prog_name->s, gomp_version->s);
 }
 
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)\n");
+    printf("Copyright (c) 2015\n");
+    printf("Leibniz Universitaet Hannover, Institut fuer "
+           "Informationsverarbeitung (TNT)\n");
     printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
 }
 
@@ -69,6 +73,7 @@ static void print_help(void)
     printf("\n");
     printf("Usage:\n");
     printf("  Compress  : gomp [-o output] [-fstv] <file.sam>\n");
+    printf("              gomp [-o output] [-fstv] <file.fq|file.fastq>\n");
     printf("  Decompress: gomp -d [-o output] [-fstv] <file.gomp>\n");
     printf("              degomp [-o output] [-fstv] <file.gomp>\n");
     printf("  Info      : gomp -i [-v] <file.gomp>\n");
@@ -113,7 +118,7 @@ static void parse_options(int argc, char *argv[])
         case -1:
             break;
         case 'd':
-            gomp_mode = gomp_MODE_DECOMPRESS;
+            gomp_mode = GOMP_MODE_DECOMPRESS;
             break;
         case 'f':
             opt_flag_force = true;
@@ -123,7 +128,7 @@ static void parse_options(int argc, char *argv[])
             exit(EXIT_SUCCESS);
             break;
         case 'i':
-            gomp_mode = gomp_MODE_INFO;
+            gomp_mode = GOMP_MODE_INFO;
             break;
         case 'o':
             opt_output = optarg;
@@ -146,9 +151,7 @@ static void parse_options(int argc, char *argv[])
         }
     } while (opt != -1);
 
-    /* There must be exactly one remaining command line argument (the input
-     * file).
-     */
+    /* The input file must be the one remaining command line argument */
     if (argc - optind > 1)
         gomp_error("Only one input file allowed\n");
     else if (argc - optind < 1)
@@ -157,24 +160,24 @@ static void parse_options(int argc, char *argv[])
         opt_input = argv[optind];
 }
 
-static const char* file_extension(const char* path)
+static const char * fname_ext(const char *path)
 {
-    const char* dot = strrchr(path, '.');
+    const char *dot = strrchr(path, '.');
     if (!dot || dot == path) { return ""; }
     return (dot + 1);
 }
 
 static void handle_signal(int sig)
 {
-    signal(sig, SIG_IGN); /* ignore the signal */
+    signal(sig, SIG_IGN); /* Ignore the signal */
     gomp_log("Catched signal: %d\n", sig);
     gomp_log("Cleaning up ...\n");
     gomp_cleanup();
-    signal(sig, SIG_DFL); /* invoke default signal action */
+    signal(sig, SIG_DFL); /* Invoke default signal action */
     raise(sig);
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     gomp_prog_name = str_new();
     gomp_version = str_new();
@@ -182,14 +185,13 @@ int main(int argc, char* argv[])
     gomp_in_fname = str_new();
     gomp_out_fname = str_new();
 
-    /* Determine program name. Truncate path if needed. */
-    const char* prog_name = argv[0];
-    char* p;
-    if ((p = strrchr(argv[0], '/')) != NULL)
-        prog_name = p + 1;
+    /* Determine program name and truncate path if needed */
+    const char *prog_name = argv[0];
+    char *p;
+    if ((p = strrchr(argv[0], '/')) != NULL) prog_name = p + 1;
     str_copy_cstr(gomp_prog_name, prog_name);
 
-    /* If invoked as 'de...', switch to decompressor mode. */
+    /* If invoked as 'de...' switch to decompressor mode */
     if (!strncmp(gomp_prog_name->s, "de", 2)) gomp_mode = GOMP_MODE_DECOMPRESS;
 
     /* Invoke custom signal handler */
@@ -201,7 +203,7 @@ int main(int argc, char* argv[])
     signal(SIGXCPU, handle_signal);
     signal(SIGXFSZ, handle_signal);
 
-    /* Parse command line options and check them for sanity. */
+    /* Parse command line options and check them for sanity */
     parse_options(argc, argv);
     str_copy_cstr(gomp_in_fname, opt_input);
     if (opt_flag_stats) gomp_stats = true;
@@ -209,9 +211,9 @@ int main(int argc, char* argv[])
     if (opt_flag_verbose) gomp_verbose = true;
 
     if (gomp_mode == GOMP_MODE_COMPRESS) {
-        /* All possible options are legal in this mode. */
+        /* All possible options are legal in this mode */
     } else if (gomp_mode == GOMP_MODE_DECOMPRESS) {
-        /* All possible options are legal in this mode. */
+        /* All possible options are legal in this mode */
     } else { /* GOMP_MODE_INFO */
         /* Options -fost are illegal in this mode. */
         if (opt_flag_force || opt_output || opt_flag_stats || opt_flag_time)
@@ -223,9 +225,14 @@ int main(int argc, char* argv[])
         gomp_error("Cannot access input file: %s\n", gomp_in_fname->s);
 
     if (gomp_mode == GOMP_MODE_COMPRESS) {
-        if (strcmp(file_extension((const char*)gomp_in_fname->s), "sam")) {
-            gomp_error("Input file has wrong extension (must be .sam): %s\n",
-                       gomp_in_fname->s);
+        if (!strcmp(fname_ext((const char*)gomp_in_fname->s), "sam")) {
+        	gomp_in_fmt = GOMP_IN_FMT_SAM;
+        } else if (!strcmp(fname_ext((const char*)gomp_in_fname->s), "fq")) {
+        	gomp_in_fmt = GOMP_IN_FMT_FQ;
+        } else if (!strcmp(fname_ext((const char*)gomp_in_fname->s), "fastq")) {
+        	gomp_in_fmt = GOMP_IN_FMT_FQ;
+        } else {
+            gomp_error("Input file extension must be sam, fast, or fq\n");
         }
 
         if (opt_output == NULL) {
@@ -235,67 +242,91 @@ int main(int argc, char* argv[])
             str_copy_cstr(gomp_out_fname, opt_output);
         }
 
-        if (!access((const char*)gomp_out_fname->s, F_OK | W_OK)
-            && opt_flag_force == false) {
-            gomp_warning("Output file already exists (use '-f' to force "
-                         "overwriting): %s\n", gomp_out_fname->s);
+        if (!access((const char *)gomp_out_fname->s, F_OK|W_OK) 
+                && opt_flag_force == false) {
+            gomp_warning("Output file already exists: %s\n", gomp_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
-        /* Invoke compressor */
         gomp_in_fp = gomp_fopen((const char*)gomp_in_fname->s, "r");
         gomp_out_fp = gomp_fopen((const char*)gomp_out_fname->s, "wb");
         gomp_log("Compressing: %s\n", gomp_in_fname->s);
-        fileenc_t* fileenc = fileenc_new(gomp_in_fp, gomp_out_fp);
-        fileenc_encode(fileenc);
-        fileenc_free(fileenc);
+        
+        if (gomp_in_fmt == GOMP_IN_FMT_SAM) {
+        	samenc_t *samenc = samenc_new(gomp_in_fp, gomp_out_fp);
+        	samenc_encode(samenc);
+        	samenc_free(samenc);
+        } else { /* GOMP_IN_FMT_FQ */
+        	fqenc_t *fqenc = fqenc_new(gomp_in_fp, gomp_out_fp);
+        	fqenc_encode(fqenc);
+        	fqenc_free(fqenc); 
+        }
+        
         gomp_log("Finished: %s\n", gomp_out_fname->s);
         gomp_fclose(gomp_in_fp);
         gomp_fclose(gomp_out_fp);
     } else  if (gomp_mode == GOMP_MODE_DECOMPRESS) {
-        if (strcmp(file_extension((const char*)gomp_in_fname->s), "gomp")) {
-            gomp_error("Input file has wrong extension (must be .gomp): %s\n",
-                       gomp_in_fname->s);
+        if (strcmp(fname_ext((const char *)gomp_in_fname->s), "gomp")) {
+            gomp_error("Input file extension must be gomp\n");
         }
 
         if (opt_output == NULL) {
             str_copy_str(gomp_out_fname, gomp_in_fname);
             str_trunc(gomp_out_fname, 4); /* strip '.gomp' */
-            if (strcmp(file_extension((const char*)gomp_out_fname->s), "sam"))
-                str_append_cstr(gomp_out_fname, ".sam");
         } else {
             str_copy_cstr(gomp_out_fname, opt_output);
         }
 
-        if (!access((const char*)gomp_out_fname->s, F_OK | W_OK)
+        if (!access((const char *)gomp_out_fname->s, F_OK|W_OK)
                 && opt_flag_force == false) {
-            gomp_warning("Output file already exists (use '-f' to force "
-                        "overwriting): %s\n", gomp_out_fname->s);
+            gomp_warning("Output file already exists: %s\n", gomp_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
-        /* Invoke decompressor */
         gomp_in_fp = gomp_fopen((const char*)gomp_in_fname->s, "rb");
         gomp_out_fp = gomp_fopen((const char*)gomp_out_fname->s, "w");
         gomp_log("Decompressing: %s\n", gomp_in_fname->s);
-        filedec_t* filedec = filedec_new(gomp_in_fp, gomp_out_fp);
-        filedec_decode(filedec);
-        filedec_free(filedec);
+        
+        unsigned char magic = 0x0;
+        if (fread_byte(gomp_in_fp, *magic)) {
+        	if (magic & 0x1) gomp_in_fmt = GOMP_IN_FMT_FQ;
+        	else gomp_in_fmt = GOMP_IN_FMT_SAM;
+        else {
+        	gomp_error("Failed to read file\n");
+        }
+        
+        if (gomp_in_fmt == GOMP_IN_FMT_SAM) {
+        	samenc_t *samenc = samenc_new(gomp_in_fp, gomp_out_fp);
+        	samenc_encode(samenc);
+        	samenc_free(samenc);
+        } else { /* GOMP_IN_FMT_FQ */
+        	fqenc_t *fqenc = fqenc_new(gomp_in_fp, gomp_out_fp);
+        	fqenc_encode(fqenc);
+        	fqenc_free(fqenc); 
+        }
+        
         gomp_log("Finished: %s\n", gomp_out_fname->s);
         gomp_fclose(gomp_in_fp);
         gomp_fclose(gomp_out_fp);
     } else { /* GOMP_MODE_INFO */
-        if (strcmp(file_extension((const char*)gomp_in_fname->s), "gomp")) {
-            gomp_error("Input file has wrong extension (must be .gomp): %s\n",
-                       gomp_in_fname->s);
+        if (strcmp(fname_ext((const char*)gomp_in_fname->s), "gomp")) {
+            gomp_error("Input file extension must be gomp\n");
         }
 
-        /* Generate information about compressed gomp file. */
-        gomp_in_fp = gomp_fopen((const char*)gomp_in_fname->s, "rb");
+        /* Read information from compressed gomp file */
+        gomp_in_fp = gomp_fopen((const char *)gomp_in_fname->s, "rb");
         gomp_log("Reading information: %s\n", gomp_in_fname->s);
-        filedec_t* filedec = filedec_new(gomp_in_fp, NULL);
-        filedec_info(filedec);
-        filedec_free(filedec);
+        
+        if (gomp_in_fmt == GOMP_IN_FMT_SAM) {
+        	samdec_t *samdec = samdec_new(gomp_in_fp, NULL);
+        	samdec_info(samdec);
+        	samdec_free(samdec);
+        } else { /* GOMP_IN_FMT_FQ */
+        	fqdec_t *fqdec = fqdec_new(gomp_in_fp, NULL);
+        	fqdec_info(fqdec);
+        	fqdec_free(fqdec); 
+        }
+        
         gomp_fclose(gomp_in_fp);
     }
 

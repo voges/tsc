@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
  * Contact: Jan Voges <voges@tnt.uni-hannover.de>
  */
 
@@ -17,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with gomp. If not, see <http: *www.gnu.org/licenses/>
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
 #include "gomplib.h"
@@ -55,11 +56,11 @@ void gomp_abort(void)
     exit(EXIT_FAILURE);
 }
 
-void gomp_error(const char* fmt, ...)
+void gomp_error(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stderr, "%s: error: %s", gomp_prog_name->s, msg);
@@ -67,34 +68,34 @@ void gomp_error(const char* fmt, ...)
     gomp_abort();
 }
 
-void gomp_warning(const char* fmt, ...)
+void gomp_warning(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stderr, "%s: warning: %s", gomp_prog_name->s, msg);
     free(msg);
 }
 
-void gomp_log(const char* fmt, ...)
+void gomp_log(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stdout, "%s: %s", gomp_prog_name->s, msg);
     free(msg);
 }
 
-void gomp_vlog(const char* fmt, ...)
+void gomp_vlog(const char *fmt, ...)
 {
     if (gomp_verbose) {
         va_list args;
         va_start(args, fmt);
-        char* msg;
+        char *msg;
         vasprintf(&msg, fmt, args);
         va_end(args);
         fprintf(stdout, "%s: %s", gomp_prog_name->s, msg);
@@ -102,21 +103,21 @@ void gomp_vlog(const char* fmt, ...)
     }
 }
 
-void* gomp_malloc(const size_t n)
+void * gomp_malloc(const size_t n)
 {
-    void* p = malloc(n);
-    if (p == NULL) gomp_error("Cannot allocate %zu bytes.\n", n);
+    void *p = malloc(n);
+    if (p == NULL) gomp_error("Cannot allocate %zu bytes!\n", n);
     return p;
 }
 
-void* gomp_realloc(void* ptr, const size_t n)
+void * gomp_realloc(void *ptr, const size_t n)
 {
-    void* p = realloc(ptr, n);
-    if (p == NULL) gomp_error("Cannot allocate %zu bytes.\n", n);
+    void *p = realloc(ptr, n);
+    if (p == NULL) gomp_error("Cannot allocate %zu bytes!\n", n);
     return p;
 }
 
-FILE* gomp_fopen(const char* fname, const char* mode)
+FILE * gomp_fopen(const char *fname, const char *mode)
 {
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
@@ -126,13 +127,13 @@ FILE* gomp_fopen(const char* fname, const char* mode)
     return fp;
 }
 
-void gomp_fclose(FILE* fp)
+void gomp_fclose(FILE *fp)
 {
     if (fp != NULL) {
         fclose(fp);
         fp = NULL;
     } else {
-        gomp_error("Failed to close file.\n");
+        gomp_error("Failed to close file!\n");
     }
 }
 

@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
  * Contact: Jan Voges <voges@tnt.uni-hannover.de>
  */
 
@@ -17,11 +18,11 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with gomp. If not, see <http: *www.gnu.org/licenses/>
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef GOMP_SAMRECORD_H
-#define GOMP_SAMRECORD_H
+#ifndef GOMP_SAMREC_H
+#define GOMP_SAMREC_H
 
 #include "gomplib.h"
 #include <stdint.h>
@@ -37,28 +38,28 @@
  */
 
 enum {
-    QNAME, /* query template name                     */
-    RNAME, /* reference sequence name                 */
-    CIGAR, /* CIGAR string                            */
-    RNEXT, /* ref. name of the mate/next read         */
-    SEQ,   /* segment sequence                        */
-    QUAL,  /* ASCII of Phred-scaled base quality + 33 */
-    OPT    /* optional information                    */
+    QNAME, /* Query template NAME             */
+    RNAME, /* Reference sequence NAME         */
+    CIGAR, /* CIGAR string                    */
+    RNEXT, /* Ref. name of the mate/NEXT read */
+    SEQ,   /* segment SEQuence                */
+    QUAL,  /* QUALity scores                  */
+    OPT    /* OPTional information            */
 };
 
 enum {
-    FLAG,  /* bitwise flag (uint16_t)                      */
-    POS,   /* 1-based leftmost mapping position (uint32_t) */
-    MAPQ,  /* mapping quality (uint8_t)                    */
-    PNEXT, /* position of the mate/next read (uint32_t)    */
-    TLEN   /* observed template length (int64_t)           */
+    FLAG,  /* bitwise FLAG (uint16_t)                      */
+    POS,   /* 1-based leftmost mapping POSition (uint32_t) */
+    MAPQ,  /* MAPping Quality (uint8_t)                    */
+    PNEXT, /* Position of the mate/NEXT read (uint32_t)    */
+    TLEN   /* observed Template LENgth (int64_t)           */
 };
 
-typedef struct samrecord_t_ {
+typedef struct samrec_t_ {
     char    line[8*MB];
     char*   str_fields[7];
     int64_t int_fields[5];
-} samrecord_t;
+} samrec_t;
 
-#endif /* GOMP_SAMRECORD_H */
+#endif /* GOMP_SAMREC_H */
 

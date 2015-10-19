@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
  * Contact: Jan Voges <voges@tnt.uni-hannover.de>
  */
 
@@ -17,7 +18,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with gomp. If not, see <http: *www.gnu.org/licenses/>
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
 #ifndef GOMP_GOMPLIB_H
@@ -39,7 +40,6 @@
     #define DEBUG(c,...) do { } while (false)
 #endif
 
-/* Binary prefixes */
 #define KB 1024LL
 #define MB (KB*1024LL)
 #define GB (MB*1024LL)
@@ -50,27 +50,33 @@ typedef enum {
     GOMP_MODE_INFO
 } gomp_mode_t;
 
-extern str_t* gomp_prog_name;
-extern str_t* gomp_version;
-extern str_t* gomp_in_fname;
-extern str_t* gomp_out_fname;
-extern FILE* gomp_in_fp;
-extern FILE* gomp_out_fp;
+typedef enum {
+    GOMP_IN_FMT_SAM,
+    GOMP_IN_FMT_FQ
+} gomp_in_fmt_t;
+
+extern str_t *gomp_prog_name;
+extern str_t *gomp_version;
+extern str_t *gomp_in_fname;
+extern str_t *gomp_out_fname;
+extern FILE *gomp_in_fp;
+extern FILE *gomp_out_fp;
 extern gomp_mode_t gomp_mode;
+extern gomp_in_fmt_t gomp_in_fmt;
 extern bool gomp_stats;
 extern bool gomp_time;
 extern bool gomp_verbose;
 
 void gomp_cleanup(void);
 void gomp_abort(void);
-void gomp_error(const char* fmt, ...);
-void gomp_warning(const char* fmt, ...);
-void gomp_log(const char* fmt, ...);
-void gomp_vlog(const char* fmt, ...); /* verbose logging */
+void gomp_error(const char *fmt, ...);
+void gomp_warning(const char *fmt, ...);
+void gomp_log(const char *fmt, ...);
+void gomp_vlog(const char *fmt, ...); /* verbose logging */
 void* gomp_malloc(const size_t n);
-void* gomp_realloc(void* ptr, const size_t n);
-FILE* gomp_fopen(const char* fname, const char* mode);
-void gomp_fclose(FILE* fp);
+void* gomp_realloc(void *ptr, const size_t n);
+FILE* gomp_fopen(const char *fname, const char *mode);
+void gomp_fclose(FILE *fp);
 
 #endif /* GOMP_GOMPLIB_H */
 

@@ -21,10 +21,20 @@
  * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef GOMP_VERSION_H
-#define GOMP_VERSION_H
+#ifndef GOMP_FQPARSER_H
+#define GOMP_FQPARSER_H
 
-#define VERSION "01.00" /* This must be exactly five (5) characters */
+#include "fqrecord.h"
+#include <stdbool.h>
 
-#endif /* GOMP_VERSION_H */
+typedef struct fqparser_t_ {
+    FILE*   fp;   /* file pointer         */
+    fqrec_t curr; /* current FASTQ record */
+} fqparser_t;
+
+fqparser_t* fqparser_new(FILE* fp);
+void fqparser_free(fqparser_t* fqparser);
+bool fqparser_next(fqparser_t* fqparser);
+
+#endif /* GOMP_FQPARSER_H */
 

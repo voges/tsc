@@ -1,34 +1,50 @@
 /*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
+ * Copyright (c) 2015 
+ * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <voges@tnt.uni-hannover.de>
+ */
+
+/*
+ * This file is part of gomp.
  *
- * This file is part of tsc.
+ * Gomp is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Gomp is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
 #include "str.h"
 #include <stdio.h>
 #include <string.h>
 
-static void str_init(str_t* str)
+static void str_init(str_t *str)
 {
     str->s = NULL;
     str->len = 0;
     str->sz = 0;
-
-    /* Init string with terminating NULL byte. */
+    
+    /* Init string with null byte */
     str_reserve(str, 1);
     str->s[str->len] = '\0';
 }
 
-str_t* str_new(void)
+str_t * str_new(void)
 {
-    str_t* str = (str_t*)malloc(sizeof(str_t));
+    str_t *str = (str_t *)malloc(sizeof(str_t));
     if (!str) abort();
     str_init(str);
     return str;
 }
 
-void str_free(str_t* str)
+void str_free(str_t *str)
 {
     if (str != NULL) {
         if (str->s != NULL) {
@@ -43,7 +59,7 @@ void str_free(str_t* str)
     }
 }
 
-void str_clear(str_t* str)
+void str_clear(str_t *str)
 {
     if (str->s != NULL) {
         free(str->s);
@@ -52,19 +68,19 @@ void str_clear(str_t* str)
     str_init(str);
 }
 
-void str_reserve(str_t* str, const size_t sz)
+void str_reserve(str_t *str, const size_t sz)
 {
     str->sz = sz;
-    str->s = (char*)realloc(str->s, str->sz * sizeof(char));
+    str->s = (char *)realloc(str->s, str->sz * sizeof(char));
     if (!(str->s)) abort();
 }
 
-void str_extend(str_t* str, const size_t ex)
+void str_extend(str_t *str, const size_t ex)
 {
     str_reserve(str, str->sz + ex);
 }
 
-void str_trunc(str_t* str, const size_t tr)
+void str_trunc(str_t *str, const size_t tr)
 {
     str->len -= tr;
     str->sz -= tr;
@@ -72,7 +88,7 @@ void str_trunc(str_t* str, const size_t tr)
     str->s[str->len] = '\0';
 }
 
-void str_append_str(str_t* str, const str_t* app)
+void str_append_str(str_t *str, const str_t *app)
 {
     str_extend(str, app->len);
     memcpy(str->s + str->len, app->s, app->len);
@@ -80,7 +96,7 @@ void str_append_str(str_t* str, const str_t* app)
     str->s[str->len] = '\0';
 }
 
-void str_append_cstr(str_t* str, const char* cstr)
+void str_append_cstr(str_t *str, const char *cstr)
 {
     size_t len = strlen(cstr);
     str_extend(str, len);
@@ -89,11 +105,10 @@ void str_append_cstr(str_t* str, const char* cstr)
     str->s[str->len] = '\0';
 }
 
-void str_append_cstrn(str_t* str, const char* cstr, const size_t len)
+void str_append_cstrn(str_t *str, const char *cstr, const size_t len)
 {
     if (len > strlen(cstr)) {
-        fprintf(stderr, "Error: Tried append %zu bytes of C-string: %s\n", len,
-                cstr);
+        fprintf(stderr, "Error: Failed to append C-string!");
         exit(EXIT_FAILURE);
     }
     str_extend(str, len);
@@ -102,14 +117,14 @@ void str_append_cstrn(str_t* str, const char* cstr, const size_t len)
     str->s[str->len] = '\0';
 }
 
-void str_append_char(str_t* str, const char c)
+void str_append_char(str_t *str, const char c)
 {
     str_extend(str, 1);
     str->s[str->len++] = c;
     str->s[str->len] = '\0';
 }
 
-void str_copy_str(str_t* dest, const str_t* src)
+void str_copy_str(str_t *dest, const str_t *src)
 {
     str_clear(dest);
     str_reserve(dest, src->len + 1);
@@ -118,7 +133,7 @@ void str_copy_str(str_t* dest, const str_t* src)
     dest->s[dest->len] = '\0';
 }
 
-void str_copy_cstr(str_t* str, const char* cstr)
+void str_copy_cstr(str_t *str, const char *cstr)
 {
     str_clear(str);
     size_t len = strlen(cstr);
