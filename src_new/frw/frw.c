@@ -1,30 +1,14 @@
 /*
- * Copyright (c) 2015 
- * Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <voges@tnt.uni-hannover.de>
- */
-
-/*
- * This file is part of gomp.
+ * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
+ * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
  *
- * Gomp is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Gomp is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with gomp. If not, see <http://www.gnu.org/licenses/>
+ * This file is part of tsc.
  */
 
 #include "frw.h"
 #include <stdlib.h>
 
-size_t fwrite_byte(FILE *fp, const unsigned char byte)
+size_t fwrite_byte(FILE* fp, const unsigned char byte)
 {
     if (fwrite(&byte, 1, 1, fp) != 1) {
         fprintf(stderr, "Error: Could not write byte\n");
@@ -33,7 +17,7 @@ size_t fwrite_byte(FILE *fp, const unsigned char byte)
     return 1;
 }
 
-size_t fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n)
+size_t fwrite_buf(FILE* fp, const unsigned char* buf, const size_t n)
 {
     if (fwrite(buf, 1, n, fp) != n) {
         fprintf(stderr, "Error: Could not write %zu byte(s)\n", n);
@@ -42,7 +26,7 @@ size_t fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n)
     return n;
 }
 
-size_t fwrite_uint32(FILE *fp, const uint32_t dword)
+size_t fwrite_uint32(FILE* fp, const uint32_t dword)
 {
     fwrite_byte(fp, (dword >> 24) & 0xFF);
     fwrite_byte(fp, (dword >> 16) & 0xFF);
@@ -51,7 +35,7 @@ size_t fwrite_uint32(FILE *fp, const uint32_t dword)
     return sizeof(uint32_t);
 }
 
-size_t fwrite_uint64(FILE *fp, const uint64_t qword)
+size_t fwrite_uint64(FILE* fp, const uint64_t qword)
 {
     fwrite_byte(fp, (qword >> 56) & 0xFF);
     fwrite_byte(fp, (qword >> 48) & 0xFF);
@@ -64,20 +48,19 @@ size_t fwrite_uint64(FILE *fp, const uint64_t qword)
     return sizeof(uint64_t);
 }
 
-size_t fread_byte(FILE *fp, unsigned char *byte)
+size_t fread_byte(FILE* fp, unsigned char* byte)
 {
     return fread(byte, 1, 1, fp);
 }
 
-size_t fread_buf(FILE *fp, unsigned char *buf, const size_t n)
+size_t fread_buf(FILE* fp, unsigned char* buf, const size_t n)
 {
     return fread(buf, 1, n, fp);
 }
 
-size_t fread_uint32(FILE *fp, uint32_t *dword)
+size_t fread_uint32(FILE* fp, uint32_t* dword)
 {
-    unsigned char *bytes = (unsigned char *)malloc(sizeof(uint32_t));
-    if (!bytes) abort();
+    unsigned char* bytes = (unsigned char*)malloc(sizeof(uint32_t));
     size_t ret = fread(bytes, 1, sizeof(uint32_t), fp);
 
     if (ret != sizeof(uint32_t)) {
@@ -96,8 +79,7 @@ size_t fread_uint32(FILE *fp, uint32_t *dword)
 
 size_t fread_uint64(FILE* fp, uint64_t* qword)
 {
-    unsigned char *bytes = (unsigned char *)malloc(sizeof(uint64_t));
-    if (!bytes) abort();
+    unsigned char* bytes = (unsigned char*)malloc(sizeof(uint64_t));
     size_t ret = fread(bytes, 1, sizeof(uint64_t), fp);
 
     if (ret != sizeof(uint64_t)) {

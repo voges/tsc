@@ -21,20 +21,15 @@
  * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
-#ifndef GOMP_FQPARSER_H
-#define GOMP_FQPARSER_H
+#ifndef GOMP_FQREC_H
+#define GOMP_FQREC_H
 
-#include "fqrecord.h"
-#include <stdbool.h>
+typedef struct fqrec_t_ {
+    char rhead[8*MB];
+    char seq[8*MB];
+    char desc[8*MB];
+    char qual[8*MB];
+} fqrec_t;
 
-typedef struct fqparser_t_ {
-    FILE*   fp;   /* file pointer         */
-    fqrec_t curr; /* current FASTQ record */
-} fqparser_t;
-
-fqparser_t* fqparser_new(FILE* fp);
-void fqparser_free(fqparser_t* fqparser);
-bool fqparser_next(fqparser_t* fqparser);
-
-#endif /* GOMP_FQPARSER_H */
+#endif /* GOMP_FQREC_H */
 

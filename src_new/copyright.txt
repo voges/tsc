@@ -1,0 +1,6 @@
+//
+// Copyright (c) 2015 
+// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+// Contact: Jan Voges <voges@tnt.uni-hannover.de>
+// 
+

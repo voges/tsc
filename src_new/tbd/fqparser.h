@@ -21,27 +21,20 @@
  * along with gomp. If not, see <http://www.gnu.org/licenses/>
  */
 
-/*
- * Wrapper functions to safely read/write different data types.
- * The 'fwrite_uintXX' and 'fread_uintXX' functions are compatible with
- * each other and are independent from the endianness of the system this code
- * will be built on.
- */
+#ifndef GOMP_FQPARSER_H
+#define GOMP_FQPARSER_H
 
-#ifndef GOMP_FRW_H
-#define GOMP_FRW_H
+#include "fqrec.h"
+#include <stdbool.h>
 
-#include <stdint.h>
-#include <stdio.h>
+typedef struct fqparser_t_ {
+    FILE*   fp;   /* file pointer         */
+    fqrec_t curr; /* current FASTQ record */
+} fqparser_t;
 
-size_t fwrite_byte(FILE *fp, const unsigned char byte);
-size_t fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n);
-size_t fwrite_uint32(FILE *fp, const uint32_t dword);
-size_t fwrite_uint64(FILE *fp, const uint64_t qword);
-size_t fread_byte(FILE *fp, unsigned char *byte);
-size_t fread_buf(FILE *fp, unsigned char *buf, const size_t n);
-size_t fread_uint32(FILE *fp, uint32_t *dword);
-size_t fread_uint64(FILE *fp, uint64_t *qword);
+fqparser_t* fqparser_new(FILE* fp);
+void fqparser_free(fqparser_t* fqparser);
+bool fqparser_next(fqparser_t* fqparser);
 
-#endif /* GOMP_FRW_H */
+#endif /* GOMP_FQPARSER_H */
 

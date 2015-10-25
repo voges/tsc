@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 /* Safe debug macro */
 #if DBG
@@ -77,6 +78,8 @@ void* gomp_malloc(const size_t n);
 void* gomp_realloc(void *ptr, const size_t n);
 FILE* gomp_fopen(const char *fname, const char *mode);
 void gomp_fclose(FILE *fp);
+
+long gomp_tvdiff(struct timeval tv0, struct timeval tv1)
 
 #endif /* GOMP_GOMPLIB_H */
 

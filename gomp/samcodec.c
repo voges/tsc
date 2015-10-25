@@ -75,19 +75,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-/* Linear SAM field indices */
-enum { SAM_QNAME, SAM_FLAG, SAM_RNAME, SAM_POS, SAM_MAPQ, SAM_CIGAR,
-       SAM_RNEXT, SAM_PNEXT, SAM_TLEN, SAM_SEQ, SAM_QUAL, SAM_OPT };
 
-/* Indices for tsc statistics */
-enum {
-    TSC_TOTAL, /* total no. of bytes written                 */
-    TSC_FF,    /* total no. of bytes written for file format */
-    TSC_SH,    /* total no. of bytes written for SAM header  */
-    TSC_AUX,   /* total no. of bytes written by auxenc       */
-    TSC_NUC,   /* total no. of bytes written by nucenc       */
-    TSC_QUAL   /* total no. of bytes written by qualenc      */
-};
 
 static long tvdiff(struct timeval tv0, struct timeval tv1)
 {
@@ -213,6 +201,8 @@ void fileenc_encode(fileenc_t* fileenc)
     size_t lut_itr = 0;
 
     /* File header */
+    gompfmt_write_header();
+    
     unsigned char magic[6]   = "tsc--"; magic[5] = '\0';
     unsigned char version[6] = VERSION; version[5] = '\0';
     uint64_t      blk_lc     = (uint64_t)FILECODEC_BLK_LC;
@@ -253,12 +243,9 @@ void fileenc_encode(fileenc_t* fileenc)
 
             /* Sub-blocks */
             gettimeofday(&tv0, NULL);
-            tsc_sz[TSC_AUX]
-                += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
-            tsc_sz[TSC_NUC]
-                += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
-            tsc_sz[TSC_QUAL]
-                += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
+            tsc_sz[TSC_AUX] += auxenc_write_block(fileenc->auxenc, fileenc->ofp);
+            tsc_sz[TSC_NUC] += nucenc_write_block(fileenc->nucenc, fileenc->ofp);
+            tsc_sz[TSC_QUAL] += qualenc_write_block(fileenc->qualenc, fileenc->ofp);
             gettimeofday(&tv1, NULL);
             elapsed_entr += tvdiff(tv0, tv1);
 
