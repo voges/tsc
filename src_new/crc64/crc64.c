@@ -1,9 +1,8 @@
-/*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
- *
- * This file is part of tsc.
- */
+//
+// Copyright (c) 2015
+// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+// Contact: Jan Voges <voges@tnt.uni-hannover.de>
+//
 
 /*
  * Specification of this CRC64 variant follows:
@@ -150,10 +149,10 @@ static const uint64_t crc64_tab[256] = {
     UINT64_C(0x536fa08fdfd90e51), UINT64_C(0x29b7d047efec8728),
 };
 
-uint64_t crc64(const unsigned char* buf, size_t size)
+uint64_t crc64(const unsigned char *buf, size_t buf_sz)
 {
     uint64_t crc = 0;
-    while (size--)
+    while (buf_sz--)
         crc = crc64_tab[(crc ^ *buf++) & 0xff] ^ (crc >> 8);
     return crc;
 }

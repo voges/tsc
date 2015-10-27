@@ -15,7 +15,7 @@
  */
 
 #include "auxcodec.h"
-#include "../arithcodec/arithcodec.h"
+#include "../rangecodec/rangecodec.h"
 #include "../crc64/crc64.h"
 #include "../frw/frw.h"
 #include "../tsclib.h"
@@ -108,7 +108,7 @@ size_t auxenc_write_block(auxenc_t* auxenc, FILE* ofp)
     unsigned char* residues = (unsigned char*)auxenc->residues->s;
     unsigned int residues_sz = (unsigned int)auxenc->residues->len;
     unsigned int data_sz = 0;
-    unsigned char* data = arith_compress_o0(residues, residues_sz, &data_sz);
+    unsigned char* data = range_compress_o0(residues, residues_sz, &data_sz);
 
     tsc_vlog("Compressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
              residues_sz, data_sz, (double)data_sz / (double)residues_sz*100);
@@ -270,7 +270,7 @@ void auxdec_decode_block(auxdec_t* auxdec,
         tsc_error("CRC64 check failed for aux block!\n");
 
     unsigned int residues_sz = 0;
-    unsigned char* residues = arith_decompress_o0(data, data_sz, &residues_sz);
+    unsigned char* residues = range_decompress_o0(data, data_sz, &residues_sz);
     free(data);
 
     tsc_vlog("Decompressed aux block: %zu bytes -> %zu bytes (%5.2f%%)\n",

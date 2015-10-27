@@ -38,7 +38,7 @@
 
 #ifdef NUCCODEC_O0
 
-#include "../arithcodec/arithcodec.h"
+#include "../rangecodec/rangecodec.h"
 #include "../crc64/crc64.h"
 #include "../frw/frw.h"
 #include "../frw/frw.h"
@@ -50,7 +50,7 @@
 
 #ifdef NUCCODEC_O1
 
-#include "../arithcodec/arithcodec.h"
+#include "../rangecodec/rangecodec.h"
 #include "../crc64/crc64.h"
 #include "../frw/frw.h"
 #include "../frw/frw.h"
@@ -130,7 +130,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned char* residues = (unsigned char*)nucenc->residues->s;
     unsigned int residues_sz = (unsigned int)nucenc->residues->len;
     unsigned int data_sz = 0;
-    unsigned char* data = arith_compress_o0(residues, residues_sz, &data_sz);
+    unsigned char* data = range_compress_o0(residues, residues_sz, &data_sz);
 
     tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
              residues_sz, data_sz, (double)data_sz / (double)residues_sz*100);
@@ -478,7 +478,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int pos_residues_sz = (unsigned int)nucenc->pos_residues->sz;
     unsigned int pos_residues_data_sz = 0;
     unsigned char* pos_residues_data
-                        = arith_compress_o0(pos_residues, pos_residues_sz,
+                        = range_compress_o0(pos_residues, pos_residues_sz,
                                             &pos_residues_data_sz);
 
     tsc_vlog("Compressed nuc-pos block: %zu bytes -> %zu bytes (%6.2f%%)\n",
@@ -490,7 +490,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int cigar_residues_sz = (unsigned int)nucenc->cigar_residues->len;
     unsigned int cigar_residues_data_sz = 0;
     unsigned char* cigar_residues_data
-                        = arith_compress_o0(cigar_residues, cigar_residues_sz,
+                        = range_compress_o0(cigar_residues, cigar_residues_sz,
                                             &cigar_residues_data_sz);
 
     tsc_vlog("Compressed nuc-cigar block: %zu bytes -> %zu bytes (%6.2f%%)\n",
@@ -502,7 +502,7 @@ size_t nucenc_write_block(nucenc_t* nucenc, FILE* ofp)
     unsigned int seq_residues_sz = (unsigned int)nucenc->seq_residues->len;
     unsigned int seq_residues_data_sz = 0;
     unsigned char* seq_residues_data
-                        = arith_compress_o1(seq_residues, seq_residues_sz,
+                        = range_compress_o1(seq_residues, seq_residues_sz,
                                             &seq_residues_data_sz);
 
     tsc_vlog("Compressed nuc-seq block: %zu bytes -> %zu bytes (%6.2f%%)\n",
@@ -661,7 +661,7 @@ void nucdec_decode_block(nucdec_t* nucdec,
         tsc_error("CRC64 check failed for nuc block!\n");
 
     unsigned int residues_sz = 0;
-    unsigned char* residues = arith_decompress_o0(data, data_sz, &residues_sz);
+    unsigned char* residues = range_decompress_o0(data, data_sz, &residues_sz);
     free(data);
 
     tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%5.2f%%)\n",

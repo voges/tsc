@@ -1,26 +1,25 @@
-/******************************************************************************
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)            *
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>                            *
- *                                                                            *
- * This file is part of ricecodec.                                            *
- ******************************************************************************/
+//
+// Copyright (c) 2015
+// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+// Contact: Jan Voges <voges@tnt.uni-hannover.de>
+//
 
-/*
- * Note it is up to the calling code to ensure that no overruns on input and
- * output buffers occur.
- */
+//
+// Note it is up to the calling code to ensure that no overruns on input and
+// output buffers occur.
+//
 
 #ifndef RICECODEC_H
 #define RICECODEC_H
 
 #include <stdlib.h>
 
-unsigned char* rice_compress(unsigned char* in,
-                             size_t         in_size,
-                             size_t*        out_size);
-unsigned char* rice_decompress(unsigned char* in,
-                               size_t         in_size,
-                               size_t*        out_size);
+unsigned char * rice_compress(unsigned char *in,
+                              size_t        in_sz,
+                              size_t        *out_sz);
+unsigned char * rice_decompress(unsigned char *in,
+                                size_t        in_sz,
+                                size_t        *out_sz);
 
-#endif /* RICECODEC_H */
+#endif // RICECODEC_H
 

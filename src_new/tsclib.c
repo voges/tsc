@@ -1,9 +1,25 @@
-/*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
- *
- * This file is part of tsc.
- */
+//
+// Copyright (c) 2015
+// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+// Contact: Jan Voges <voges@tnt.uni-hannover.de>
+//
+
+//
+// This file is part of tsc.
+//
+// Tsc is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tsc is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with tsc. If not, see <http://www.gnu.org/licenses/>
+//
 
 #include "tsclib.h"
 #include <stdarg.h>
@@ -28,7 +44,7 @@ void tsc_cleanup(void)
     if (tsc_out_fname->len > 0) {
         tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {
-            unlink((const char*)tsc_out_fname->s);
+            unlink((const char *)tsc_out_fname->s);
             tsc_log("Removed %s\n", tsc_out_fname->s);
         }
     }
@@ -40,11 +56,11 @@ void tsc_abort(void)
     exit(EXIT_FAILURE);
 }
 
-void tsc_error(const char* fmt, ...)
+void tsc_error(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stderr, "%s: error: %s", tsc_prog_name->s, msg);
@@ -52,34 +68,34 @@ void tsc_error(const char* fmt, ...)
     tsc_abort();
 }
 
-void tsc_warning(const char* fmt, ...)
+void tsc_warning(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stderr, "%s: warning: %s", tsc_prog_name->s, msg);
     free(msg);
 }
 
-void tsc_log(const char* fmt, ...)
+void tsc_log(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    char* msg;
+    char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
     fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
     free(msg);
 }
 
-void tsc_vlog(const char* fmt, ...)
+void tsc_vlog(const char *fmt, ...)
 {
     if (tsc_verbose) {
         va_list args;
         va_start(args, fmt);
-        char* msg;
+        char *msg;
         vasprintf(&msg, fmt, args);
         va_end(args);
         fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
@@ -87,21 +103,21 @@ void tsc_vlog(const char* fmt, ...)
     }
 }
 
-void* tsc_malloc(const size_t n)
+void * tsc_malloc(const size_t n)
 {
-    void* p = malloc(n);
-    if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
+    void *p = malloc(n);
+    if (p == NULL) tsc_error("Cannot allocate %zu bytes\n", n);
     return p;
 }
 
-void* tsc_realloc(void* ptr, const size_t n)
+void *tsc_realloc(void *ptr, const size_t n)
 {
-    void* p = realloc(ptr, n);
-    if (p == NULL) tsc_error("Cannot allocate %zu bytes.\n", n);
+    void *p = realloc(ptr, n);
+    if (p == NULL) tsc_error("Cannot allocate %zu bytes\n", n);
     return p;
 }
 
-FILE* tsc_fopen(const char* fname, const char* mode)
+FILE * tsc_fopen(const char *fname, const char *mode)
 {
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
@@ -111,13 +127,13 @@ FILE* tsc_fopen(const char* fname, const char* mode)
     return fp;
 }
 
-void tsc_fclose(FILE* fp)
+void tsc_fclose(FILE *fp)
 {
     if (fp != NULL) {
         fclose(fp);
         fp = NULL;
     } else {
-        tsc_error("Failed to close file.\n");
+        tsc_error("Failed to close file\n");
     }
 }
 

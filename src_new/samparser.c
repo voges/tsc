@@ -1,22 +1,22 @@
 //
-// Copyright (c) 2015 
+// Copyright (c) 2015
 // Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
 // Contact: Jan Voges <voges@tnt.uni-hannover.de>
-// 
+//
 
 //
 // This file is part of tsc.
-// 
+//
 // Tsc is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-// 
+//
 // Tsc is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with tsc. If not, see <http://www.gnu.org/licenses/>
 //
@@ -93,11 +93,12 @@ static void samparser_parse(samparser_t *samparser)
 {
     size_t l = strlen(samparser->curr.line) - 1;
 
-    while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n'))
+    while (l && (samparser->curr.line[l] == '\r'
+               || samparser->curr.line[l] == '\n'))
         samparser->curr.line[l--] = '\0';
 
     char *c = samparser->curr.qname = samparser->curr.line;
-    int f = 1, sfc = 1, ifc = 0;
+    int f = 1;
 
     while (*c) {
         if (*c == '\t') {
@@ -125,7 +126,8 @@ static void samparser_parse(samparser_t *samparser)
 bool samparser_next(samparser_t *samparser)
 {
     // Try to read and parse next line
-    if (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
+    if (fgets(samparser->curr.line, sizeof(samparser->curr.line),
+              samparser->fp)) {
         if (*(samparser->curr.line) == '@')
             tsc_error("Tried to read SAM record but found header line\n");
         else
