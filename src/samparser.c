@@ -1,14 +1,25 @@
-/*
- * Copyright (c) 2015 Institut fuer Informationsverarbeitung (TNT)
- * Contact: Jan Voges <jvoges@tnt.uni-hannover.de>
- *
- * This file is part of tsc.
- */
+//
+// Copyright (c) 2015
+// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
+// Contact: Jan Voges <voges@tnt.uni-hannover.de>
+//
 
-/*
- * This SAM parser follows the principles established in the SAM parser from
- * DeeZ.
- */
+//
+// This file is part of tsc.
+//
+// Tsc is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tsc is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with tsc. If not, see <http://www.gnu.org/licenses/>
+//
 
 /*
  * Copyright (c) 2013, 2014, Simon Fraser University, Indiana University
@@ -42,11 +53,11 @@
 #include "samparser.h"
 #include <string.h>
 
-static void samparser_init(samparser_t* samparser, FILE* fp)
+static void samparser_init(samparser_t *samparser, FILE *fp)
 {
     samparser->fp = fp;
 
-    /* Read the SAM header. */
+    // Read the SAM header
     while (fgets(samparser->curr.line, sizeof(samparser->curr.line),
                  samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
@@ -59,59 +70,66 @@ static void samparser_init(samparser_t* samparser, FILE* fp)
     }
 }
 
-samparser_t* samparser_new(FILE* fp)
+samparser_t * samparser_new(FILE *fp)
 {
-    samparser_t* samparser = (samparser_t*)tsc_malloc(sizeof(samparser_t));
+    samparser_t *samparser = (samparser_t *)tsc_malloc(sizeof(samparser_t));
     samparser->head = str_new();
     samparser_init(samparser, fp);
     return samparser;
 }
 
-void samparser_free(samparser_t* samparser)
+void samparser_free(samparser_t *samparser)
 {
     if (samparser != NULL) {
         str_free(samparser->head);
         free(samparser);
         samparser = NULL;
-    } else { /* samparser == NULL */
-        tsc_error("Tried to free NULL pointer.\n");
+    } else {
+        tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void samparser_parse(samparser_t* samparser)
+static void samparser_parse(samparser_t *samparser)
 {
     size_t l = strlen(samparser->curr.line) - 1;
 
     while (l && (samparser->curr.line[l] == '\r'
-                 || samparser->curr.line[l] == '\n'))
+               || samparser->curr.line[l] == '\n'))
         samparser->curr.line[l--] = '\0';
 
-    char* c = samparser->curr.str_fields[0] = samparser->curr.line;
-    int f = 1, sfc = 1, ifc = 0;
+    char *c = samparser->curr.qname = samparser->curr.line;
+    int f = 1;
 
     while (*c) {
         if (*c == '\t') {
-            if (f == 1 || f == 3 || f == 4 || f == 7 || f == 8)
-                samparser->curr.int_fields[ifc++] = atoi(c + 1);
-            else
-                samparser->curr.str_fields[sfc++] = c + 1;
+            if (f ==  1) samparser->curr.flag  = atoi(c + 1);
+            if (f ==  2) samparser->curr.rname = c + 1;
+            if (f ==  3) samparser->curr.pos   = atoi(c + 1);
+            if (f ==  4) samparser->curr.mapq  = atoi(c + 1);
+            if (f ==  5) samparser->curr.cigar = c + 1;
+            if (f ==  6) samparser->curr.rnext = c + 1;
+            if (f ==  7) samparser->curr.pnext = atoi(c + 1);
+            if (f ==  8) samparser->curr.tlen  = atoi(c + 1);
+            if (f ==  9) samparser->curr.seq   = c + 1;
+            if (f == 10) samparser->curr.qual  = c + 1;
+            if (f == 11) samparser->curr.opt   = c + 1;
             f++;
             *c = '\0';
-            if (f == 12) { break; }
+            if (f == 12) break;
         }
         c++;
     }
 
-    if (f == 11) samparser->curr.str_fields[sfc++] = c;
+    if (f == 11) samparser->curr.opt = c;
 }
 
-bool samparser_next(samparser_t* samparser)
+bool samparser_next(samparser_t *samparser)
 {
-    /* Try to read and parse next line. */
+    // Try to read and parse next line
     if (fgets(samparser->curr.line, sizeof(samparser->curr.line),
               samparser->fp)) {
         if (*(samparser->curr.line) == '@')
-            tsc_error("Tried to read SAM record but found header line.\n");
+            tsc_error("Tried to read SAM record but found header line\n");
         else
             samparser_parse(samparser);
     } else {

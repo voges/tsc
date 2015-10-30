@@ -1,14 +1,21 @@
-EXEC        = tsc
-ALIAS       = detsc
-CC          = gcc
-CFLAGS      = -Wall -D _GNU_SOURCE
-INCLUDES    = #-I.
-LIBRARIES   = #-L.
-LDFLAGS     = -lm
-SOURCEDIR   = .
-SOURCES    := $(shell find $(SOURCEDIR) -name '*.c') # find C files recursively
-OBJECTS     = $(SOURCES:.c=.o)
-LN_SF       = ln -sf
+EXEC       = tsc
+ALIAS      = detsc
+CC         = gcc
+CWARN      = -Wall #-Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wundef -Wconversion
+CFLAGS     = -D _GNU_SOURCE $(CWARN) #-std=c99
+INCLUDES   = #-I.
+LIBRARIES  = #-L.
+LDFLAGS    = -lm
+
+TSC_SRC     = common.c samcodec.c samparser.c tsc.c tscfmt.c tsclib.c
+CODECS_SRC := $(shell find codecs -name '*.c')
+TVC_SRC    := $(shell find tvclib -name '*.c')
+RANGE_SRC  := $(shell find range -name '*.c')
+RICE_SRC   := $(shell find rice -name '*.c')
+SOURCES = $(TSC_SRC) $(CODECS_SRC) $(TVC_SRC) $(RANGE_SRC) $(RICE_SRC)
+
+OBJECTS = $(SOURCES:.c=.o)
+LN_SF   = ln -sf
 
 .PHONY: default all debug clean
 
