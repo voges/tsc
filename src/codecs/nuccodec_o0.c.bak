@@ -49,7 +49,7 @@ static void nucenc_init(nucenc_t *nucenc)
 
 nucenc_t * nucenc_new(void)
 {
-    nucenc_t* nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
+    nucenc_t *nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
     nucenc->tmp = str_new();
     nucenc_init(nucenc);
     return nucenc;

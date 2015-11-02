@@ -24,14 +24,13 @@
 #ifndef TSC_NUCCODEC_O1_H
 #define TSC_NUCCODEC_O1_H
 
-#include "../tvclib/str.h"
-#include <stdint.h>
-#include <stdio.h>
-
 #include "../tvclib/bbuf.h"
 #include "../tvclib/cbufint64.h"
 #include "../tvclib/cbufstr.h"
+#include "../tvclib/str.h"
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #define NUCCODEC_WINDOW_SZ 10
 
@@ -39,16 +38,16 @@
 // -----------------------------------------------------------------------------
 
 typedef struct nucenc_t_ {
-    size_t blkl_n; /* no. of records processed in the curr block        */
-    bool first;    /* 'false', if first line has not been processed yet */
+    size_t in_sz;    // Accumulated input size
+    size_t rec_cnt;  // No. of records processed in the current block
+    size_t grec_cnt; // Total no. of records processed
+    bool first;      // 'false', if first line has not been processed yet
+    str_t  *tmp;     // Temporal storage for e.g. prediction residues
 
-    cbufint64_t* pos_cbuf;    /* circular buffer for POSitions          */
-    cbufstr_t*   cigar_cbuf;  /* circular buffer for CIGARs             */
-    cbufstr_t*   exp_cbuf;    /* circular buffer for EXPanded sequences */
-
-    bbuf_t*      pos_residues;     /* position prediction residues */
-    str_t*       cigar_residues;   /* CIGAR prediction residues    */
-    str_t*       seq_residues;     /* sequence prediction residues */
+    // Circular buffers
+    cbufint64_t *neo_cbuf;
+    cbufint64_t *pos_cbuf;
+    cbufstr_t   *exs_cbuf;
 } nucenc_t;
 
 nucenc_t * nucenc_new(void);
@@ -68,11 +67,11 @@ typedef struct nucdec_t_ {
 
 nucdec_t * nucdec_new(void);
 void nucdec_free(nucdec_t *nucdec);
-void nucdec_decode_block(nucdec_t *nucdec,
-                         FILE     *fp,
-                         uint32_t *pos,
-                         str_t    **cigar,
-                         str_t    **seq);
+size_t nucdec_decode_block(nucdec_t *nucdec,
+                           FILE     *fp,
+                           uint32_t *pos,
+                           str_t    **cigar,
+                           str_t    **seq);
 
 #endif // TSC_NUCCODEC_O1_H
 

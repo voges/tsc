@@ -26,8 +26,8 @@
 
 #include "samparser.h"
 #include "codecs/auxcodec.h"
-#include "codecs/nuccodec_o0.h"
-//#include "codecs/nuccodec_o1.h"
+//#include "codecs/nuccodec_o0.h"
+#include "codecs/nuccodec_o1.h"
 #include "codecs/qualcodec.h"
 #include "tvclib/str.h"
 #include <stdio.h>
