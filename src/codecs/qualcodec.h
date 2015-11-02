@@ -51,7 +51,7 @@ typedef struct qualdec_t_ {
 
 qualdec_t * qualdec_new(void);
 void qualdec_free(qualdec_t *qualdec);
-void qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual);
+size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual);
 
 #endif // TSC_QUALCODEC_H
 

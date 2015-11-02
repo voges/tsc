@@ -76,11 +76,11 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
     ret += fread_uint64(fp, &(tscfh->sblk_n));
 
     // Sanity check
-    if (strncmp(tscfh->magic, "tsc", 3))
+    if (strncmp((const char *)tscfh->magic, "tsc", 3))
         tsc_error("File magic does not match\n");
     if (!(tscfh->flags & 0x1))
         tsc_error("File seems not to contain data in SAM format\n");
-    if (strncmp(tsc_version->s, tscfh->ver, tsc_version->len))
+    if (strncmp(tsc_version->s, (const char *)tscfh->ver, tsc_version->len))
         tsc_error("File was compressed with another version\n");
     if (!(tscfh->rec_n))
         tsc_error("File does not contain any records\n");
@@ -163,8 +163,10 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
 
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
 {
-    if (tscsh->data_sz == 0 || tscsh->data == NULL)
-        tsc_error("Tried to write empty SAM header\n");
+    if (tscsh->data_sz == 0 || tscsh->data == NULL) {
+        tsc_warning("Empty SAM header\n");
+        return 0;
+    }
 
     size_t ret = 0;
 

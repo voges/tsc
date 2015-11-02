@@ -21,8 +21,8 @@
 // along with tsc. If not, see <http://www.gnu.org/licenses/>
 //
 
-#ifndef TSC_AUXCODEC_H
-#define TSC_AUXCODEC_H
+#ifndef TSC_NUCCODEC_O0_H
+#define TSC_NUCCODEC_O0_H
 
 #include "../tvclib/str.h"
 #include <stdint.h>
@@ -31,44 +31,34 @@
 // Encoder
 // -----------------------------------------------------------------------------
 
-typedef struct auxenc_t_ {
+typedef struct nucenc_t_ {
     size_t in_sz;   // Accumulated input size
     size_t rec_cnt; // No. of records processed in the current block
     str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} auxenc_t;
+} nucenc_t;
 
-auxenc_t * auxenc_new(void);
-void auxenc_free(auxenc_t *auxenc);
-void auxenc_add_record(auxenc_t       *auxenc,
-                       const char     *qname,
-                       const uint16_t flag,
-                       const char     *rname,
-                       const uint8_t  mapq,
-                       const char     *rnext,
-                       const uint32_t pnext,
-                       const int64_t  tlen,
-                       const char     *opt);
-size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp);
+nucenc_t * nucenc_new(void);
+void nucenc_free(nucenc_t *nucenc);
+void nucenc_add_record(nucenc_t       *nucenc,
+                       const uint32_t pos,
+                       const char     *cigar,
+                       const char     *seq);
+size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp);
 
 // Decoder
 // -----------------------------------------------------------------------------
 
-typedef struct auxdec_t_ {
+typedef struct nucdec_t_ {
     size_t out_sz; // Accumulated output size
-} auxdec_t;
+} nucdec_t;
 
-auxdec_t * auxdec_new(void);
-void auxdec_free(auxdec_t *auxdec);
-size_t auxdec_decode_block(auxdec_t *auxdec,
+nucdec_t * nucdec_new(void);
+void nucdec_free(nucdec_t *nucdec);
+size_t nucdec_decode_block(nucdec_t *nucdec,
                            FILE     *fp,
-                           str_t    **qname,
-                           uint16_t *flag,
-                           str_t    **rname,
-                           uint8_t  *mapq,
-                           str_t    **rnext,
-                           uint32_t *pnext,
-                           int64_t  *tlen,
-                           str_t    **opt);
+                           uint32_t *pos,
+                           str_t    **cigar,
+                           str_t    **seq);
 
-#endif // TSC_AUXCODEC_H
+#endif // TSC_NUCCODEC_O0_H
 

@@ -198,7 +198,7 @@ static size_t auxdec_decode(auxdec_t      *auxdec,
     size_t ret = 0;
     size_t i = 0;
     size_t line = 0;
-    unsigned char* cstr = tmp;
+    unsigned char *cstr = tmp;
     unsigned int idx = 0;
 
     for (i = 0; i < tmp_sz; i++) {
@@ -259,16 +259,16 @@ static size_t auxdec_decode(auxdec_t      *auxdec,
     return ret;
 }
 
-void auxdec_decode_block(auxdec_t *auxdec,
-                         FILE     *fp,
-                         str_t    **qname,
-                         uint16_t *flag,
-                         str_t    **rname,
-                         uint8_t  *mapq,
-                         str_t    **rnext,
-                         uint32_t *pnext,
-                         int64_t  *tlen,
-                         str_t    **opt)
+size_t auxdec_decode_block(auxdec_t *auxdec,
+                           FILE     *fp,
+                           str_t    **qname,
+                           uint16_t *flag,
+                           str_t    **rname,
+                           uint8_t  *mapq,
+                           str_t    **rnext,
+                           uint32_t *pnext,
+                           int64_t  *tlen,
+                           str_t    **opt)
 {
     unsigned char blk_id[8];
     uint64_t      rec_cnt;
@@ -283,6 +283,13 @@ void auxdec_decode_block(auxdec_t *auxdec,
     fread_uint64(fp, &data_crc);
     data = (unsigned char *)tsc_malloc((size_t)data_sz);
     fread_buf(fp, data, data_sz);
+
+    // Compute tsc block size
+    size_t ret = sizeof(blk_id)
+               + sizeof(rec_cnt)
+               + sizeof(data_sz)
+               + sizeof(data_crc)
+               + data_sz;
 
     // Check CRC64
     if (crc64(data, data_sz) != data_crc)
@@ -313,5 +320,7 @@ void auxdec_decode_block(auxdec_t *auxdec,
              (double)auxdec->out_sz / (double)data_sz * 100);
 
     auxdec_reset(auxdec);
+
+    return ret;
 }
 

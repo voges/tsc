@@ -164,7 +164,7 @@ static size_t qualdec_decode(qualdec_t     *qualdec,
     return ret;
 }
 
-void qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
+size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
 {
     unsigned char blk_id[8];
     uint64_t      rec_cnt;
@@ -179,6 +179,13 @@ void qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
     fread_uint64(fp, &data_crc);
     data = (unsigned char *)tsc_malloc((size_t)data_sz);
     fread_buf(fp, data, data_sz);
+
+    // Compute tsc block size
+    size_t ret = sizeof(blk_id)
+               + sizeof(rec_cnt)
+               + sizeof(data_sz)
+               + sizeof(data_crc)
+               + data_sz;
 
     // Check CRC64
     if (crc64(data, data_sz) != data_crc)
@@ -199,5 +206,7 @@ void qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
              (double)qualdec->out_sz / (double)data_sz * 100);
 
     qualdec_reset(qualdec);
+
+    return ret;
 }
 

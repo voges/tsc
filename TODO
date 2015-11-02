@@ -1,4 +1,0 @@
-- Include mapping quality into 'nuccodec'
-- Check for memory leaks with Valgrind
-- Include zlib
-

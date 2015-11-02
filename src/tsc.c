@@ -264,6 +264,7 @@ int main(int argc, char *argv[])
         // Invoke decompressor
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "w");
+        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         samdec_t * samdec = samdec_new(tsc_in_fp, tsc_out_fp);
         samdec_decode(samdec);
         samdec_free(samdec);

@@ -137,27 +137,83 @@ static void samenc_print_stats(const size_t  *sam_sz,
                         + tsc_sz[TSC_AUX];
 
     tsc_log("\n"
-            "\tCompression Statistics:\n"
-            "\t-----------------------\n"
-            "\tNumber of records: %12zu\n"
-            "\tNumber of blocks : %12zu\n"
-            "\tSpeed (MiB/s)    : %12.2f\n"
-            "\tTsc file size    : %12zu (%6.2f%%)\n"
-            "\t  File header    : %12zu (%6.2f%%)\n"
-            "\t  SAM header     : %12zu (%6.2f%%)\n"
-            "\t  Block header(s): %12zu (%6.2f%%)\n"
-            "\t  Aux            : %12zu (%6.2f%%)\n"
-            "\t  Nuc            : %12zu (%6.2f%%)\n"
-            "\t  Qual           : %12zu (%6.2f%%)\n"
-            "\tCompression ratios         read /      written\n"
-            "\t  Total          : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Aux            : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Nuc            : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual           : %12zu / %12zu (%6.2f%%)\n"
+            "\tStatistics:\n"
+            "\t-----------\n"
+            "\tNumber of records  : %12zu\n"
+            "\tNumber of blocks   : %12zu\n"
+            "\tSpeed (MiB/s)      : %12.2f\n"
+            "\n"
+            "\tSAM file size      : %12zu (%6.2f%%)\n"
+            "\t  QNAME            : %12zu (%6.2f%%)\n"
+            "\t  FLAG             : %12zu (%6.2f%%)\n"
+            "\t  RNAME            : %12zu (%6.2f%%)\n"
+            "\t  POS              : %12zu (%6.2f%%)\n"
+            "\t  MAPQ             : %12zu (%6.2f%%)\n"
+            "\t  CIGAR            : %12zu (%6.2f%%)\n"
+            "\t  RNEXT            : %12zu (%6.2f%%)\n"
+            "\t  PNEXT            : %12zu (%6.2f%%)\n"
+            "\t  TLEN             : %12zu (%6.2f%%)\n"
+            "\t  SEQ              : %12zu (%6.2f%%)\n"
+            "\t  QUAL             : %12zu (%6.2f%%)\n"
+            "\t  OPT              : %12zu (%6.2f%%)\n"
+            "\t  CTRL (\\t, \\n)    : %12zu (%6.2f%%)\n"
+            "\t  HEAD (SAM header): %12zu (%6.2f%%)\n"
+            "\n"
+            "\tTsc file size      : %12zu (%6.2f%%)\n"
+            "\t  File header      : %12zu (%6.2f%%)\n"
+            "\t  SAM header       : %12zu (%6.2f%%)\n"
+            "\t  Block header(s)  : %12zu (%6.2f%%)\n"
+            "\t  Aux              : %12zu (%6.2f%%)\n"
+            "\t  Nuc              : %12zu (%6.2f%%)\n"
+            "\t  Qual             : %12zu (%6.2f%%)\n"
+            "\n"
+            "\tCompression ratios            SAM /          tsc\n"
+            "\t  Total            : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Aux              : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Nuc              : %12zu / %12zu (%6.2f%%)\n"
+            "\t  Qual             : %12zu / %12zu (%6.2f%%)\n"
+            "\n"
+            "\tTiming\n"
+            "\tTotal time elapsed : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tCoding             : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tBlock(s)           : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\tRemaining          : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n",
             tscfh->rec_n,
             tscfh->blk_n,
             (sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
+
+            sam_total_sz,
+            (100 * (double)sam_total_sz / (double)sam_total_sz),
+            sam_sz[SAM_QNAME],
+            (100 * (double)sam_sz[SAM_QNAME] / (double)sam_total_sz),
+            sam_sz[SAM_FLAG],
+            (100 * (double)sam_sz[SAM_FLAG] / (double)sam_total_sz),
+            sam_sz[SAM_RNAME],
+            (100 * (double)sam_sz[SAM_RNAME] / (double)sam_total_sz),
+            sam_sz[SAM_POS],
+            (100 * (double)sam_sz[SAM_POS] / (double)sam_total_sz),
+            sam_sz[SAM_MAPQ],
+            (100 * (double)sam_sz[SAM_MAPQ] / (double)sam_total_sz),
+            sam_sz[SAM_CIGAR],
+            (100 * (double)sam_sz[SAM_CIGAR] / (double)sam_total_sz),
+            sam_sz[SAM_RNEXT],
+            (100 * (double)sam_sz[SAM_RNEXT] / (double)sam_total_sz),
+            sam_sz[SAM_PNEXT],
+            (100 * (double)sam_sz[SAM_PNEXT] / (double)sam_total_sz),
+            sam_sz[SAM_TLEN],
+            (100 * (double)sam_sz[SAM_TLEN] / (double)sam_total_sz),
+            sam_sz[SAM_SEQ],
+            (100 * (double)sam_sz[SAM_SEQ] / (double)sam_total_sz),
+            sam_sz[SAM_QUAL],
+            (100 * (double)sam_sz[SAM_QUAL] / (double)sam_total_sz),
+            sam_sz[SAM_OPT],
+            (100 * (double)sam_sz[SAM_OPT] / (double)sam_total_sz),
+            sam_sz[SAM_CTRL],
+            (100 * (double)sam_sz[SAM_CTRL] / (double)sam_total_sz),
+            sam_sz[SAM_HEAD],
+            (100 * (double)sam_sz[SAM_HEAD] / (double)sam_total_sz),
+
             tsc_total_sz,
             (100 * (double)tsc_total_sz / (double)tsc_total_sz),
             tsc_sz[TSC_FH],
@@ -172,6 +228,7 @@ static void samenc_print_stats(const size_t  *sam_sz,
             (100 * (double)tsc_sz[TSC_NUC] / (double)tsc_total_sz),
             tsc_sz[TSC_QUAL],
             (100 * (double)tsc_sz[TSC_QUAL] / (double)tsc_total_sz),
+
             sam_total_sz,
             tsc_total_sz,
             (100*(double)tsc_total_sz/(double)sam_total_sz),
@@ -183,16 +240,8 @@ static void samenc_print_stats(const size_t  *sam_sz,
             (100*(double)tsc_sz[TSC_NUC]/(double)sam_nuc_sz),
             sam_qual_sz,
             tsc_sz[TSC_QUAL],
-            (100*(double)tsc_sz[TSC_QUAL]/(double)sam_qual_sz));
+            (100*(double)tsc_sz[TSC_QUAL]/(double)sam_qual_sz),
 
-    tsc_log("\n"
-            "\tTiming Statistics:\n"
-            "\t------------------\n"
-            "\tTotal time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tCoding            : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tBlock(s)          : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\tRemaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\n",
             et[ET_TOT],
             (double)et[ET_TOT] / (double)1000000,
             (100*(double)et[ET_TOT]/(double)et[ET_TOT]),
@@ -437,24 +486,24 @@ void samdec_decode(samdec_t *samdec)
 
         // Decode sub-blocks
         gettimeofday(&tv0, NULL);
-        auxdec_decode_block(samdec->auxdec,
-                            samdec->ifp,
-                            qname,
-                            flag,
-                            rname,
-                            mapq,
-                            rnext,
-                            pnext,
-                            tlen,
-                            opt);
-        nucdec_decode_block(samdec->nucdec,
-                            samdec->ifp,
-                            pos,
-                            cigar,
-                            seq);
-        qualdec_decode_block(samdec->qualdec,
-                             samdec->ifp,
-                             qual);
+        tsc_sz[TSC_AUX] += auxdec_decode_block(samdec->auxdec,
+                                               samdec->ifp,
+                                               qname,
+                                               flag,
+                                               rname,
+                                               mapq,
+                                               rnext,
+                                               pnext,
+                                               tlen,
+                                               opt);
+        tsc_sz[TSC_NUC] += nucdec_decode_block(samdec->nucdec,
+                                               samdec->ifp,
+                                               pos,
+                                               cigar,
+                                               seq);
+        tsc_sz[TSC_QUAL] += qualdec_decode_block(samdec->qualdec,
+                                                 samdec->ifp,
+                                                 qual);
         gettimeofday(&tv1, NULL);
         et[ET_BLK] += tvdiff(tv0, tv1);
 
