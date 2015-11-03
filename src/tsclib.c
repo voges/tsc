@@ -70,13 +70,15 @@ void tsc_error(const char *fmt, ...)
 
 void tsc_warning(const char *fmt, ...)
 {
-    va_list args;
-    va_start(args, fmt);
-    char *msg;
-    vasprintf(&msg, fmt, args);
-    va_end(args);
-    fprintf(stderr, "%s: warning: %s", tsc_prog_name->s, msg);
-    free(msg);
+    if (tsc_warn) {
+        va_list args;
+        va_start(args, fmt);
+        char *msg;
+        vasprintf(&msg, fmt, args);
+        va_end(args);
+        fprintf(stderr, "%s: warning: %s", tsc_prog_name->s, msg);
+        free(msg);
+    }
 }
 
 void tsc_log(const char *fmt, ...)

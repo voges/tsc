@@ -101,6 +101,13 @@ void str_append_char(str_t *str, const char c)
     str->s[str->len] = '\0';
 }
 
+void str_append_num(str_t *str, const int64_t num)
+{
+    char num_cstr[101];
+    snprintf(num_cstr, sizeof(num_cstr), "%"PRId64, num);
+    str_append_cstr(str, num_cstr);
+}
+
 void str_copy_str(str_t *dest, const str_t *src)
 {
     str_clear(dest);

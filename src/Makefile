@@ -5,7 +5,7 @@ CWARN      = -Wall #-Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align 
 CFLAGS     = -D _GNU_SOURCE $(CWARN) #-std=c99
 INCLUDES   = #-I.
 LIBRARIES  = #-L.
-LDFLAGS    = -lm
+LDFLAGS    = -lm -lz
 
 TSC_SRC     = common.c samcodec.c samparser.c tsc.c tscfmt.c tsclib.c
 CODECS_SRC := $(shell find codecs -name '*.c')

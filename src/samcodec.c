@@ -252,7 +252,7 @@ static void samenc_print_stats(const size_t  *sam_sz,
             (double)et[ET_BLK] / (double)1000000,
             (100*(double)et[ET_BLK]/(double)et[ET_TOT]),
             et[ET_REM],
-            (double)(ET_REM) / (double)1000000,
+            (double)et[ET_REM] / (double)1000000,
             (100*(double)et[ET_REM] / (double)et[ET_TOT]));
 }
 

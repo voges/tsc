@@ -38,6 +38,7 @@ static const char *opt_output = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
 static bool opt_flag_verbose = false;
+static bool opt_flag_warn = false;
 
 // Initializing global vars from 'tsclib.h'
 str_t *tsc_prog_name = NULL;
@@ -49,6 +50,7 @@ FILE *tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 bool tsc_verbose = false;
+bool tsc_warn = false;
 
 static void print_version(void)
 {
@@ -82,6 +84,7 @@ static void print_help(void)
     printf("  -s, --stats       Print (de-)compression statistics\n");
     printf("  -v, --verbose     Verbose output\n");
     printf("  -V, --version     Display program version\n");
+    printf("  -w, --warn        Print warnings\n");
     printf("\n");
 }
 
@@ -98,10 +101,11 @@ static void parse_options(int argc, char *argv[])
         { "stats",      no_argument,       NULL, 's'},
         { "verbose",    no_argument,       NULL, 'v'},
         { "version",    no_argument,       NULL, 'V'},
+        { "warn",       no_argument,       NULL, 'w'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "dfhio:svV";
+    const char *short_options = "dfhio:svVw";
 
     do {
         int opt_idx = 0;
@@ -134,6 +138,9 @@ static void parse_options(int argc, char *argv[])
         case 'V':
             print_version();
             exit(EXIT_SUCCESS);
+            break;
+        case 'w':
+            opt_flag_warn = true;
             break;
         default:
             exit(EXIT_FAILURE);
@@ -198,6 +205,7 @@ int main(int argc, char *argv[])
     str_copy_cstr(tsc_in_fname, opt_input);
     if (opt_flag_stats) tsc_stats = true;
     if (opt_flag_verbose) tsc_verbose = true;
+    if (opt_flag_warn) tsc_warn = true;
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // All possible options are legal in this mode
@@ -227,7 +235,7 @@ int main(int argc, char *argv[])
 
         if (!access((const char *)tsc_out_fname->s, F_OK | W_OK)
                 && opt_flag_force == false) {
-            tsc_warning("Output file already exists: %s\n", tsc_out_fname->s);
+            tsc_error("Output file already exists: %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 
@@ -257,7 +265,7 @@ int main(int argc, char *argv[])
 
         if (!access((const char *)tsc_out_fname->s, F_OK | W_OK)
                 && opt_flag_force == false) {
-            tsc_warning("Output file already exists: %s\n", tsc_out_fname->s);
+            tsc_error("Output file already exists: %s\n", tsc_out_fname->s);
             exit(EXIT_FAILURE);
         }
 

@@ -60,6 +60,7 @@ extern FILE *tsc_out_fp;
 extern tsc_mode_t tsc_mode;
 extern bool tsc_stats;
 extern bool tsc_verbose;
+extern bool tsc_warn;
 
 void tsc_cleanup(void);
 void tsc_abort(void);

@@ -35,6 +35,7 @@
 #include "../tvclib/crc64.h"
 #include "../tvclib/frw.h"
 #include "../tsclib.h"
+#include "zlib.h"
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>
@@ -95,13 +96,6 @@ static void nucenc_reset(nucenc_t *nucenc)
     nucenc->first = false;
 }
 
-static void str_append_num(str_t *str, int64_t num)
-{
-    char num_cstr[101];
-    snprintf(num_cstr, sizeof(num_cstr), "%zu", num);
-    str_append_cstr(str, num_cstr);
-}
-
 static void nucenc_expand(str_t          *stogy,
                           str_t          *exs,
                           const char     *cigar,
@@ -136,6 +130,7 @@ static void nucenc_expand(str_t          *stogy,
         case 'I':
         case 'S':
             str_append_cstrn(stogy, &seq[seq_idx], op_len);
+            // These are -not- added to EXS
             seq_idx += op_len;
             break;
         case 'D':
@@ -146,8 +141,8 @@ static void nucenc_expand(str_t          *stogy,
         }
         case 'H':
         case 'P': {
-            size_t i = 0;
-            for (i = 0; i < op_len; i++) { str_append_char(exs, '-'); }
+            //size_t i = 0;
+            //for (i = 0; i < op_len; i++) { str_append_char(exs, '-'); }
             break;
         }
         default: tsc_error("Bad CIGAR string: %s\n", cigar);
@@ -156,25 +151,53 @@ static void nucenc_expand(str_t          *stogy,
         op_len = 0;
     }
     DEBUG("stogy: %s", stogy->s);
+    DEBUG("exs: %s", exs->s);
 }
 
-static size_t nucenc_diff(const uint32_t pos,
+static size_t nucenc_diff(uint32_t       *poff,
+                          const uint32_t pos,
                           str_t          *stogy,
-                          const str_t    *exs,
+                          const char     *exs,
                           const uint32_t pos_ref,
                           const char     *exs_ref)
 {
-    size_t edit_n = 0; // Number of indels
-
     // Compute and check position offset
-    int64_t poff = pos - pos_ref;
-    if (poff < 0) tsc_error("SAM file not sorted\n");
-    if (poff > strlen(exs_ref)) tsc_error("poff too large\n");
+    *poff = pos - pos_ref;
+    if (*poff < 0) tsc_error("SAM file not sorted\n");
+    if (*poff > strlen(exs_ref)) {
+        tsc_warning("poff too large\n");
+        str_append_cstr(stogy, "x");
+        return stogy->len;
+    }
 
-    // Iterate through STOGY and check for indels
+    //DEBUG("Comparing:");
+    //printf("%s\n", exs_ref);
+    //int i = 0;
+    //for (i = 0; i < *poff; i++) printf(" ");
+    //printf("%s\n", exs);
 
+    str_append_cstr(stogy, ":");
 
-    return edit_n;
+    // Iterate through EXS and check for indels
+    size_t idx = 0;
+    size_t idx_ref = *poff;
+    while (exs[idx] && exs_ref[idx_ref]) {
+        if (exs[idx] != exs_ref[idx_ref]) {
+            str_append_num(stogy, idx);
+            str_append_char(stogy, exs[idx]);
+        }
+        idx++;
+        idx_ref++;
+    }
+
+    // Append trailing sequence
+    while (exs[idx]) {
+        str_append_char(stogy, exs[idx++]);
+    }
+
+    //printf("%s\n", stogy->s);
+
+    return stogy->len;
 }
 
 void nucenc_add_record(nucenc_t       *nucenc,
@@ -182,16 +205,28 @@ void nucenc_add_record(nucenc_t       *nucenc,
                        const char     *cigar,
                        const char     *seq)
 {
+    nucenc->in_sz += sizeof(pos) + strlen(cigar) + strlen(seq);
+
     // We assume five possible symbols for seq:
     //   A=65, C=67, G=71, N=78, T=84 or a=97, c=99, g=103, n=110, t=116
 
+    DEBUG("%d", pos);
+    DEBUG("%s", cigar);
+    DEBUG("%s", seq);
+
     // Sanity check
-    if (!pos)
-        tsc_error("POSition missing in line %zu\n", nucenc->grec_cnt);
-    if (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0'))
-        tsc_error("CIGAR missing in line %zu\n", nucenc->grec_cnt);
-    if (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))
-        tsc_error("SEQ missing in line %zu\n", nucenc->grec_cnt);
+    if (!pos) {
+        tsc_warning("POSition missing in line %zu\n", nucenc->grec_cnt);
+        return;
+    }
+    if (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) {
+        tsc_warning("CIGAR missing in line %zu\n", nucenc->grec_cnt);
+        return;
+    }
+    if (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0')) {
+        tsc_warning("SEQ missing in line %zu\n", nucenc->grec_cnt);
+        return;
+    }
 
     // Convert SEQ to uppercase
     //size_t i = 0;
@@ -203,16 +238,16 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_t* exs = str_new();
         nucenc_expand(stogy, exs, cigar, seq);
 
+        cbufint64_push(nucenc->neo_cbuf, strlen(cigar));
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
 
-        str_append_char(nucenc->tmp, pos & 0xF000);
-        str_append_char(nucenc->tmp, pos & 0x0F00);
-        str_append_char(nucenc->tmp, pos & 0x00F0);
-        str_append_char(nucenc->tmp, pos & 0x000F);
+        str_append_num(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
-        str_append_cstr(nucenc->tmp, "\n");
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_cstr(nucenc->tmp, seq);
+        str_append_cstr(nucenc->tmp, "~");
 
         str_free(stogy);
         str_free(exs);
@@ -248,32 +283,47 @@ void nucenc_add_record(nucenc_t       *nucenc,
     str_t   *exs_ref = cbufstr_get(nucenc->exs_cbuf, cbuf_idx_best);
 
     // 3) Compute changes (indels) from ref to curr and extend STOGY
-    size_t neo = nucenc_diff(pos, stogy, exs, pos_ref, exs_ref->s);
+    uint32_t poff;
+    size_t neo = nucenc_diff(&poff, pos, stogy, exs->s, pos_ref, exs_ref->s);
 
-    // 4) Push NEO, POFF, STOGY, EXS into circular buffer
+    // 4) Push NEO, POS, STOGY, EXS into circular buffer
     cbufint64_push(nucenc->neo_cbuf, neo);
     cbufint64_push(nucenc->pos_cbuf, pos);
     cbufstr_push(nucenc->exs_cbuf, exs->s);
 
     // 5) Write STOGY
+    str_append_num(nucenc->tmp, poff);
+    str_append_cstr(nucenc->tmp, ":");
     str_append_str(nucenc->tmp, stogy);
-    str_append_cstr(nucenc->tmp, "\n");
+    str_append_cstr(nucenc->tmp, "~");
+    DEBUG("%s", nucenc->tmp->s);
 
     str_free(stogy);
     str_free(exs);
 
     nucenc->rec_cnt++;
+    nucenc->grec_cnt++;
 }
 
 size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
 {
     size_t ret = 0;
 
-    // Compress block
+    // Compress block with range coder
+    //unsigned char *tmp = (unsigned char *)nucenc->tmp->s;
+    //unsigned int tmp_sz = (unsigned int)nucenc->tmp->len;
+    //unsigned int data_sz = 0;
+    //unsigned char *data = range_compress_o0(tmp, tmp_sz, &data_sz);
+
+    // Compress block with zlib
     unsigned char *tmp = (unsigned char *)nucenc->tmp->s;
     unsigned int tmp_sz = (unsigned int)nucenc->tmp->len;
-    unsigned int data_sz = 0;
-    unsigned char *data = range_compress_o0(tmp, tmp_sz, &data_sz);
+    Byte *data;
+    uLong data_sz = 100000*sizeof(int);
+    data = (Byte *)calloc((uInt)data_sz, 1);
+    int err = compress(data, &data_sz, (const Bytef *)tmp, (uLong)tmp_sz);
+    if (err != Z_OK) tsc_error("zlib failed to compress: %d\n", err);
+    // TODO: Clean this up
 
     // Compute CRC64
     uint64_t data_crc = crc64(data, data_sz);
@@ -370,7 +420,7 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
 
     // Decompress block
     unsigned int tmp_sz = 0;
-    unsigned char * tmp = range_decompress_o0(data, data_sz, &tmp_sz);
+    unsigned char *tmp = range_decompress_o0(data, data_sz, &tmp_sz);
     free(data);
 
     // Decode block
