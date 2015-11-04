@@ -271,7 +271,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_append_cstr(nucenc->tmp, "~");
 
         // Push NEO, POS, and EXS to circular buffer
-        cbufint64_push(nucenc->neo_cbuf, strlen(cigar));
+        cbufint64_push(nucenc->neo_cbuf, ALPHA*stogy->len);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
 
@@ -318,12 +318,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
     if (pos_off > exs_ref->len || pos_off < 0) {
         if (pos_off < 0) {
             tsc_warning("SAM file not sorted (line %zu)\n", nucenc->trec_cnt-1);
-            tsc_warning("Proceeding with new I-Frame\n");
-
-            // Clear circular buffer; start with new I-Frame
-            cbufint64_clear(nucenc->neo_cbuf);
-            cbufint64_clear(nucenc->pos_cbuf);
-            cbufstr_clear(nucenc->exs_cbuf);
         }
 
         if (pos_off > exs_ref->len) {
@@ -331,6 +325,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         }
 
         // 4a) Clear circular buffer; start with new I-Frame
+        tsc_warning("Proceeding with new I-Frame\n");
         cbufint64_clear(nucenc->neo_cbuf);
         cbufint64_clear(nucenc->pos_cbuf);
         cbufstr_clear(nucenc->exs_cbuf);
@@ -349,7 +344,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_append_str(nucenc->tmp, exs);
         str_append_cstr(nucenc->tmp, "~");
     } else {
-        // 4b) Compute changes (indels) from ref to curr
+        // 4b) Compute changes (SNPs) from ref to curr
         nucenc_diff(snp, trail, pos_off, exs->s, exs_ref->s);
 
         // 5b) Compute NEO
