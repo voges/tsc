@@ -383,13 +383,17 @@ void samenc_encode(samenc_t *samenc)
     tsc_sz[TSC_FH] = tscfh_write(tscfh, samenc->ofp);
     fseek(samenc->ofp, (long)0, SEEK_END);
 
+    // Print nuccodec summary
+    tsc_log("Nuccodec skipped %zu records\n", samenc->nucenc->tskip_cnt);
+    tsc_log("Nuccodec added %zu additional I-Frame(s)\n", samenc->nucenc->tpoff_cnt);
+
     // Print summary
     gettimeofday(&tt1, NULL);
     et[ET_TOT] = tvdiff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_COD] - et[ET_BLK];
-    tsc_vlog("Compressed %zu record(s)\n", tscfh->rec_n);
-    tsc_vlog("Wrote %zu block(s)\n", tscfh->blk_n);
-    tsc_vlog("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
+    tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
+    tsc_log("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
 
     // If selected, print detailed statistics
     if (tsc_stats) samenc_print_stats(sam_sz, tsc_sz, tscfh, et);

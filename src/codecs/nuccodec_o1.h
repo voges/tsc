@@ -32,17 +32,30 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define NUCCODEC_WINDOW_SZ 10
+#define WINDOW_SZ 10
+#define ALPHA 0.5
 
 // Encoder
 // -----------------------------------------------------------------------------
 
 typedef struct nucenc_t_ {
-    size_t in_sz;    // Accumulated input size
-    size_t rec_cnt;  // No. of records processed in the current block
-    size_t grec_cnt; // Total no. of records processed
-    bool first;      // 'false', if first line has not been processed yet
-    str_t  *tmp;     // Temporal storage for e.g. prediction residues
+    size_t in_sz;     // Accumulated input size
+    size_t rec_cnt;   // No. of records processed in the current block
+    size_t trec_cnt;  // Total # of records processed
+    bool first;       // 'false', if first line has not been processed yet
+    size_t skip_cnt;  // # of skipped records (POS, CIGAR, or SEQ missing) in the
+                      // current block
+    size_t tskip_cnt; // Total # of skipped records
+    size_t poff_cnt;  // # of I-Frames added to due large position offset
+    size_t tpoff_cnt; // Total # of added I-Frames
+    double stogy_mu;  // Mean STOGY length
+    double snp_mu;    // Mean SNP length
+    double trail_mu;  // Mean TRAIL length
+
+    str_t  *stat_fname; // File name for statistics file
+    FILE   *stat_fp;    // File pointer to statistics file
+
+    str_t  *tmp;      // Temporal storage for e.g. prediction residues
 
     // Circular buffers
     cbufint64_t *neo_cbuf;

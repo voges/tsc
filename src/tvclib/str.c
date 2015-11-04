@@ -101,11 +101,18 @@ void str_append_char(str_t *str, const char c)
     str->s[str->len] = '\0';
 }
 
-void str_append_num(str_t *str, const int64_t num)
+void str_append_int(str_t *str, const int64_t num)
 {
     char num_cstr[101];
     snprintf(num_cstr, sizeof(num_cstr), "%"PRId64, num);
     str_append_cstr(str, num_cstr);
+}
+
+void str_append_double2(str_t *str, const double dbl)
+{
+    char dbl_cstr[101];
+    snprintf(dbl_cstr, sizeof(dbl_cstr), "%.2f", dbl);
+    str_append_cstr(str, dbl_cstr);
 }
 
 void str_copy_str(str_t *dest, const str_t *src)

@@ -49,29 +49,66 @@ static void nucenc_init(nucenc_t* nucenc)
 {
     nucenc->in_sz = 0;
     nucenc->rec_cnt = 0;
-    nucenc->grec_cnt = 0;
+    nucenc->trec_cnt = 0;
     nucenc->first = false;
+    nucenc->skip_cnt = 0;
+    nucenc->tskip_cnt = 0;
+    nucenc->poff_cnt = 0;
+    nucenc->tpoff_cnt = 0;
+    nucenc->stogy_mu = 0.0;
+    nucenc->snp_mu = 0.0;
+    nucenc->trail_mu = 0.0;
+
+    // Open statistics file
+    str_append_str(nucenc->stat_fname, tsc_out_fname);
+    str_append_cstr(nucenc->stat_fname, ".nuc.csv");
+    nucenc->stat_fp = tsc_fopen((const char *)nucenc->stat_fname->s, "w");
+
+    // Write header for statistics file
+    str_t *stat = str_new();
+    str_append_cstr(stat, "poff_cnt");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat, "skip_cnt");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat, "rec_cnt");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat,"CR");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat, "stogy_mu");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat, "snp_mu");
+    str_append_cstr(stat, ",");
+    str_append_cstr(stat, "trail_mu");
+    str_append_cstr(stat, "\n");
+    fwrite_buf(nucenc->stat_fp, (const unsigned char *)stat->s, stat->len);
+    str_free(stat);
 }
 
 nucenc_t * nucenc_new(void)
 {
     nucenc_t *nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
 
+    nucenc->stat_fname = str_new();
     nucenc->tmp = str_new();
-    nucenc->neo_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
-    nucenc->pos_cbuf = cbufint64_new(NUCCODEC_WINDOW_SZ);
-    nucenc->exs_cbuf = cbufstr_new(NUCCODEC_WINDOW_SZ);
+    nucenc->neo_cbuf = cbufint64_new(WINDOW_SZ);
+    nucenc->pos_cbuf = cbufint64_new(WINDOW_SZ);
+    nucenc->exs_cbuf = cbufstr_new(WINDOW_SZ);
 
     nucenc_init(nucenc);
 
-    tsc_vlog("Nucenc window size: %d\n", NUCCODEC_WINDOW_SZ);
+    tsc_vlog("Nuccodec WINDOW_SZ: %d\n", WINDOW_SZ);
+    tsc_vlog("Nuccodec ALPHA: %.1f\n", ALPHA);
 
     return nucenc;
 }
 
 void nucenc_free(nucenc_t *nucenc)
 {
+    tsc_fclose(nucenc->stat_fp);
+    tsc_log("Wrote nuccodec statistics to %s\n", nucenc->stat_fname->s);
+
     if (nucenc != NULL) {
+        str_free(nucenc->stat_fname);
         str_free(nucenc->tmp);
         cbufint64_free(nucenc->neo_cbuf);
         cbufint64_free(nucenc->pos_cbuf);
@@ -90,21 +127,23 @@ static void nucenc_reset(nucenc_t *nucenc)
     cbufint64_clear(nucenc->neo_cbuf);
     cbufint64_clear(nucenc->pos_cbuf);
     cbufstr_clear(nucenc->exs_cbuf);
+    nucenc->stogy_mu = 0.0;
+    nucenc->snp_mu = 0.0;
+    nucenc->trail_mu = 0.0;
 
     nucenc->in_sz = 0;
     nucenc->rec_cnt = 0;
     nucenc->first = false;
+    nucenc->skip_cnt = 0;
+    nucenc->poff_cnt = 0;
 }
 
-static void nucenc_expand(str_t          *stogy,
-                          str_t          *exs,
-                          const char     *cigar,
-                          const char     *seq)
+static void nucenc_expand(str_t      *stogy,
+                          str_t      *exs,
+                          const char *cigar,
+                          const char *seq)
 
 {
-    //DEBUG("pos: %"PRIu64" cigar: %s", pos, cigar);
-    //DEBUG("seq: \t%s", seq);
-
     size_t cigar_idx = 0;
     size_t cigar_len = strlen(cigar);
     size_t op_len = 0; // Length of current CIGAR operation
@@ -117,32 +156,34 @@ static void nucenc_expand(str_t          *stogy,
             continue;
         }
 
-        str_append_num(stogy, op_len);
+        // Copy CIGAR part to STOGY
+        str_append_int(stogy, op_len);
         str_append_char(stogy, cigar[cigar_idx]);
 
         switch (cigar[cigar_idx]) {
         case 'M':
         case '=':
         case 'X':
+            // Add matching part to EXS
             str_append_cstrn(exs, &seq[seq_idx], op_len);
             seq_idx += op_len;
             break;
         case 'I':
         case 'S':
+            // Add inserted part to STOGY (-not- to EXS)
             str_append_cstrn(stogy, &seq[seq_idx], op_len);
-            // These are -not- added to EXS
             seq_idx += op_len;
             break;
         case 'D':
         case 'N': {
+            // Inflate EXS
             size_t i = 0;
             for (i = 0; i < op_len; i++) { str_append_char(exs, '?'); }
             break;
         }
         case 'H':
         case 'P': {
-            //size_t i = 0;
-            //for (i = 0; i < op_len; i++) { str_append_char(exs, '-'); }
+            // These have been clipped
             break;
         }
         default: tsc_error("Bad CIGAR string: %s\n", cigar);
@@ -154,50 +195,33 @@ static void nucenc_expand(str_t          *stogy,
     DEBUG("exs: %s", exs->s);
 }
 
-static size_t nucenc_diff(uint32_t       *poff,
-                          const uint32_t pos,
-                          str_t          *stogy,
-                          const char     *exs,
-                          const uint32_t pos_ref,
-                          const char     *exs_ref)
+static void nucenc_diff(str_t          *snp,
+                        str_t          *trail,
+                        const uint32_t pos_off,
+                        const char     *exs,
+                        const char     *exs_ref)
 {
-    // Compute and check position offset
-    *poff = pos - pos_ref;
-    if (*poff < 0) tsc_error("SAM file not sorted\n");
-    if (*poff > strlen(exs_ref)) {
-        tsc_warning("poff too large\n");
-        str_append_cstr(stogy, "x");
-        return stogy->len;
-    }
-
-    //DEBUG("Comparing:");
     //printf("%s\n", exs_ref);
     //int i = 0;
-    //for (i = 0; i < *poff; i++) printf(" ");
+    //for (i = 0; i < pos_off; i++) printf(" ");
     //printf("%s\n", exs);
 
-    str_append_cstr(stogy, ":");
-
-    // Iterate through EXS and check for indels
+    // Iterate through EXS, check for indels and store them in SNP
     size_t idx = 0;
-    size_t idx_ref = *poff;
+    size_t idx_ref = pos_off;
     while (exs[idx] && exs_ref[idx_ref]) {
         if (exs[idx] != exs_ref[idx_ref]) {
-            str_append_num(stogy, idx);
-            str_append_char(stogy, exs[idx]);
+            str_append_int(snp, idx);
+            str_append_char(snp, exs[idx]);
         }
         idx++;
         idx_ref++;
     }
 
-    // Append trailing sequence
+    // Append trailing sequence to TRAIL
     while (exs[idx]) {
-        str_append_char(stogy, exs[idx++]);
+        str_append_char(trail, exs[idx++]);
     }
-
-    //printf("%s\n", stogy->s);
-
-    return stogy->len;
 }
 
 void nucenc_add_record(nucenc_t       *nucenc,
@@ -210,27 +234,26 @@ void nucenc_add_record(nucenc_t       *nucenc,
     // We assume five possible symbols for seq:
     //   A=65, C=67, G=71, N=78, T=84 or a=97, c=99, g=103, n=110, t=116
 
-    DEBUG("%d", pos);
-    DEBUG("%s", cigar);
-    DEBUG("%s", seq);
-
     // Sanity check
     if (!pos) {
-        tsc_warning("POSition missing in line %zu\n", nucenc->grec_cnt);
+        tsc_warning("POSition missing in line %zu\n", nucenc->trec_cnt);
+        nucenc->skip_cnt++;
         return;
     }
     if (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) {
-        tsc_warning("CIGAR missing in line %zu\n", nucenc->grec_cnt);
+        tsc_warning("CIGAR missing in line %zu\n", nucenc->trec_cnt);
+        nucenc->skip_cnt++;
         return;
     }
     if (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0')) {
-        tsc_warning("SEQ missing in line %zu\n", nucenc->grec_cnt);
+        tsc_warning("SEQ missing in line %zu\n", nucenc->trec_cnt);
+        nucenc->skip_cnt++;
         return;
     }
 
-    // Convert SEQ to uppercase
-    //size_t i = 0;
-    //while (seq[i++]) { seq[i] = toupper(seq[i]); }
+    // Count this record
+    nucenc->rec_cnt++;
+    nucenc->trec_cnt++;
 
     // First record in block
     if (!nucenc->first) {
@@ -238,71 +261,131 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_t* exs = str_new();
         nucenc_expand(stogy, exs, cigar, seq);
 
-        cbufint64_push(nucenc->neo_cbuf, strlen(cigar));
-        cbufint64_push(nucenc->pos_cbuf, pos);
-        cbufstr_push(nucenc->exs_cbuf, exs->s);
-
-        str_append_num(nucenc->tmp, pos);
+        // Write fPOS:STOGY:EXS~
+        str_append_cstr(nucenc->tmp, "f");
+        str_append_int(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
         str_append_cstr(nucenc->tmp, ":");
-        str_append_cstr(nucenc->tmp, seq);
+        str_append_str(nucenc->tmp, exs);
         str_append_cstr(nucenc->tmp, "~");
+
+        // Push NEO, POS, and EXS to circular buffer
+        cbufint64_push(nucenc->neo_cbuf, strlen(cigar));
+        cbufint64_push(nucenc->pos_cbuf, pos);
+        cbufstr_push(nucenc->exs_cbuf, exs->s);
 
         str_free(stogy);
         str_free(exs);
 
         nucenc->first = true;
-        nucenc->rec_cnt++;
+
+        DEBUG("%s", nucenc->tmp->s);
         return;
     }
 
+    str_t *stogy = str_new();
+    str_t *snp = str_new();
+    str_t *trail = str_new();
+    str_t *exs = str_new();
+
     // 1) Expand SEQ using and CIGAR. This yields an expanded sequence (EXS)
     //    and a modified CIGAR string (STOGY).
-    str_t* stogy = str_new();
-    str_t* exs = str_new();
     nucenc_expand(stogy, exs, cigar, seq);
 
-    // 2) Get matching NEO, POS, STOGY, EXS from circular buffer
+    // 2) Get matching NEO, POS, EXS from circular buffer
     size_t cbuf_idx = 0;
     size_t cbuf_n = nucenc->pos_cbuf->n;
     size_t cbuf_idx_best = cbuf_idx;
-    uint32_t diff_best = UINT32_MAX;
+    uint32_t neo_best = UINT32_MAX;
 
     do {
-        int64_t neo_ref = cbufint64_get(nucenc->neo_cbuf, cbuf_idx);
-        int64_t diff = neo_ref; // TODO
-        if (diff < diff_best) {
-            diff_best = diff;
+        uint32_t neo_ref = (uint32_t)cbufint64_get(nucenc->neo_cbuf, cbuf_idx);
+        if (neo_ref < neo_best) {
+            neo_best = neo_ref;
             cbuf_idx_best = cbuf_idx;
         }
         cbuf_idx++;
     } while (cbuf_idx < cbuf_n);
 
     int64_t pos_ref = cbufint64_get(nucenc->pos_cbuf, cbuf_idx_best);
-    str_t   *exs_ref = cbufstr_get(nucenc->exs_cbuf, cbuf_idx_best);
+    str_t *exs_ref = cbufstr_get(nucenc->exs_cbuf, cbuf_idx_best);
 
-    // 3) Compute changes (indels) from ref to curr and extend STOGY
-    uint32_t poff;
-    size_t neo = nucenc_diff(&poff, pos, stogy, exs->s, pos_ref, exs_ref->s);
+    // 3) Compute and check position offset
+    int64_t pos_off = pos - pos_ref;
+    uint32_t neo = 0;
 
-    // 4) Push NEO, POS, STOGY, EXS into circular buffer
+    if (pos_off > exs_ref->len || pos_off < 0) {
+        if (pos_off < 0) {
+            tsc_warning("SAM file not sorted (line %zu)\n", nucenc->trec_cnt-1);
+            tsc_warning("Proceeding with new I-Frame\n");
+
+            // Clear circular buffer; start with new I-Frame
+            cbufint64_clear(nucenc->neo_cbuf);
+            cbufint64_clear(nucenc->pos_cbuf);
+            cbufstr_clear(nucenc->exs_cbuf);
+        }
+
+        if (pos_off > exs_ref->len) {
+            tsc_warning("Position offset too large (line %zu)\n", nucenc->trec_cnt-1);
+        }
+
+        // 4a) Clear circular buffer; start with new I-Frame
+        cbufint64_clear(nucenc->neo_cbuf);
+        cbufint64_clear(nucenc->pos_cbuf);
+        cbufstr_clear(nucenc->exs_cbuf);
+
+        nucenc->poff_cnt++;
+
+        // 5a) Compute NEO
+        neo = ceil((1-ALPHA)*0 + ALPHA*(stogy->len + 0));
+
+        // 6a) Write xPOS:STOGY:EXS~
+        str_append_cstr(nucenc->tmp, "x");
+        str_append_int(nucenc->tmp, pos);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_str(nucenc->tmp, stogy);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_str(nucenc->tmp, exs);
+        str_append_cstr(nucenc->tmp, "~");
+    } else {
+        // 4b) Compute changes (indels) from ref to curr
+        nucenc_diff(snp, trail, pos_off, exs->s, exs_ref->s);
+
+        // 5b) Compute NEO
+        neo = ceil((1-ALPHA)*pos_off + ALPHA*(stogy->len + snp->len));
+
+        // 6b) Write POS_OFF:STOGY[:SNP][:TRAIL]~
+        str_append_int(nucenc->tmp, pos_off);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_str(nucenc->tmp, stogy);
+        if (snp->len) {
+            str_append_cstr(nucenc->tmp, ":");
+            str_append_str(nucenc->tmp, snp);
+        }
+        if (trail->len) {
+            str_append_cstr(nucenc->tmp, ":");
+            str_append_str(nucenc->tmp, trail);
+        }
+        str_append_cstr(nucenc->tmp, "~");
+    }
+
+    // 7) Push NEO, POS, and EXS to circular buffer
     cbufint64_push(nucenc->neo_cbuf, neo);
     cbufint64_push(nucenc->pos_cbuf, pos);
     cbufstr_push(nucenc->exs_cbuf, exs->s);
 
-    // 5) Write STOGY
-    str_append_num(nucenc->tmp, poff);
-    str_append_cstr(nucenc->tmp, ":");
-    str_append_str(nucenc->tmp, stogy);
-    str_append_cstr(nucenc->tmp, "~");
     DEBUG("%s", nucenc->tmp->s);
 
-    str_free(stogy);
-    str_free(exs);
+    // Update statistics
+    nucenc->stogy_mu += stogy->len;
+    nucenc->snp_mu += snp->len;
+    nucenc->trail_mu += trail->len;
 
-    nucenc->rec_cnt++;
-    nucenc->grec_cnt++;
+    str_free(stogy);
+    str_free(snp);
+    str_free(trail);
+    str_free(exs);
 }
 
 size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
@@ -319,7 +402,9 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
     unsigned char *tmp = (unsigned char *)nucenc->tmp->s;
     unsigned int tmp_sz = (unsigned int)nucenc->tmp->len;
     Byte *data;
-    uLong data_sz = 100000*sizeof(int);
+    compressBound(tmp_sz);
+    uLong data_sz = compressBound(tmp_sz) + 1;
+    //uLong data_sz = 100000*sizeof(int);
     data = (Byte *)calloc((uInt)data_sz, 1);
     int err = compress(data, &data_sz, (const Bytef *)tmp, (uLong)tmp_sz);
     if (err != Z_OK) tsc_error("zlib failed to compress: %d\n", err);
@@ -340,6 +425,28 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
              nucenc->in_sz,
              data_sz,
              (double)data_sz / (double)nucenc->in_sz * 100);
+
+    nucenc->tskip_cnt += nucenc->skip_cnt;
+    nucenc->tpoff_cnt += nucenc->poff_cnt;
+
+    // Write statistics to file
+    str_t *stat = str_new();
+    str_append_int(stat, nucenc->poff_cnt);
+    str_append_cstr(stat, ",");
+    str_append_int(stat, nucenc->skip_cnt);
+    str_append_cstr(stat, ",");
+    str_append_int(stat, nucenc->rec_cnt);
+    str_append_cstr(stat, ",");
+    str_append_double2(stat,(double)data_sz / (double)nucenc->in_sz * 100);
+    str_append_cstr(stat, ",");
+    str_append_double2(stat, nucenc->stogy_mu/(double)nucenc->rec_cnt);
+    str_append_cstr(stat, ",");
+    str_append_double2(stat, nucenc->snp_mu/(double)nucenc->rec_cnt);
+    str_append_cstr(stat, ",");
+    str_append_double2(stat, nucenc->trail_mu/(double)nucenc->rec_cnt);
+    str_append_cstr(stat, "\n");
+    fwrite_buf(nucenc->stat_fp, (const unsigned char *)stat->s, stat->len);
+    str_free(stat);
 
     nucenc_reset(nucenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream

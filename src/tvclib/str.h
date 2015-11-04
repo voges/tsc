@@ -21,7 +21,8 @@ void str_append_str(str_t *str, const str_t *app);
 void str_append_cstr(str_t *str , const char *cstr);
 void str_append_cstrn(str_t *str, const char *cstr, const size_t len);
 void str_append_char(str_t *str, const char c);
-void str_append_num(str_t *str, const int64_t num);
+void str_append_int(str_t *str, const int64_t num);
+void str_append_double2(str_t *str, const double dbl);
 void str_copy_str(str_t *dest, const str_t *src);
 void str_copy_cstr(str_t *dest, const char *src);
 
