@@ -1,8 +1,10 @@
 Build the executable
 --------------------
-cd src && make
+$ cd src
+$ make
 
 Doxygen documentation (requires doxygen and dot)
 ------------------------------------------------
-cd src && doxygen Doxyfile
+$ cd src
+$ doxygen Doxyfile
 
