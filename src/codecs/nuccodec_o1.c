@@ -264,8 +264,8 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     // First record in block
     if (!nucenc->first) {
-        str_t* stogy = str_new();
-        str_t* exs = str_new();
+        str_t *stogy = str_new();
+        str_t *exs = str_new();
         nucenc_expand(stogy, exs, cigar, seq);
 
         // Write fPOS:STOGY:EXS~
