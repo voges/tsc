@@ -49,7 +49,7 @@ typedef struct nucenc_t_ {
     size_t poff_cnt;  // # of I-Frames added to due large position offset
     size_t tpoff_cnt; // Total # of added I-Frames
     double stogy_mu;  // Mean STOGY length
-    double snp_mu;    // Mean SNP length
+    double mod_mu;    // Mean MOD length
     double trail_mu;  // Mean TRAIL length
 
     str_t  *stat_fname; // File name for statistics file

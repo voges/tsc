@@ -62,8 +62,9 @@ enum {
 // Indices for timing statistics
 enum {
     ET_TOT, // Total time elapsed
-    ET_COD, // Predictive coding steps
-    ET_BLK, // Block coding (i.e. entropy coding) steps
+    ET_AUX,
+    ET_NUC,
+    ET_QUAL,
     ET_REM  // Remaining (I/O, statistics, etc.)
 };
 
@@ -141,7 +142,7 @@ static void samenc_print_stats(const size_t  *sam_sz,
             "\t-----------\n"
             "\tNumber of records   : %12zu\n"
             "\tNumber of blocks    : %12zu\n"
-            "\tSpeed (MiB/s)       : %12.2f\n"
+            "\tSpeed (MB/s)        : %12.2f\n"
             "\n"
             "\tSAM file size       : %12zu (%6.2f%%)\n"
             "\t  QNAME             : %12zu (%6.2f%%)\n"
@@ -175,8 +176,9 @@ static void samenc_print_stats(const size_t  *sam_sz,
             "\n"
             "\tTiming\n"
             "\t  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Coding            : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Block(s)          : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\t  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\t  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\t  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\t  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n",
             tscfh->rec_n,
@@ -245,12 +247,15 @@ static void samenc_print_stats(const size_t  *sam_sz,
             et[ET_TOT],
             (double)et[ET_TOT] / (double)1000000,
             (100*(double)et[ET_TOT]/(double)et[ET_TOT]),
-            et[ET_COD],
-            (double)et[ET_COD] / (double)1000000,
-            (100*(double)et[ET_COD]/(double)et[ET_TOT]),
-            et[ET_BLK],
-            (double)et[ET_BLK] / (double)1000000,
-            (100*(double)et[ET_BLK]/(double)et[ET_TOT]),
+            et[ET_AUX],
+            (double)et[ET_AUX] / (double)1000000,
+            (100*(double)et[ET_AUX]/(double)et[ET_TOT]),
+            et[ET_NUC],
+            (double)et[ET_NUC] / (double)1000000,
+            (100*(double)et[ET_NUC]/(double)et[ET_TOT]),
+            et[ET_QUAL],
+            (double)et[ET_QUAL] / (double)1000000,
+            (100*(double)et[ET_QUAL]/(double)et[ET_TOT]),
             et[ET_REM],
             (double)et[ET_REM] / (double)1000000,
             (100*(double)et[ET_REM] / (double)et[ET_TOT]));
@@ -260,7 +265,7 @@ void samenc_encode(samenc_t *samenc)
 {
     size_t   sam_sz[14] = {0}; // SAM statistics
     size_t   tsc_sz[6]  = {0}; //mv  Tsc statistics
-    long     et[4]      = {0}; // Timing statistics
+    long     et[5]      = {0}; // Timing statistics
     long     fpos_prev  = 0;   // fp offset of the previous block
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
@@ -306,10 +311,16 @@ void samenc_encode(samenc_t *samenc)
             // Write sub-blocks
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_AUX] +=auxenc_write_block(samenc->auxenc, samenc->ofp);
+            gettimeofday(&tv1, NULL);
+            et[ET_AUX] += tvdiff(tv0, tv1);
+            gettimeofday(&tv0, NULL);
             tsc_sz[TSC_NUC] +=nucenc_write_block(samenc->nucenc, samenc->ofp);
+            gettimeofday(&tv1, NULL);
+            et[ET_NUC] += tvdiff(tv0, tv1);
+            gettimeofday(&tv0, NULL);
             tsc_sz[TSC_QUAL]+=qualenc_write_block(samenc->qualenc, samenc->ofp);
             gettimeofday(&tv1, NULL);
-            et[ET_BLK] += tvdiff(tv0, tv1);
+            et[ET_QUAL] += tvdiff(tv0, tv1);
         }
 
         // Add record to encoders
@@ -323,14 +334,20 @@ void samenc_encode(samenc_t *samenc)
                           samrec->pnext,
                           samrec->tlen,
                           samrec->opt);
+        gettimeofday(&tv1, NULL);
+        et[ET_AUX] += tvdiff(tv0, tv1);
+        gettimeofday(&tv0, NULL);
         nucenc_add_record(samenc->nucenc,
                           samrec->pos,
                           samrec->cigar,
                           samrec->seq);
+        gettimeofday(&tv1, NULL);
+        et[ET_NUC] += tvdiff(tv0, tv1);
+        gettimeofday(&tv0, NULL);
         qualenc_add_record(samenc->qualenc,
                            samrec->qual);
         gettimeofday(&tv1, NULL);
-        et[ET_COD] += tvdiff(tv0, tv1);
+        et[ET_QUAL] += tvdiff(tv0, tv1);
 
         // Accumulate input statistics, omit \t's and \n's
         sam_sz[SAM_QNAME] += strlen(samrec->qname);
@@ -371,11 +388,17 @@ void samenc_encode(samenc_t *samenc)
 
     // Write -last- sub-blocks
     gettimeofday(&tv0, NULL);
-    tsc_sz[TSC_AUX]  += auxenc_write_block(samenc->auxenc, samenc->ofp);
-    tsc_sz[TSC_NUC]  += nucenc_write_block(samenc->nucenc, samenc->ofp);
-    tsc_sz[TSC_QUAL] += qualenc_write_block(samenc->qualenc, samenc->ofp);
+    tsc_sz[TSC_AUX] +=auxenc_write_block(samenc->auxenc, samenc->ofp);
     gettimeofday(&tv1, NULL);
-    et[ET_COD] += tvdiff(tv0, tv1);
+    et[ET_AUX] += tvdiff(tv0, tv1);
+    gettimeofday(&tv0, NULL);
+    tsc_sz[TSC_NUC] +=nucenc_write_block(samenc->nucenc, samenc->ofp);
+    gettimeofday(&tv1, NULL);
+    et[ET_NUC] += tvdiff(tv0, tv1);
+    gettimeofday(&tv0, NULL);
+    tsc_sz[TSC_QUAL]+=qualenc_write_block(samenc->qualenc, samenc->ofp);
+    gettimeofday(&tv1, NULL);
+    et[ET_QUAL] += tvdiff(tv0, tv1);
 
     // Write file header
     tscfh->blk_n = tscbh->blk_cnt;
@@ -385,12 +408,12 @@ void samenc_encode(samenc_t *samenc)
 
     // Print nuccodec summary
     tsc_log("Nuccodec skipped %zu records\n", samenc->nucenc->tskip_cnt);
-    tsc_log("Nuccodec added %zu additional I-Frame(s)\n", samenc->nucenc->tpoff_cnt);
+    tsc_log("Nuccodec added %zu additional I-Record(s)\n", samenc->nucenc->tpoff_cnt);
 
     // Print summary
     gettimeofday(&tt1, NULL);
     et[ET_TOT] = tvdiff(tt0, tt1);
-    et[ET_REM] = et[ET_TOT] - et[ET_COD] - et[ET_BLK];
+    et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_NUC] - et[ET_QUAL];
     tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
     tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
     tsc_log("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
@@ -444,7 +467,7 @@ void samdec_decode(samdec_t *samdec)
 {
     size_t   sam_sz[14] = {0}; // SAM statistics
     size_t   tsc_sz[6]  = {0}; // Tsc statistics
-    long     et[4]      = {0}; // Timing statistics
+    long     et[5]      = {0}; // Timing statistics
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
 
@@ -500,16 +523,22 @@ void samdec_decode(samdec_t *samdec)
                                                pnext,
                                                tlen,
                                                opt);
+        gettimeofday(&tv1, NULL);
+        et[ET_AUX] += tvdiff(tv0, tv1);
+        gettimeofday(&tv0, NULL);
         tsc_sz[TSC_NUC] += nucdec_decode_block(samdec->nucdec,
                                                samdec->ifp,
                                                pos,
                                                cigar,
                                                seq);
+        gettimeofday(&tv1, NULL);
+        et[ET_NUC] += tvdiff(tv0, tv1);
+        gettimeofday(&tv0, NULL);
         tsc_sz[TSC_QUAL] += qualdec_decode_block(samdec->qualdec,
                                                  samdec->ifp,
                                                  qual);
         gettimeofday(&tv1, NULL);
-        et[ET_BLK] += tvdiff(tv0, tv1);
+        et[ET_QUAL] += tvdiff(tv0, tv1);
 
         // These are dummies for testing
         //for (i = 0; i < blkl_cnt; i++) {
@@ -595,7 +624,7 @@ void samdec_decode(samdec_t *samdec)
     // Print summary
     gettimeofday(&tt1, NULL);
     et[ET_TOT] = tvdiff(tt0, tt1);
-    et[ET_REM] = et[ET_TOT] - et[ET_COD] - et[ET_BLK];
+    et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_NUC] - et[ET_QUAL];
     tsc_vlog("Decompressed %zu record(s)\n", tscfh->rec_n);
     tsc_vlog("Read %zu block(s)\n", tscfh->blk_n);
     tsc_vlog("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);

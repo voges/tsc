@@ -40,10 +40,10 @@
     #define DEBUG(c,...) do { } while (false)
 #endif
 
-// Binary prefixes
-#define KB 1024LL
-#define MB (KB*1024LL)
-#define GB (MB*1024LL)
+// Decimal prefixes
+#define KB 1000LL
+#define MB (KB*1000LL)
+#define GB (MB*1000LL)
 
 typedef enum {
     TSC_MODE_COMPRESS,

@@ -12,12 +12,8 @@
 src/doxygen
 
 # Executables
-src/arithcodec/arith
+src/range/range
 src/detsc
-src/ricecodec/rice
+src/rice/rice
 src/tsc
-framework/arithcodec/arith
-framework/detsc
-framework/ricecodec/rice
-framework/tsc
 
