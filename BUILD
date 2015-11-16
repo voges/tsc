@@ -7,4 +7,3 @@ Doxygen documentation (requires doxygen and dot)
 ------------------------------------------------
 $ cd src
 $ doxygen Doxyfile
-
