@@ -76,6 +76,11 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp);
 
 typedef struct nucdec_t_ {
     size_t out_sz; // Accumulated output size
+
+    // Circular buffers
+    cbufint64_t *neo_cbuf;
+    cbufint64_t *pos_cbuf;
+    cbufstr_t   *exs_cbuf;
 } nucdec_t;
 
 nucdec_t * nucdec_new(void);
