@@ -24,11 +24,11 @@
 //
 // Nuc o1 block format:
 //   unsigned char  blk_id[8]: "nuc----" + '\0'
-//   uint64_t       rec_blk_cnt  : No. of lines in block
-//   uint64_t       tmp_sz   : Size of uncompressed data
-//   uint64_t       data_sz  : Data size
-//   uint64_t       data_crc : CRC64 of compressed data
-//   unsigned char  *data    : Data
+//   uint64_t       rec_blk_cnt: No. of lines in block
+//   uint64_t       tmp_sz     : Size of uncompressed data
+//   uint64_t       data_sz    : Data size
+//   uint64_t       data_crc   : CRC64 of compressed data
+//   unsigned char  *data      : Data
 //
 
 #include "nuccodec_o1.h"
@@ -97,7 +97,7 @@ nucenc_t * nucenc_new(void)
 void nucenc_free(nucenc_t *nucenc)
 {
     tsc_fclose(nucenc->stat_fp);
-    tsc_log("Wrote nuccodec statistics to %s\n", nucenc->stat_fname->s);
+    tsc_vlog("Wrote nuccodec statistics to %s\n", nucenc->stat_fname->s);
 
     if (nucenc != NULL) {
         str_free(nucenc->tmp);
@@ -258,6 +258,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     //
     // First record in block:
+    // - Expand SEQ using CIGAR
     // - Write fPOS:STOGY:EXS~
     // - Push NEO, POS, EXS to circular buffer
     //
@@ -279,7 +280,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
         cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
-        printf("push i %d %d %s\n", (int)ceil(ALPHA*stogy->len), pos, exs->s);
 
         str_free(stogy);
         str_free(exs);
@@ -289,7 +289,11 @@ void nucenc_add_record(nucenc_t       *nucenc,
     }
 
     //
-    // Record passed sanity check, and is not the 1st record; try to encode it
+    // Record passed sanity check, and is not the 1st record
+    // - Expand SEQ using CIGAR
+    // - Get matching EXS from circular buffer
+    // - Check position offset
+    // - Either make new I-Record or encode "normal" record
     //
 
     str_t *stogy = str_new();
@@ -316,12 +320,10 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     int64_t pos_ref = cbufint64_get(nucenc->pos_cbuf, cbuf_idx_best);
     str_t *exs_ref = cbufstr_get(nucenc->exs_cbuf, cbuf_idx_best);
-    //printf("idx: %d, exs_ref: %s\n", cbuf_idx_best, exs_ref->s);
 
     // Compute and check position offset
     int64_t pos_off = pos - pos_ref;
     uint32_t neo = 0;
-
 
     if (pos_off > exs_ref->len || pos_off < 0) {
         nucenc->i_blk_cnt++;
@@ -348,7 +350,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
         cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
-        printf("push i %d %d %s\n", (int)ceil(ALPHA*stogy->len), pos, exs->s);
     } else {
 
         //
@@ -377,9 +378,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
         cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
-        printf("push %d %d %s\n", neo, pos, exs->s);
-        printf("push seq %s\n", seq);
-
     }
 
     // Update statistics
@@ -432,7 +430,6 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
     str_append_int(stat, nucenc->m_blk_cnt);
     str_append_cstr(stat, ",");
     str_append_int(stat, nucenc->i_blk_cnt);
-    str_append_cstr(stat, ",");
     str_append_cstr(stat, ",");
     str_append_double2(stat, nucenc->stogy_mu/(double)nucenc->rec_blk_cnt);
     str_append_cstr(stat, ",");
@@ -564,9 +561,9 @@ static void nucdec_alike(str_t          *exs,
             continue;
         }
 
-
         match_len += op_len;
 
+        // Reduce match length if bases have been inserted or soft-clipped
         switch (stogy[stogy_idx]) {
         case 'I':
         case 'S':
@@ -578,11 +575,13 @@ static void nucdec_alike(str_t          *exs,
 
         op_len = 0;
     }
-    if (match_len+pos_off >= strlen(exs_ref))
+
+    if (match_len+pos_off >= strlen(exs_ref)) {
         match_len = strlen(exs_ref)-pos_off;
+    }
 
     str_append_cstrn(exs, &exs_ref[pos_off], match_len);
-    //printf("push from exs_ref %s\n", exs->s);
+
     // Integrate MODs into EXS
     size_t mod_idx = 0;
     size_t mod_len = strlen(mod);
@@ -595,7 +594,6 @@ static void nucdec_alike(str_t          *exs,
         }
 
         exs->s[mod_pos] = mod[mod_idx];
-
         mod_pos = 0;
     }
 
@@ -610,6 +608,8 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
                             str_t         **cigar,
                             str_t         **seq)
 {
+    size_t ret = 0;
+
     tmp = tsc_realloc(tmp, ++tmp_sz);
     tmp[tmp_sz-1] = '\0'; // Terminate tmp
 
@@ -622,7 +622,6 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
             str_append_char(rec, *tmp++);
         }
         str_append_char(rec, *tmp);
-        printf("%s\n", rec->s);
 
         // Make readable pointer aliases for current record
         uint32_t *_pos_ = &pos[rec_blk_cnt];
@@ -658,8 +657,6 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
                 ++itr;
             }
             if (!_seq_->len) str_append_char(_seq_, '*');
-
-            //printf("m\t%d\t%s\t%s\n", *_pos_, _cigar_->s, _seq_->s);
         }
 
         //
@@ -702,12 +699,9 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
             cbufint64_push(nucdec->neo_cbuf, (int64_t)ceil(ALPHA*stogy->len));
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);
-            printf("push i %d %d %s\n", (int)ceil(ALPHA*stogy->len), *_pos_, exs->s);
 
             // Contract
             nucdec_contract(_cigar_, _seq_, stogy->s, exs->s);
-
-            //printf("f/i\t%d\t%s\t%s\n", *_pos_, _cigar_->s, _seq_->s);
 
             str_free(stogy);
             str_free(exs);
@@ -776,7 +770,6 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
 
             int64_t pos_ref = cbufint64_get(nucdec->pos_cbuf, cbuf_idx_best);
             str_t *exs_ref = cbufstr_get(nucdec->exs_cbuf, cbuf_idx_best);
-            //printf("idx: %d, exs_ref: %s\n", cbuf_idx_best, exs_ref->s);
 
             // Compute POS
             *_pos_ = pos_off + pos_ref;
@@ -785,16 +778,12 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
             nucdec_alike(exs, exs_ref->s, pos_off, stogy->s, mod->s, trail->s);
 
             // Push NEO, POS, EXS to circular buffer
-            printf("push %d %d %s\n", neo, *_pos_, exs->s);
-
             cbufint64_push(nucdec->neo_cbuf, neo);
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);
 
             // Contract EXS
             nucdec_contract(_cigar_, _seq_, stogy->s, exs->s);
-            printf("push seq %s\n", _seq_->s);
-            //printf("\t%d\t%s\t%s\n", *_pos_, _cigar_->s, _seq_->s);
 
             str_free(stogy);
             str_free(exs);
@@ -802,6 +791,7 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
             str_free(trail);
         }
 
+        ret += sizeof(*_pos_) + _cigar_->len + _seq_->len;
         str_clear(rec);
         rec_blk_cnt++;
         tmp++;
@@ -809,7 +799,7 @@ static size_t nucdec_decode(nucdec_t      *nucdec,
 
     str_free(rec);
 
-    return 0;
+    return ret;
 }
 
 size_t nucdec_decode_block(nucdec_t *nucdec,

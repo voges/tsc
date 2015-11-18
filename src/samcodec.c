@@ -407,16 +407,16 @@ void samenc_encode(samenc_t *samenc)
     fseek(samenc->ofp, (long)0, SEEK_END);
 
     // Print nuccodec summary
-    tsc_log("Nuccodec processed %zu invalid records\n", samenc->nucenc->m_tot_cnt);
-    tsc_log("Nuccodec added %zu additional I-Record(s)\n", samenc->nucenc->i_tot_cnt);
+    tsc_vlog("Nuccodec processed %zu invalid records\n", samenc->nucenc->m_tot_cnt);
+    tsc_vlog("Nuccodec added %zu additional I-Record(s)\n", samenc->nucenc->i_tot_cnt);
 
     // Print summary
     gettimeofday(&tt1, NULL);
     et[ET_TOT] = tvdiff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_NUC] - et[ET_QUAL];
-    tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
-    tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
-    tsc_log("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_vlog("Compressed %zu record(s)\n", tscfh->rec_n);
+    tsc_vlog("Wrote %zu block(s)\n", tscfh->blk_n);
+    tsc_vlog("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
 
     // If selected, print detailed statistics
     if (tsc_stats) samenc_print_stats(sam_sz, tsc_sz, tscfh, et);
@@ -651,8 +651,6 @@ void samdec_info(samdec_t *samdec)
 
     // Read and print block headers
     tsc_log("\n"
-            "\tInfo:\n"
-            "\t----\n"
             "\t        fpos      fpos_nxt       blk_cnt       rec_cnt"
             "         rec_n       chr_cnt       pos_min       pos_max\n");
 
