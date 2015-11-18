@@ -40,22 +40,21 @@
 
 typedef struct nucenc_t_ {
     size_t in_sz;     // Accumulated input size
-    size_t rec_cnt;   // No. of records processed in the current block
-    size_t trec_cnt;  // Total # of records processed
+    size_t rec_blk_cnt;   // No. of records processed in the current block
+    size_t rec_tot_cnt;  // Total # of records processed
     bool first;       // 'false', if first line has not been processed yet
-    size_t skip_cnt;  // # of skipped records (POS, CIGAR, or SEQ missing) in the
-                      // current block
-    size_t tskip_cnt; // Total # of skipped records
-    size_t poff_cnt;  // # of I-Frames added to due large position offset
-    size_t tpoff_cnt; // Total # of added I-Frames
+    str_t  *tmp;      // Temporal storage for e.g. prediction residues
+
+    // Statistics
+    str_t  *stat_fname; // File name for statistics file
+    FILE   *stat_fp;    // File pointer to statistics file
+    size_t m_blk_cnt;
+    size_t m_tot_cnt;
+    size_t i_blk_cnt;
+    size_t i_tot_cnt;
     double stogy_mu;  // Mean STOGY length
     double mod_mu;    // Mean MOD length
     double trail_mu;  // Mean TRAIL length
-
-    str_t  *stat_fname; // File name for statistics file
-    FILE   *stat_fp;    // File pointer to statistics file
-
-    str_t  *tmp;      // Temporal storage for e.g. prediction residues
 
     // Circular buffers
     cbufint64_t *neo_cbuf;
