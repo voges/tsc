@@ -1,7 +1,9 @@
 #!/bin/bash
 
+rm -r bin
 mkdir bin
 cd src
+make clean
 make
 mv tsc ../bin
 mv detsc ../bin
