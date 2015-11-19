@@ -142,7 +142,6 @@ static void samenc_print_stats(const size_t  *sam_sz,
             "\t-----------\n"
             "\tNumber of records   : %12zu\n"
             "\tNumber of blocks    : %12zu\n"
-            "\tSpeed (MB/s)        : %12.2f\n"
             "\n"
             "\tSAM file size       : %12zu (%6.2f%%)\n"
             "\t  QNAME             : %12zu (%6.2f%%)\n"
@@ -180,10 +179,15 @@ static void samenc_print_stats(const size_t  *sam_sz,
             "\t  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\t  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\t  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "\n"
+            "\tSpeed\n"
+            "\t  Total             : %12.2f MB/s\n"
+            "\t  Aux               : %12.2f MB/s\n"
+            "\t  Nuc               : %12.2f MB/s\n"
+            "\t  Qual              : %12.2f MB/s\n"
             "\n",
             tscfh->rec_n,
             tscfh->blk_n,
-            (sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
 
             sam_total_sz,
             (100 * (double)sam_total_sz / (double)sam_total_sz),
@@ -258,7 +262,12 @@ static void samenc_print_stats(const size_t  *sam_sz,
             (100*(double)et[ET_QUAL]/(double)et[ET_TOT]),
             et[ET_REM],
             (double)et[ET_REM] / (double)1000000,
-            (100*(double)et[ET_REM] / (double)et[ET_TOT]));
+            (100*(double)et[ET_REM] / (double)et[ET_TOT]),
+
+            (sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
+            (sam_aux_sz / MB) / ((double)et[ET_AUX] / (double)1000000),
+            (sam_nuc_sz / MB) / ((double)et[ET_NUC] / (double)1000000),
+            (sam_qual_sz / MB) / ((double)et[ET_QUAL] / (double)1000000));
 }
 
 void samenc_encode(samenc_t *samenc)
