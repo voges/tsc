@@ -16,6 +16,7 @@ src/range/range
 src/detsc
 src/rice/rice
 src/tsc
+bin
 
 # Tsc files
 *.tsc
