@@ -838,7 +838,7 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
 
     // Decompress block
     unsigned char *tmp = tsc_malloc(tmp_sz * sizeof(unsigned char));
-    int err = uncompress(tmp, &tmp_sz, data, data_sz);
+    int err = uncompress(tmp, (uLongf *)&tmp_sz, data, data_sz);
     if (err != Z_OK) tsc_error("zlib failed to uncompress: %d\n", err);
     free(data);
 

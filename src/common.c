@@ -33,7 +33,7 @@ size_t ndigits(int64_t x)
     // Ugly but fast
     size_t n = 0;
     if (x < 0) n++;
-    x = abs(x);
+    x = llabs(x);
 
     if (x < 10) return n+1;
     if (x < 100) return n+2;
