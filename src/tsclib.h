@@ -61,6 +61,7 @@ extern tsc_mode_t tsc_mode;
 extern bool tsc_stats;
 extern bool tsc_verbose;
 extern bool tsc_warn;
+extern unsigned int tsc_blocksz;
 
 void tsc_cleanup(void);
 void tsc_abort(void);

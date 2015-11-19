@@ -68,20 +68,24 @@ enum {
     ET_REM  // Remaining (I/O, statistics, etc.)
 };
 
-static void samenc_init(samenc_t *samenc, FILE *ifp, FILE *ofp)
+static void samenc_init(samenc_t *samenc,
+                        FILE *ifp,
+                        FILE *ofp,
+                        unsigned int blk_sz)
 {
     samenc->ifp = ifp;
     samenc->ofp = ofp;
+    samenc->blk_sz = blk_sz;
 }
 
-samenc_t * samenc_new(FILE *ifp, FILE *ofp)
+samenc_t * samenc_new(FILE *ifp, FILE *ofp, unsigned int blk_sz)
 {
     samenc_t *samenc = (samenc_t *)tsc_malloc(sizeof(samenc_t));
     samenc->samparser = samparser_new(ifp);
     samenc->auxenc = auxenc_new();
     samenc->nucenc = nucenc_new();
     samenc->qualenc = qualenc_new();
-    samenc_init(samenc, ifp, ofp);
+    samenc_init(samenc, ifp, ofp, blk_sz);
     return samenc;
 }
 
@@ -295,7 +299,7 @@ void samenc_encode(samenc_t *samenc)
     tscsh->data = NULL; // Need this before freeing tscsh
 
     // Set up block header
-    tscbh->rec_n = SAMCODEC_REC_N;
+    tscbh->rec_n = samenc->blk_sz;
 
     samrec_t *samrec = &(samenc->samparser->curr);
     while (samparser_next(samenc->samparser)) {

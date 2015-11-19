@@ -35,6 +35,7 @@
 // Options/flags from getopt
 static const char *opt_input = NULL;
 static const char *opt_output = NULL;
+static const char *opt_blocksz = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
 static bool opt_flag_verbose = false;
@@ -51,6 +52,7 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 bool tsc_verbose = false;
 bool tsc_warn = false;
+unsigned int tsc_blocksz = 0;
 
 static void print_version(void)
 {
@@ -76,6 +78,7 @@ static void print_help(void)
     printf("  Info      : tsc -i [-v] <file.tsc>\n");
     printf("\n");
     printf("Options:\n");
+    printf("  -b  --blocksz     Specify block size\n");
     printf("  -d  --decompress  Decompress\n");
     printf("  -f, --force       Force overwriting of output file(s)\n");
     printf("  -h, --help        Print this help\n");
@@ -93,6 +96,7 @@ static void parse_options(int argc, char *argv[])
     int opt;
 
     static struct option long_options[] = {
+        { "blocksz",    required_argument, NULL, 'b'},
         { "decompress", no_argument,       NULL, 'd'},
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
@@ -105,13 +109,16 @@ static void parse_options(int argc, char *argv[])
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "dfhio:svVw";
+    const char *short_options = "b:dfhio:svVw";
 
     do {
         int opt_idx = 0;
         opt = getopt_long(argc, argv, short_options, long_options, &opt_idx);
         switch (opt) {
         case -1:
+            break;
+        case 'b':
+            opt_blocksz = optarg;
             break;
         case 'd':
             tsc_mode = TSC_MODE_DECOMPRESS;
@@ -209,11 +216,23 @@ int main(int argc, char *argv[])
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // All possible options are legal in this mode
+        if (!opt_blocksz) {
+            tsc_blocksz = 10000; // Default value
+        } else {
+            if (atoi(opt_blocksz) <= 0) {
+                tsc_error("Block size must be positive\n");
+            } else {
+                tsc_blocksz = (unsigned int)atoi(opt_blocksz);
+            }
+        }
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
-        // All possible options are legal in this mode
+        // Option -b is illegal in this mode
+        if (opt_blocksz) {
+            tsc_error("Illegal option(s) detected\n");
+        }
     } else { // TSC_MODE_INFO */
-        // Options -fos are illegal in this mode
-        if (opt_flag_force || opt_output || opt_flag_stats) {
+        // Options -bfos are illegal in this mode
+        if (opt_blocksz || opt_flag_force || opt_output || opt_flag_stats) {
             tsc_error("Illegal option(s) detected\n");
         }
     }
@@ -243,7 +262,7 @@ int main(int argc, char *argv[])
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp);
+        samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
         samenc_encode(samenc);
         samenc_free(samenc);
         tsc_log("Finished: %s\n", tsc_out_fname->s);

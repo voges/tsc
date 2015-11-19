@@ -32,18 +32,17 @@
 #include "tvclib/str.h"
 #include <stdio.h>
 
-#define SAMCODEC_REC_N 10000LL // No. of records per block
-
 typedef struct samenc_t_ {
-    FILE        *ifp;
-    FILE        *ofp;
-    samparser_t *samparser;
-    auxenc_t    *auxenc;
-    nucenc_t    *nucenc;
-    qualenc_t   *qualenc;
+    FILE         *ifp;
+    FILE         *ofp;
+    unsigned int blk_sz;
+    samparser_t  *samparser;
+    auxenc_t     *auxenc;
+    nucenc_t     *nucenc;
+    qualenc_t    *qualenc;
 } samenc_t;
 
-samenc_t * samenc_new(FILE *ifp, FILE *ofp);
+samenc_t * samenc_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
 void samenc_free(samenc_t *samenc);
 void samenc_encode(samenc_t *samenc);
 
