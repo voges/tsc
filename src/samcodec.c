@@ -407,8 +407,8 @@ void samenc_encode(samenc_t *samenc)
     fseek(samenc->ofp, (long)0, SEEK_END);
 
     // Print nuccodec summary
-    tsc_vlog("Nuccodec processed %zu invalid records\n", samenc->nucenc->m_tot_cnt);
-    tsc_vlog("Nuccodec added %zu additional I-Record(s)\n", samenc->nucenc->i_tot_cnt);
+    //tsc_vlog("Nuccodec processed %zu invalid records\n", samenc->nucenc->m_tot_cnt);
+    //tsc_vlog("Nuccodec added %zu additional I-Record(s)\n", samenc->nucenc->i_tot_cnt);
 
     // Print summary
     gettimeofday(&tt1, NULL);

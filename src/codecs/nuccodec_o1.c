@@ -469,10 +469,10 @@ nucdec_t * nucdec_new(void)
 void nucdec_free(nucdec_t *nucdec)
 {
     if (nucdec != NULL) {
-        free(nucdec);
         cbufint64_free(nucdec->neo_cbuf);
         cbufint64_free(nucdec->pos_cbuf);
         cbufstr_free(nucdec->exs_cbuf);
+        free(nucdec);
         nucdec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
@@ -601,17 +601,14 @@ static void nucdec_alike(str_t          *exs,
     str_append_cstr(exs, trail);
 }
 
-static size_t nucdec_decode(nucdec_t      *nucdec,
-                            unsigned char *tmp,
-                            size_t        tmp_sz,
-                            uint32_t      *pos,
-                            str_t         **cigar,
-                            str_t         **seq)
+static size_t nucdec_decode_records(nucdec_t      *nucdec,
+                                    unsigned char *tmp,
+                                    size_t        tmp_sz,
+                                    uint32_t      *pos,
+                                    str_t         **cigar,
+                                    str_t         **seq)
 {
     size_t ret = 0;
-
-    tmp = tsc_realloc(tmp, ++tmp_sz);
-    tmp[tmp_sz-1] = '\0'; // Terminate tmp
 
     str_t *rec = str_new();
     size_t rec_blk_cnt = 0;
@@ -837,13 +834,15 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
         tsc_error("CRC64 check failed for nuc block\n");
 
     // Decompress block
-    unsigned char *tmp = tsc_malloc(tmp_sz * sizeof(unsigned char));
-    int err = uncompress(tmp, (uLongf *)&tmp_sz, data, data_sz);
+    Bytef *tmp = (Bytef *)tsc_malloc(tmp_sz * sizeof(unsigned char));
+    int err = uncompress(tmp, (uLongf *)&tmp_sz, (const Bytef *)data, (uLong)data_sz);
     if (err != Z_OK) tsc_error("zlib failed to uncompress: %d\n", err);
     free(data);
 
     // Decode block
-    nucdec->out_sz = nucdec_decode(nucdec, tmp, tmp_sz, pos, cigar, seq);
+    tmp = tsc_realloc(tmp, ++tmp_sz);
+    tmp[tmp_sz-1] = '\0'; // Terminate tmp
+    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, pos, cigar, seq);
     free(tmp); // Free memory used for decoded bitstream
 
     tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",

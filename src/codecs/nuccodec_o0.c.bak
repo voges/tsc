@@ -156,12 +156,12 @@ static void nucdec_reset(nucdec_t *nucdec)
     nucdec_init(nucdec);
 }
 
-static size_t nucdec_decode(nucdec_t      *nucdec,
-                            unsigned char *tmp,
-                            size_t        tmp_sz,
-                            uint32_t      *pos,
-                            str_t         **cigar,
-                            str_t         **seq)
+static size_t nucdec_decode_records(nucdec_t      *nucdec,
+                                    unsigned char *tmp,
+                                    size_t        tmp_sz,
+                                    uint32_t      *pos,
+                                    str_t         **cigar,
+                                    str_t         **seq)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -239,7 +239,7 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
     free(data);
 
     // Decode block
-    nucdec->out_sz = nucdec_decode(nucdec, tmp, tmp_sz, pos, cigar, seq);
+    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, pos, cigar, seq);
     free(tmp); // Free memory used for decoded bitstream
 
     tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
