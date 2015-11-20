@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="/usr/bin/time -v ../bin/tsc -sf $1 > $1.tsc_compress"
+echo $cmd
+eval $cmd

@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="/usr/bin/time -v quip $1 -o $1.sam > $1.quip_decompress"
+echo $cmd
+eval $cmd

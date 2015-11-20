@@ -277,7 +277,7 @@ static void samenc_print_stats(const size_t  *sam_sz,
 void samenc_encode(samenc_t *samenc)
 {
     size_t   sam_sz[14] = {0}; // SAM statistics
-    size_t   tsc_sz[6]  = {0}; //mv  Tsc statistics
+    size_t   tsc_sz[6]  = {0}; // Tsc statistics
     long     et[5]      = {0}; // Timing statistics
     long     fpos_prev  = 0;   // fp offset of the previous block
     struct timeval tt0, tt1, tv0, tv1;

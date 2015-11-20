@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="diff $1 $1.qp.sam"
+echo $cmd
+eval $cmd

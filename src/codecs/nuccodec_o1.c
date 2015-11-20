@@ -23,7 +23,7 @@
 
 //
 // Nuc o1 block format:
-//   unsigned char  blk_id[8]: "nuc----" + '\0'
+//   unsigned char  blk_id[8]  : "nuc----" + '\0'
 //   uint64_t       rec_blk_cnt: No. of lines in block
 //   uint64_t       tmp_sz     : Size of uncompressed data
 //   uint64_t       data_sz    : Data size
@@ -46,7 +46,7 @@
 // Encoder
 // -----------------------------------------------------------------------------
 
-static void nucenc_init(nucenc_t* nucenc)
+static void nucenc_init(nucenc_t *nucenc)
 {
     nucenc->in_sz = 0;
     nucenc->rec_blk_cnt = 0;
@@ -487,8 +487,8 @@ static void nucdec_reset(nucdec_t *nucdec)
     nucdec_init(nucdec);
 }
 
-static void nucdec_contract(str_t *cigar,
-                            str_t *seq,
+static void nucdec_contract(str_t      *cigar,
+                            str_t      *seq,
                             const char *stogy,
                             const char *exs)
 {
