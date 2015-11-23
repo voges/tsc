@@ -5,6 +5,6 @@ mkdir bin
 cd src
 make clean
 make
-mv tsc ../bin
-mv detsc ../bin
+mv tsc ../bin/
+mv detsc ../bin/
 
