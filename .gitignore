@@ -13,12 +13,9 @@
 src/doxygen
 
 # Executables
-src/range/range
-src/rice/rice
 src/tsc
 src/detsc
 bin/
 
 # Tsc files
-*.tsc
-*.tsc.sam
+*.tsc*

@@ -32,7 +32,7 @@
 //
 
 #include "nuccodec_o1.h"
-#include "../range/range.h"
+#include "../range.h"
 #include "../tvclib/crc64.h"
 #include "../tvclib/frw.h"
 #include "../tsclib.h"

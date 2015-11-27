@@ -7,12 +7,10 @@ INCLUDES   = #-I.
 LIBRARIES  = #-L.
 LDFLAGS    = -lm -lz
 
-TSC_SRC     = common.c samcodec.c samparser.c tsc.c tscfmt.c tsclib.c
+TSC_SRC     = common.c samcodec.c samparser.c tsc.c tscfmt.c tsclib.c range.c
 CODECS_SRC := $(shell find codecs -name '*.c')
 TVC_SRC    := $(shell find tvclib -name '*.c')
-RANGE_SRC  := $(shell find range -name '*.c')
-RICE_SRC   := $(shell find rice -name '*.c')
-SOURCES = $(TSC_SRC) $(CODECS_SRC) $(TVC_SRC) $(RANGE_SRC) $(RICE_SRC)
+SOURCES = $(TSC_SRC) $(CODECS_SRC) $(TVC_SRC)
 
 OBJECTS = $(SOURCES:.c=.o)
 LN_SF   = ln -sf
