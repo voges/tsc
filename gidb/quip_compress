@@ -1,4 +1,0 @@
-#!/bin/bash
-cmd="/usr/bin/time -v quip $1 > $1.quip_compress"
-echo $cmd
-eval $cmd

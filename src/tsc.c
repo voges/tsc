@@ -144,6 +144,7 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'V':
             print_version();
+            print_copyright();
             exit(EXIT_SUCCESS);
             break;
         case 'w':

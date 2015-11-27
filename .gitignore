@@ -4,6 +4,7 @@
 *.a
 *.so
 *.tmp
+~$*
 
 # Created by Dolphin file manager
 .directory

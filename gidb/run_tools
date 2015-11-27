@@ -1,0 +1,187 @@
+#!/bin/bash
+
+# Gzip v1.6
+echo "--"
+echo "Gzip v1.6"
+echo "--"
+touch $1.gz.log
+echo "COMPRESSION" >> $1.gz.log
+cmd="/usr/bin/time -v -o $1.gz.time gzip $1 -c > $1.gz"
+echo $cmd
+eval $cmd
+cat $1.gz.time >> $1.gz.log
+rm -f $1.gz.time
+wc -c $1.gz >> $1.gz.log
+echo "" >> $1.gz.log
+echo "DECOMPRESSION" >> $1.gz.log
+cmd="/usr/bin/time -v -o $1.gz.time gzip -d $1.gz -c > $1.gz.sam"
+echo $cmd
+eval $cmd
+cat $1.gz.time >> $1.gz.log
+rm -f $1.gz.time
+rm -f $1.gz.sam
+rm -f $1.gz
+
+# Range
+echo "--"
+echo "Range"
+echo "--"
+touch $1.range.log
+echo "COMPRESSION" >> $1.range.log
+cmd="/usr/bin/time -v -o $1.range.time range < $1 > $1.range"
+echo $cmd
+eval $cmd
+cat $1.range.time >> $1.range.log
+rm -f $1.range.time
+wc -c $1.range >> $1.range.log
+echo "" >> $1.range.log
+echo "DECOMPRESSION" >> $1.range.log
+cmd="/usr/bin/time -v -o $1.range.time range -d < $1.range > $1.range.sam"
+echo $cmd
+eval $cmd
+cat $1.range.time >> $1.range.log
+rm -f $1.range.time
+rm -f $1.range.sam
+rm -f $1.range
+
+# Tsc v1.0
+echo "--"
+echo "Tsc v1.0"
+echo "--"
+touch $1.tsc.log
+echo "COMPRESSION" >> $1.tsc.log
+cmd="/usr/bin/time -v -o $1.tsc.time tsc -s $1 -o $1.tsc >> $1.tsc.log"
+echo $cmd
+eval $cmd
+cat $1.tsc.time >> $1.tsc.log
+rm -f $1.tsc.time
+wc -c $1.tsc >> $1.tsc.log
+echo "" >> $1.tsc.log
+echo "DECOMPRESSION" >> $1.tsc.log
+cmd="/usr/bin/time -v -o $1.tsc.time tsc -d -s $1.tsc -o $1.tsc.sam >> $1.tsc.log"
+echo $cmd
+eval $cmd
+cat $1.tsc.time >> $1.tsc.log
+rm -f $1.tsc.time
+rm -f $1.tsc.sam
+rm -f $1.tsc
+ 
+# Quip v1.1.8
+echo "--"
+echo "Quip v1.1.8"
+echo "--"
+touch $1.qp.log
+echo "COMPRESSION" >> $1.qp.log
+cmd="/usr/bin/time -v -o $1.qp.time quip $1 -c > $1.qp"
+echo $cmd
+eval $cmd
+quip -lv $1.qp >> $1.qp.log
+cat $1.qp.time >> $1.qp.log
+rm -f $1.qp.time
+wc -c $1.qp >> $1.qp.log
+echo "" >> $1.qp.log
+echo "DECOMPRESSION" >> $1.qp.log
+cmd="/usr/bin/time -v -o $1.qp.time quip -d --output=sam $1.qp -c > $1.qp.sam"
+echo $cmd
+eval $cmd
+cat $1.qp.time >> $1.qp.log
+rm -f $1.qp.time
+rm -f $1.qp.sam
+rm -f $1.qp
+
+# Quip v1.1.8 -a
+echo "--"
+echo "Quip v1.1.8 -a"
+echo "--"
+touch $1.qpa.log
+echo "COMPRESSION" >> $1.qpa.log
+cmd="/usr/bin/time -v -o $1.qpa.time quip -a $1 -c > $1.qp"
+echo $cmd
+eval $cmd
+quip -lv $1.qp >> $1.qpa.log
+cat $1.qpa.time >> $1.qpa.log
+rm -f $1.qpa.time
+wc -c $1.qp >> $1.qpa.log
+echo "" >> $1.qpa.log
+echo "DECOMPRESSION" >> $1.qpa.log
+cmd="/usr/bin/time -v -o $1.qpa.time quip -d --output=sam $1.qp -c > $1.qp.sam"
+echo $cmd
+eval $cmd
+cat $1.qpa.time >> $1.qpa.log
+rm -f $1.qpa.time
+rm -f $1.qp.sam
+rm -f $1.qp
+
+# Quip v1.1.8 -r
+echo "--"
+echo "Quip v1.1.8 -r"
+echo "--"
+touch $1.qpr.log
+echo "COMPRESSION" >> $1.qpr.log
+cmd="/usr/bin/time -v -o $1.qpr.time quip -r $2 $1 -c > $1.qp"
+echo $cmd
+eval $cmd
+quip -lv $1.qp >> $1.qpr.log
+cat $1.qpr.time >> $1.qpr.log
+rm -f $1.qpr.time
+wc -c $1.qp >> $1.qpr.log
+echo "" >> $1.qpr.log
+echo "DECOMPRESSION" >> $1.qpr.log
+cmd="/usr/bin/time -v -o $1.qpr.time quip -d -r $2 --output=sam $1.qp -c > $1.qp.sam"
+echo $cmd
+eval $cmd
+cat $1.qpr.time >> $1.qpr.log
+rm -f $1.qpr.time
+rm -f $1.qp.sam
+rm -f $1.qp
+
+# DeeZ v1.0
+echo "--"
+echo "DeeZ v1.0"
+echo "--"
+touch $1.dz.log
+echo "COMPRESSION" >> $1.dz.log
+cmd="/usr/bin/time -v -o $1.dz.time deez -S -r $2 $1 -o $1.dz 2>> $1.dz.log"
+echo $cmd
+eval $cmd
+cat $1.dz.time >> $1.dz.log
+rm -f $1.dz.time
+wc -c $1.dz >> $1.dz.log
+echo "" >> $1.dz.log
+echo "DECOMPRESSION" >> $1.dz.log
+cmd="/usr/bin/time -v -o $1.dz.time deez -r $2 $1.dz -o $1.dz.sam"
+echo $cmd
+eval $cmd
+cat $1.dz.time >> $1.dz.log
+rm -f $1.dz.time
+rm -f $1.dz.sam
+rm -f $1.dz
+
+# Sam_comp v0.8
+echo "--"
+echo "Sam_comp v0.8"
+echo "--"
+touch $1.zam.log
+echo "COMPRESSION" >> $1.zam.log
+cmd="/usr/bin/time -v -o $1.zam.time sam_comp -v < $1 > $1.zam 2>> $1.zam.log"
+echo $cmd
+eval $cmd
+cat $1.zam.time >> $1.zam.log
+rm -f $1.zam.time
+wc -c $1.zam >> $1.zam.log
+echo "" >> $1.zam.log
+echo "DECOMPRESSION" >> $1.zam.log
+cmd="/usr/bin/time -v -o $1.zam.time sam_comp -d < $1.zam > $1.zam.sam"
+echo $cmd
+eval $cmd
+cat $1.zam.time >> $1.zam.log
+rm -f $1.zam.time
+rm -f $1.zam.sam
+rm -f $1.zam
+
+# CRAM v2.0
+echo "--"
+echo "CRAM v2.0"
+echo "--"
+echo "TODO"
+
