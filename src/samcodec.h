@@ -26,8 +26,10 @@
 
 #include "samparser.h"
 #include "codecs/auxcodec.h"
+#include "codecs/idcodec.h"
 //#include "codecs/nuccodec_o0.h"
 #include "codecs/nuccodec_o1.h"
+#include "codecs/paircodec.h"
 #include "codecs/qualcodec.h"
 #include "tvclib/str.h"
 #include <stdio.h>
@@ -38,7 +40,9 @@ typedef struct samenc_t_ {
     unsigned int blk_sz;
     samparser_t  *samparser;
     auxenc_t     *auxenc;
+    idenc_t      *idenc;
     nucenc_t     *nucenc;
+    pairenc_t   *pairenc;
     qualenc_t    *qualenc;
 } samenc_t;
 
@@ -50,7 +54,9 @@ typedef struct samdec_t_ {
     FILE      *ifp;
     FILE      *ofp;
     auxdec_t  *auxdec;
+    iddec_t   *iddec;
     nucdec_t  *nucdec;
+    pairdec_t *pairdec;
     qualdec_t *qualdec;
 } samdec_t;
 

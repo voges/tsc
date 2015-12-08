@@ -21,8 +21,8 @@
 // along with tsc. If not, see <http://www.gnu.org/licenses/>
 //
 
-#ifndef TSC_AUXCODEC_H
-#define TSC_AUXCODEC_H
+#ifndef TSC_PAIRCODEC_H
+#define TSC_PAIRCODEC_H
 
 #include "../tvclib/str.h"
 #include <stdint.h>
@@ -31,34 +31,34 @@
 // Encoder
 // -----------------------------------------------------------------------------
 
-typedef struct auxenc_t_ {
+typedef struct pairenc_t_ {
     size_t in_sz;   // Accumulated input size
     size_t rec_cnt; // No. of records processed in the current block
     str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} auxenc_t;
+} pairenc_t;
 
-auxenc_t * auxenc_new(void);
-void auxenc_free(auxenc_t *auxenc);
-void auxenc_add_record(auxenc_t       *auxenc,
-                       const uint16_t flag,
-                       const uint8_t  mapq,
-                       const char     *opt);
-size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp);
+pairenc_t * pairenc_new(void);
+void pairenc_free(pairenc_t *pairenc);
+void pairenc_add_record(pairenc_t      *pairenc,
+                        const char     *rnext,
+                        const uint32_t pnext,
+                        const int64_t  tlen);
+size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp);
 
 // Decoder
 // -----------------------------------------------------------------------------
 
-typedef struct auxdec_t_ {
+typedef struct pairdec_t_ {
     size_t out_sz; // Accumulated output size
-} auxdec_t;
+} pairdec_t;
 
-auxdec_t * auxdec_new(void);
-void auxdec_free(auxdec_t *auxdec);
-size_t auxdec_decode_block(auxdec_t *auxdec,
-                           FILE     *fp,
-                           uint16_t *flag,
-                           uint8_t  *mapq,
-                           str_t    **opt);
+pairdec_t * pairdec_new(void);
+void pairdec_free(pairdec_t *pairdec);
+size_t pairdec_decode_block(pairdec_t *pairdec,
+                            FILE      *fp,
+                            str_t     **rnext,
+                            uint32_t  *pnext,
+                            int64_t   *tlen);
 
-#endif // TSC_AUXCODEC_H
+#endif // TSC_PAIRCODEC_H
 

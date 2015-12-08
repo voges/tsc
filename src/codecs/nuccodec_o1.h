@@ -39,11 +39,12 @@
 // -----------------------------------------------------------------------------
 
 typedef struct nucenc_t_ {
-    size_t in_sz;     // Accumulated input size
-    size_t rec_blk_cnt;   // No. of records processed in the current block
-    size_t rec_tot_cnt;  // Total # of records processed
-    bool first;       // 'false', if first line has not been processed yet
-    str_t  *tmp;      // Temporal storage for e.g. prediction residues
+    size_t in_sz;       // Accumulated input size
+    size_t rec_blk_cnt; // No. of records processed in the current block
+    size_t rec_tot_cnt; // Total # of records processed
+    bool   first;       // 'false', if first line has not been processed yet
+    str_t  *tmp;        // Temporal storage for e.g. prediction residues
+    str_t  *rname_prev; // Holding current RNAME
 
     // Statistics
     str_t  *stat_fname; // File name for statistics file
@@ -65,6 +66,7 @@ typedef struct nucenc_t_ {
 nucenc_t * nucenc_new(void);
 void nucenc_free(nucenc_t *nucenc);
 void nucenc_add_record(nucenc_t       *nucenc,
+                       const char     *rname,
                        const uint32_t pos,
                        const char     *cigar,
                        const char     *seq);
@@ -86,6 +88,7 @@ nucdec_t * nucdec_new(void);
 void nucdec_free(nucdec_t *nucdec);
 size_t nucdec_decode_block(nucdec_t *nucdec,
                            FILE     *fp,
+                           str_t    **rname,
                            uint32_t *pos,
                            str_t    **cigar,
                            str_t    **seq);

@@ -81,6 +81,7 @@ nucenc_t * nucenc_new(void)
     nucenc_t *nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
 
     nucenc->tmp = str_new();
+    nucenc->rname_prev = str_new();
     nucenc->stat_fname = str_new();
     nucenc->neo_cbuf = cbufint64_new(WINDOW_SZ);
     nucenc->pos_cbuf = cbufint64_new(WINDOW_SZ);
@@ -101,6 +102,7 @@ void nucenc_free(nucenc_t *nucenc)
 
     if (nucenc != NULL) {
         str_free(nucenc->tmp);
+        str_free(nucenc->rname_prev);
         str_free(nucenc->stat_fname);
         cbufint64_free(nucenc->neo_cbuf);
         cbufint64_free(nucenc->pos_cbuf);
@@ -116,6 +118,7 @@ void nucenc_free(nucenc_t *nucenc)
 static void nucenc_reset(nucenc_t *nucenc)
 {
     str_clear(nucenc->tmp);
+    str_clear(nucenc->rname_prev);
     cbufint64_clear(nucenc->neo_cbuf);
     cbufint64_clear(nucenc->pos_cbuf);
     cbufstr_clear(nucenc->exs_cbuf);
@@ -219,11 +222,12 @@ static void nucenc_diff(str_t          *mod,
 }
 
 void nucenc_add_record(nucenc_t       *nucenc,
+                       const char     *rname,
                        const uint32_t pos,
                        const char     *cigar,
                        const char     *seq)
 {
-    nucenc->in_sz += sizeof(pos) + strlen(cigar) + strlen(seq);
+    nucenc->in_sz += strlen(rname) + sizeof(pos) + strlen(cigar) + strlen(seq);
     nucenc->rec_blk_cnt++;
     nucenc->rec_tot_cnt++;
 
@@ -604,6 +608,7 @@ static void nucdec_alike(str_t          *exs,
 static size_t nucdec_decode_records(nucdec_t      *nucdec,
                                     unsigned char *tmp,
                                     size_t        tmp_sz,
+                                    str_t         **rname,
                                     uint32_t      *pos,
                                     str_t         **cigar,
                                     str_t         **seq)
@@ -612,6 +617,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
 
     str_t *rec = str_new();
     size_t rec_blk_cnt = 0;
+    str_t *rname_prev = str_new();
 
     while (*tmp != '\0') {
         // Get tsc record
@@ -621,6 +627,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
         str_append_char(rec, *tmp);
 
         // Make readable pointer aliases for current record
+        str_t *_rname_ = rname[rec_blk_cnt];
         uint32_t *_pos_ = &pos[rec_blk_cnt];
         str_t *_cigar_ = cigar[rec_blk_cnt];
         str_t *_seq_ = seq[rec_blk_cnt];
@@ -788,19 +795,21 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_free(trail);
         }
 
-        ret += sizeof(*_pos_) + _cigar_->len + _seq_->len;
+        ret += _rname_->len + sizeof(*_pos_) + _cigar_->len + _seq_->len;
         str_clear(rec);
         rec_blk_cnt++;
         tmp++;
     }
 
     str_free(rec);
+    str_free(rname_prev);
 
     return ret;
 }
 
 size_t nucdec_decode_block(nucdec_t *nucdec,
                            FILE     *fp,
+                           str_t    **rname,
                            uint32_t *pos,
                            str_t    **cigar,
                            str_t    **seq)
@@ -842,7 +851,7 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
     // Decode block
     tmp = tsc_realloc(tmp, ++tmp_sz);
     tmp[tmp_sz-1] = '\0'; // Terminate tmp
-    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, pos, cigar, seq);
+    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, rname, pos, cigar, seq);
     free(tmp); // Free memory used for decoded bitstream
 
     tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",

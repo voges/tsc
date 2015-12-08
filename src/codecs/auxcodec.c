@@ -73,49 +73,25 @@ static void auxenc_reset(auxenc_t *auxenc)
 }
 
 void auxenc_add_record(auxenc_t       *auxenc,
-                       const char     *qname,
                        const uint16_t flag,
-                       const char     *rname,
                        const uint8_t  mapq,
-                       const char     *rnext,
-                       const uint32_t pnext,
-                       const int64_t  tlen,
                        const char     *opt)
 {
-    auxenc->in_sz += strlen(qname);
     auxenc->in_sz += sizeof(flag);
-    auxenc->in_sz += strlen(rname);
     auxenc->in_sz += sizeof(mapq);
-    auxenc->in_sz += strlen(rnext);
-    auxenc->in_sz += sizeof(pnext);
-    auxenc->in_sz += sizeof(tlen);
     auxenc->in_sz += strlen(opt);
 
     auxenc->rec_cnt++;
 
     char flag_cstr[101];
     char mapq_cstr[101];
-    char pnext_cstr[101];
-    char tlen_cstr[101];
 
     snprintf(flag_cstr, sizeof(flag_cstr), "%"PRIu16, flag);
     snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRIu8, mapq);
-    snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu32, pnext);
-    snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen);
 
-    str_append_cstr(auxenc->tmp, qname);
-    str_append_cstr(auxenc->tmp, "\t");
     str_append_cstr(auxenc->tmp, flag_cstr);
     str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, rname);
-    str_append_cstr(auxenc->tmp, "\t");
     str_append_cstr(auxenc->tmp, mapq_cstr);
-    str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, rnext);
-    str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, pnext_cstr);
-    str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, tlen_cstr);
     str_append_cstr(auxenc->tmp, "\t");
     str_append_cstr(auxenc->tmp, opt);
     str_append_cstr(auxenc->tmp, "\n");
@@ -186,13 +162,8 @@ static void auxdec_reset(auxdec_t* auxdec)
 static size_t auxdec_decode(auxdec_t      *auxdec,
                             unsigned char *tmp,
                             size_t         tmp_sz,
-                            str_t         **qname,
                             uint16_t      *flag,
-                            str_t         **rname,
                             uint8_t       *mapq,
-                            str_t         **rnext,
-                            uint32_t      *pnext,
-                            int64_t       *tlen,
                             str_t         **opt)
 {
     size_t ret = 0;
@@ -216,34 +187,14 @@ static size_t auxdec_decode(auxdec_t      *auxdec,
             tmp[i] = '\0';
             switch (idx++) {
             case 0:
-                str_append_cstr(qname[line], (const char *)cstr);
-                ret += strlen((const char *)cstr);
-                break;
-            case 1:
                 flag[line] = strtoll((const char *)cstr, NULL, 10);
                 ret += sizeof(*flag);
                 break;
-            case 2:
-                str_append_cstr(rname[line], (const char *)cstr);
-                ret += strlen((const char *)cstr);
-                break;
-            case 3:
+            case 1:
                 mapq[line] = strtoll((const char *)cstr, NULL, 10);
                 ret += sizeof(*mapq);
                 break;
-            case 4:
-                str_append_cstr(rnext[line], (const char *)cstr);
-                ret += strlen((const char *)cstr);
-                break;
-            case 5:
-                pnext[line] = strtoll((const char *)cstr, NULL, 10);
-                ret += sizeof(*pnext);
-                break;
-            case 6:
-                tlen[line] = strtoll((const char *)cstr, NULL, 10);
-                ret += sizeof(*tlen);
-                break;
-            case 7:
+            case 2:
                 // Fall through (all upcoming columns are 'opt')
             default:
                 str_append_cstr(opt[line], (const char *)cstr);
@@ -261,13 +212,8 @@ static size_t auxdec_decode(auxdec_t      *auxdec,
 
 size_t auxdec_decode_block(auxdec_t *auxdec,
                            FILE     *fp,
-                           str_t    **qname,
                            uint16_t *flag,
-                           str_t    **rname,
                            uint8_t  *mapq,
-                           str_t    **rnext,
-                           uint32_t *pnext,
-                           int64_t  *tlen,
                            str_t    **opt)
 {
     unsigned char blk_id[8];
@@ -301,17 +247,7 @@ size_t auxdec_decode_block(auxdec_t *auxdec,
     free(data);
 
     // Decode block
-    auxdec->out_sz = auxdec_decode(auxdec,
-                                   tmp,
-                                   tmp_sz,
-                                   qname,
-                                   flag,
-                                   rname,
-                                   mapq,
-                                   rnext,
-                                   pnext,
-                                   tlen,
-                                   opt);
+    auxdec->out_sz = auxdec_decode(auxdec, tmp, tmp_sz, flag, mapq, opt);
     free(tmp); // Free memory used for decoded bitstream
 
     tsc_vlog("Decompressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
