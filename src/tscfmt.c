@@ -89,7 +89,7 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
     if (!(tscfh->sblk_n))
         tsc_error("File does not contain sub-blocks\n");
 
-    tsc_vlog("Read tsc file header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Read tsc file header\n");
 
     return ret;
 }
@@ -105,7 +105,7 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
     ret += fwrite_uint64(fp, tscfh->blk_n);
     ret += fwrite_uint64(fp, tscfh->sblk_n);
 
-    tsc_vlog("Wrote tsc file header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Wrote tsc file header\n");
 
     return ret;
 }
@@ -156,7 +156,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
     tscsh->data = (unsigned char *)tsc_malloc((size_t)tscsh->data_sz);
     ret += fread_buf(fp, tscsh->data, tscsh->data_sz);
 
-    tsc_vlog("Read SAM header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Read SAM header\n");
 
     return ret;
 }
@@ -164,7 +164,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
 {
     if (tscsh->data_sz == 0 || tscsh->data == NULL) {
-        tsc_warning("Empty SAM header\n");
+        tsc_log(TSC_LOG_WARN, "Empty SAM header\n");
         return 0;
     }
 
@@ -173,7 +173,7 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
     ret += fwrite_uint64(fp, tscsh->data_sz);
     ret += fwrite_buf(fp, tscsh->data, tscsh->data_sz);
 
-    tsc_vlog("Wrote SAM header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Wrote SAM header\n");
 
     return ret;
 }
@@ -227,7 +227,7 @@ size_t tscbh_read(tscbh_t *tscbh, FILE *fp)
     ret += fread_uint64(fp, &(tscbh->pos_min));
     ret += fread_uint64(fp, &(tscbh->pos_max));
 
-    tsc_vlog("Read block header %"PRIu64"\n", tscbh->blk_cnt);
+    tsc_log(TSC_LOG_VERBOSE, "Read block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }
@@ -245,7 +245,7 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
     ret += fwrite_uint64(fp, tscbh->pos_min);
     ret += fwrite_uint64(fp, tscbh->pos_max);
 
-    tsc_vlog("Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
+    tsc_log(TSC_LOG_VERBOSE, "Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }

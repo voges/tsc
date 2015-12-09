@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-my $tsc = "../src/tsc";
+my $tsc = "tsc";
 my $dir = ".";
 opendir(DIR, $dir) or die $!;
 

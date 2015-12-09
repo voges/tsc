@@ -118,10 +118,11 @@ size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             auxenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)auxenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            auxenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)auxenc->in_sz * 100);
 
     auxenc_reset(auxenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -250,10 +251,11 @@ size_t auxdec_decode_block(auxdec_t *auxdec,
     auxdec->out_sz = auxdec_decode(auxdec, tmp, tmp_sz, flag, mapq, opt);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             auxdec->out_sz,
-             (double)auxdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            auxdec->out_sz,
+            (double)auxdec->out_sz / (double)data_sz * 100);
 
     auxdec_reset(auxdec);
 

@@ -102,10 +102,11 @@ size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             qualenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)qualenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            qualenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)qualenc->in_sz * 100);
 
     qualenc_reset(qualenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -200,10 +201,11 @@ size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
     qualdec->out_sz = qualdec_decode(qualdec, tmp, tmp_sz, qual);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             qualdec->out_sz,
-             (double)qualdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            qualdec->out_sz,
+            (double)qualdec->out_sz / (double)data_sz * 100);
 
     qualdec_reset(qualdec);
 

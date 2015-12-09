@@ -102,10 +102,11 @@ size_t idenc_write_block(idenc_t *idenc, FILE * fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             idenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)idenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            idenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)idenc->in_sz * 100);
 
     idenc_reset(idenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -200,10 +201,11 @@ size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname)
     iddec->out_sz = iddec_decode(iddec, tmp, tmp_sz, qname);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             iddec->out_sz,
-             (double)iddec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            iddec->out_sz,
+            (double)iddec->out_sz / (double)data_sz * 100);
 
     iddec_reset(iddec);
 

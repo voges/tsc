@@ -42,10 +42,11 @@ void tsc_cleanup(void)
     if (tsc_out_fp != NULL)
         tsc_fclose(tsc_out_fp);
     if (tsc_out_fname->len > 0) {
-        tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
+        tsc_log(TSC_LOG_DEFAULT,
+                "Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {
             unlink((const char *)tsc_out_fname->s);
-            tsc_log("Removed %s\n", tsc_out_fname->s);
+            tsc_log(TSC_LOG_DEFAULT, "Removed %s\n", tsc_out_fname->s);
         }
     }
 }
@@ -63,44 +64,40 @@ void tsc_error(const char *fmt, ...)
     char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s: error: %s", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s [error]: %s", tsc_prog_name->s, msg);
     free(msg);
     tsc_abort();
 }
 
-void tsc_warning(const char *fmt, ...)
+void tsc_log(tsc_loglvl_t loglvl, const char *fmt, ...)
 {
-    if (tsc_warn) {
-        va_list args;
-        va_start(args, fmt);
-        char *msg;
-        vasprintf(&msg, fmt, args);
-        va_end(args);
-        fprintf(stderr, "%s: warning: %s", tsc_prog_name->s, msg);
-        free(msg);
+    char *msg_head;
+
+    switch (loglvl) {
+    case TSC_LOG_DEFAULT:
+        asprintf(&msg_head,"%s [log]: ", tsc_prog_name->s);
+        break;
+    case TSC_LOG_INFO:
+        asprintf(&msg_head,"%s [info]: ", tsc_prog_name->s);
+        break;
+    case TSC_LOG_VERBOSE:
+        asprintf(&msg_head,"%s [verbose]: ", tsc_prog_name->s);
+        break;
+    case TSC_LOG_WARN:
+        asprintf(&msg_head,"%s [warn]: ", tsc_prog_name->s);
+        break;
+    default:
+        fprintf(stderr, "%s [error]: Wrong log level", tsc_prog_name->s);
+        tsc_abort();
     }
-}
 
-void tsc_log(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    char *msg;
-    vasprintf(&msg, fmt, args);
-    va_end(args);
-    fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
-    free(msg);
-}
-
-void tsc_vlog(const char *fmt, ...)
-{
-    if (tsc_verbose) {
+    if (loglvl <= tsc_loglvl) {
         va_list args;
         va_start(args, fmt);
         char *msg;
         vasprintf(&msg, fmt, args);
         va_end(args);
-        fprintf(stdout, "%s: %s", tsc_prog_name->s, msg);
+        fprintf(stdout, "%s%s", msg_head, msg);
         free(msg);
     }
 }

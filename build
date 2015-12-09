@@ -1,10 +1,13 @@
 #!/bin/bash
 
+set -x # echo on
 rm -r bin
-mkdir bin
+mkdir -p  bin
 cd src
 make clean
 make
-mv tsc ../bin/
-mv detsc ../bin/
+cd ../bin
+cp ../src/tsc .
+ln -sf tsc detsc
+cd ..
 

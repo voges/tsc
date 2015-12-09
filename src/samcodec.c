@@ -151,7 +151,8 @@ static void samenc_print_stats(const size_t  *sam_sz,
                         + tsc_sz[TSC_PAIR]
                         + tsc_sz[TSC_QUAL];
 
-    tsc_log("\n"
+    fprintf(stdout,
+            "\n"
             "\tStatistics:\n"
             "\t-----------\n"
             "\tNumber of records   : %12zu\n"
@@ -492,17 +493,22 @@ void samenc_encode(samenc_t *samenc)
     fseek(samenc->ofp, (long)0, SEEK_END);
 
     // Print nuccodec summary
-    tsc_vlog("Nuccodec: %zu invalid record(s)\n", samenc->nucenc->m_tot_cnt);
-    tsc_vlog("Nuccodec: %zu added I-Record(s)\n", samenc->nucenc->i_tot_cnt);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Nuccodec processed %zu invalid record(s)\n",
+            samenc->nucenc->m_tot_cnt);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Nuccodec added %zu I-Record(s)\n",
+            samenc->nucenc->i_tot_cnt);
 
     // Print summary
     gettimeofday(&tt1, NULL);
     et[ET_TOT] = tvdiff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_ID]
                - et[ET_NUC] - et[ET_PAIR] - et[ET_QUAL];
-    tsc_vlog("Compressed %zu record(s)\n", tscfh->rec_n);
-    tsc_vlog("Wrote %zu block(s)\n", tscfh->blk_n);
-    tsc_vlog("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log(TSC_LOG_INFO, "Compressed %zu record(s)\n", tscfh->rec_n);
+    tsc_log(TSC_LOG_INFO, "Wrote %zu block(s)\n", tscfh->blk_n);
+    tsc_log(TSC_LOG_INFO, "Took %ld us ~= %.2f s\n",
+            et[ET_TOT], (double)et[ET_TOT]/1000000);
 
     // If selected, print detailed statistics
     if (tsc_stats) samenc_print_stats(sam_sz, tsc_sz, tscfh, et);
@@ -731,9 +737,10 @@ void samdec_decode(samdec_t *samdec)
     et[ET_TOT] = tvdiff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_ID]
                - et[ET_NUC] - et[ET_PAIR] - et[ET_QUAL];
-    tsc_vlog("Decompressed %zu record(s)\n", tscfh->rec_n);
-    tsc_vlog("Read %zu block(s)\n", tscfh->blk_n);
-    tsc_vlog("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log(TSC_LOG_INFO, "Decompressed %zu record(s)\n", tscfh->rec_n);
+    tsc_log(TSC_LOG_INFO, "Read %zu block(s)\n", tscfh->blk_n);
+    tsc_log(TSC_LOG_INFO, "Took %ld us ~= %.2f s\n",
+            et[ET_TOT], (double)et[ET_TOT]/1000000);
 
     // If selected, print detailed statistics
     if (tsc_stats) samdec_print_stats(sam_sz, tsc_sz, tscfh, et);
@@ -756,9 +763,9 @@ void samdec_info(samdec_t *samdec)
     tscsh_read(tscsh, samdec->ifp);
 
     // Read and print block headers
-    tsc_log("\n"
-            "\t        fpos      fpos_nxt       blk_cnt       rec_cnt"
-            "         rec_n       chr_cnt       pos_min       pos_max\n");
+    printf("\n"
+           "\t        fpos      fpos_nxt       blk_cnt       rec_cnt"
+           "         rec_n       chr_cnt       pos_min       pos_max\n");
 
     while (1) {
         tscbh_read(tscbh, samdec->ifp);

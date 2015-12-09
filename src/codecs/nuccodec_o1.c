@@ -89,8 +89,8 @@ nucenc_t * nucenc_new(void)
 
     nucenc_init(nucenc);
 
-    tsc_vlog("Nuccodec WINDOW_SZ: %d\n", WINDOW_SZ);
-    tsc_vlog("Nuccodec ALPHA: %.1f\n", ALPHA);
+    tsc_log(TSC_LOG_INFO, "Nuccodec WINDOW_SZ: %d\n", WINDOW_SZ);
+    tsc_log(TSC_LOG_INFO, "Nuccodec ALPHA: %.1f\n", ALPHA);
 
     return nucenc;
 }
@@ -98,7 +98,7 @@ nucenc_t * nucenc_new(void)
 void nucenc_free(nucenc_t *nucenc)
 {
     tsc_fclose(nucenc->stat_fp);
-    tsc_vlog("Wrote nuccodec statistics to %s\n", nucenc->stat_fname->s);
+    tsc_log(TSC_LOG_INFO, "Nuccodec statistics: %s\n", nucenc->stat_fname->s);
 
     if (nucenc != NULL) {
         str_free(nucenc->tmp);
@@ -233,28 +233,27 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     //
     // Sanity check:
-    // - Write m[POS][:CIGAR][:SEQ]~ in case of corrupted record
+    // - Write mRNAME:POS:CIGAR:SEQ~ in case of corrupted record
     // - Do -not- push to circular buffer
     //
 
-    if (   (!pos)
+    if (   (!strlen(rname) || (rname[0] == '*' && rname[1] == '\0'))
+        || (!pos)
         || (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0'))
         || (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))) {
-        tsc_warning("Missing POS|CIGAR|SEQ in line %zu\n", nucenc->rec_tot_cnt);
+        tsc_log(TSC_LOG_WARN,
+                "Missing RNAME|POS|CIGAR|SEQ (line %zu)\n",
+                nucenc->rec_tot_cnt);
         nucenc->m_blk_cnt++;
 
         str_append_cstr(nucenc->tmp, "m");
-        if (pos) {
-            str_append_int(nucenc->tmp, pos);
-        }
-        if (strlen(cigar)) {
-            str_append_cstr(nucenc->tmp, ":");
-            str_append_cstr(nucenc->tmp, cigar);
-        }
-        if (strlen(seq)) {
-            str_append_cstr(nucenc->tmp, ":");
-            str_append_cstr(nucenc->tmp, seq);
-        }
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_int(nucenc->tmp, pos);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_cstr(nucenc->tmp, cigar);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_cstr(nucenc->tmp, seq);
         str_append_cstr(nucenc->tmp, "~");
 
         return;
@@ -262,8 +261,9 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     //
     // First record in block:
+    // - Store RNAME
     // - Expand SEQ using CIGAR
-    // - Write fPOS:STOGY:EXS~
+    // - Write fRNAME:POS:STOGY:EXS~
     // - Push NEO, POS, EXS to circular buffer
     //
 
@@ -271,9 +271,13 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_t *stogy = str_new();
         str_t *exs = str_new();
 
+        str_copy_cstr(nucenc->rname_prev, rname);
+
         nucenc_expand(stogy, exs, cigar, seq);
 
         str_append_cstr(nucenc->tmp, "f");
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
         str_append_int(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
@@ -329,17 +333,24 @@ void nucenc_add_record(nucenc_t       *nucenc,
     int64_t pos_off = pos - pos_ref;
     uint32_t neo = 0;
 
-    if (pos_off > exs_ref->len || pos_off < 0) {
+    if (   pos_off > exs_ref->len
+        || pos_off < 0
+        || strcmp(rname, nucenc->rname_prev->s)) {
         nucenc->i_blk_cnt++;
 
         //
-        // Position offset is negative or too large:
-        // - Write iPOS:STOGY:EXS
+        // Position offset is negative or too large, or RNAME has changed:
+        // - Store RNAME
+        // - Write iRNAME:POS:STOGY:EXS
         // - Clear circular buffer
         // - Push NEO, POS, EXS to circular buffer
         //
 
+        str_copy_cstr(nucenc->rname_prev, rname);
+
         str_append_cstr(nucenc->tmp, "i");
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
         str_append_int(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
@@ -421,10 +432,11 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             nucenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)nucenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            nucenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)nucenc->in_sz * 100);
 
     nucenc->m_tot_cnt += nucenc->m_blk_cnt;
     nucenc->i_tot_cnt += nucenc->i_blk_cnt;
@@ -633,29 +645,37 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
         str_t *_seq_ = seq[rec_blk_cnt];
 
         //
-        // Check for skipped records of type m[POS][:CIGAR][:SEQ]~
+        // Check for skipped records of type mRNAME:POS:CIGAR:SEQ]~
         //
 
         if (rec->s[0] == 'm') {
             int itr = 1;
 
+            // Get RNAME
+            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+                str_append_char(_rname_, rec->s[itr]);
+                ++itr;
+            }
+            if (!_rname_->len) str_append_char(_rname_, '*');
+
             // Get POS
             *_pos_ = 0;
-            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+            itr++;
+            while (rec->s[itr] != ':') {
                 *_pos_ = *_pos_ * 10 + rec->s[itr] - '0';
                 ++itr;
             }
 
             // Get CIGAR
-            if (rec->s[itr] != '~') itr++;
-            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+            itr++;
+            while (rec->s[itr] != ':') {
                 str_append_char(_cigar_, rec->s[itr]);
                 ++itr;
             }
             if (!_cigar_->len) str_append_char(_cigar_, '*');
 
             // Get SEQ
-            if (rec->s[itr] != '~') itr++;
+            itr++;
             while (rec->s[itr] != '~') {
                 str_append_char(_seq_, rec->s[itr]);
                 ++itr;
@@ -664,8 +684,8 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
         }
 
         //
-        // Get first record of type fPOS:STOGY:EXS~ or inserted I-Record of
-        // type iPOS:STOGY:EXS~
+        // Get first record of type fRNAME:POS:STOGY:EXS~ or inserted I-Record
+        // of type iRNAME:POS:STOGY:EXS~
         //
 
         if (rec->s[0] == 'f' || rec->s[0] == 'i') {
@@ -673,8 +693,15 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_t *exs = str_new();
             int itr = 1;
 
+            // Get RNAME
+            while (rec->s[itr] != ':') {
+                str_append_char(_rname_, rec->s[itr]);
+                itr++;
+            }
+
             // Get POS
             *_pos_ = 0;
+            ++itr;
             while (rec->s[itr] != ':') {
                 *_pos_ = *_pos_ * 10 + rec->s[itr] - '0';
                 itr++;
@@ -707,6 +734,9 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             // Contract
             nucdec_contract(_cigar_, _seq_, stogy->s, exs->s);
 
+            // Store RNAME
+            str_copy_str(rname_prev, _rname_);
+
             str_free(stogy);
             str_free(exs);
         }
@@ -721,6 +751,9 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_t *exs = str_new();
             str_t *mod = str_new();
             str_t *trail = str_new();
+
+            // Get RNAME
+            str_copy_str(_rname_, rname_prev);
 
             int itr = 0;
 
@@ -854,10 +887,11 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
     nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, rname, pos, cigar, seq);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             nucdec->out_sz,
-             (double)nucdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            nucdec->out_sz,
+            (double)nucdec->out_sz / (double)data_sz * 100);
 
     nucdec_reset(nucdec);
 

@@ -38,8 +38,6 @@ static const char *opt_output = NULL;
 static const char *opt_blocksz = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
-static bool opt_flag_verbose = false;
-static bool opt_flag_warn = false;
 
 // Initializing global vars from 'tsclib.h'
 str_t *tsc_prog_name = NULL;
@@ -49,9 +47,8 @@ str_t *tsc_out_fname = NULL;
 FILE *tsc_in_fp = NULL;
 FILE *tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
+tsc_loglvl_t tsc_loglvl = TSC_LOG_DEFAULT;
 bool tsc_stats = false;
-bool tsc_verbose = false;
-bool tsc_warn = false;
 unsigned int tsc_blocksz = 0;
 
 static void print_version(void)
@@ -83,11 +80,11 @@ static void print_help(void)
     printf("  -f, --force       Force overwriting of output file(s)\n");
     printf("  -h, --help        Print this help\n");
     printf("  -i, --info        Print information about tsc file\n");
+    printf("  -l, --log         Log level (0-3, default: 0)\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -v, --verbose     Verbose output\n");
+    printf("  -v, --verbose     Verbose output (equals --log=2)\n");
     printf("  -V, --version     Display program version\n");
-    printf("  -w, --warn        Print warnings\n");
     printf("\n");
 }
 
@@ -101,15 +98,15 @@ static void parse_options(int argc, char *argv[])
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
         { "info",       no_argument,       NULL, 'i'},
+        { "log",        required_argument, NULL, 'l'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
         { "verbose",    no_argument,       NULL, 'v'},
         { "version",    no_argument,       NULL, 'V'},
-        { "warn",       no_argument,       NULL, 'w'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhio:svVw";
+    const char *short_options = "b:dfhil:o:svV";
 
     do {
         int opt_idx = 0;
@@ -133,6 +130,13 @@ static void parse_options(int argc, char *argv[])
         case 'i':
             tsc_mode = TSC_MODE_INFO;
             break;
+        case 'l':
+            if (atoi(optarg) >= 0 && atoi(optarg) <= 3) {
+                tsc_loglvl = atoi(optarg);
+            } else {
+                tsc_error("Log level must be 0-3\n");
+            }
+            break;
         case 'o':
             opt_output = optarg;
             break;
@@ -140,15 +144,12 @@ static void parse_options(int argc, char *argv[])
             opt_flag_stats = true;
             break;
         case 'v':
-            opt_flag_verbose = true;
+            tsc_loglvl = TSC_LOG_VERBOSE;
             break;
         case 'V':
             print_version();
             print_copyright();
             exit(EXIT_SUCCESS);
-            break;
-        case 'w':
-            opt_flag_warn = true;
             break;
         default:
             exit(EXIT_FAILURE);
@@ -174,8 +175,8 @@ static const char *fext(const char* path)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); // Ignore the signal
-    tsc_log("Catched signal: %d\n", sig);
-    tsc_log("Cleaning up ...\n");
+    tsc_log(TSC_LOG_DEFAULT, TSC_LOG_DEFAULT, "Catched signal: %d\n", sig);
+    tsc_log(TSC_LOG_DEFAULT, TSC_LOG_DEFAULT, "Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); // Invoke default signal action
     raise(sig);
@@ -212,8 +213,6 @@ int main(int argc, char *argv[])
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
     if (opt_flag_stats) tsc_stats = true;
-    if (opt_flag_verbose) tsc_verbose = true;
-    if (opt_flag_warn) tsc_warn = true;
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // All possible options are legal in this mode
@@ -262,11 +261,11 @@ int main(int argc, char *argv[])
         // Invoke compressor
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
-        tsc_log("Compressing: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Compressing: %s\n", tsc_in_fname->s);
         samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
         samenc_encode(samenc);
         samenc_free(samenc);
-        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
         tsc_fclose(tsc_in_fp);
         tsc_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
@@ -292,11 +291,11 @@ int main(int argc, char *argv[])
         // Invoke decompressor
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "w");
-        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Decompressing: %s\n", tsc_in_fname->s);
         samdec_t * samdec = samdec_new(tsc_in_fp, tsc_out_fp);
         samdec_decode(samdec);
         samdec_free(samdec);
-        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
         tsc_fclose(tsc_in_fp);
         tsc_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
@@ -306,7 +305,7 @@ int main(int argc, char *argv[])
 
         // Read information from compressed tsc file
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_log("Reading information: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Reading information: %s\n", tsc_in_fname->s);
         samdec_t *samdec = samdec_new(tsc_in_fp, NULL);
         samdec_info(samdec);
         samdec_free(samdec);

@@ -118,10 +118,11 @@ size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             pairenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)pairenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            pairenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)pairenc->in_sz * 100);
 
     pairenc_reset(pairenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -244,10 +245,11 @@ size_t pairdec_decode_block(pairdec_t *pairdec,
     pairdec->out_sz = pairdec_decode(pairdec, tmp, tmp_sz, rnext, pnext, tlen);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             pairdec->out_sz,
-             (double)pairdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            pairdec->out_sz,
+            (double)pairdec->out_sz / (double)data_sz * 100);
 
     pairdec_reset(pairdec);
 
