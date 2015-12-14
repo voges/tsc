@@ -187,8 +187,8 @@ static const char *fext(const char* path)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); // Ignore the signal
-    tsc_log(TSC_LOG_DEFAULT, TSC_LOG_DEFAULT, "Catched signal: %d\n", sig);
-    tsc_log(TSC_LOG_DEFAULT, TSC_LOG_DEFAULT, "Cleaning up ...\n");
+    tsc_log(TSC_LOG_DEFAULT, "Catched signal: %d\n", sig);
+    tsc_log(TSC_LOG_DEFAULT, "Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); // Invoke default signal action
     raise(sig);
