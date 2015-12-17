@@ -35,12 +35,12 @@
 
 //
 // Nuc o1 block format:
-//   unsigned char  blk_id[8]  : "nuc----" + '\0'
-//   uint64_t       rec_blk_cnt: No. of lines in block
-//   uint64_t       tmp_sz     : Size of uncompressed data
-//   uint64_t       data_sz    : Data size
-//   uint64_t       data_crc   : CRC64 of compressed data
-//   unsigned char  *data      : Data
+//   unsigned char blk_id[8]  : "nuc----" + '\0'
+//   uint64_t      rec_blk_cnt: No. of lines in block
+//   uint64_t      tmp_sz     : Size of uncompressed data
+//   uint64_t      data_sz    : Data size
+//   uint64_t      data_crc   : CRC64 of compressed data
+//   unsigned char *data      : Data
 //
 
 #include "nuccodec_o1.h"
@@ -76,6 +76,7 @@ static void nucenc_init(nucenc_t *nucenc)
     // Open statistics file and write header for it
     str_append_str(nucenc->stat_fname, tsc_out_fname);
     str_append_cstr(nucenc->stat_fname, ".nuc.log");
+    tsc_log(TSC_LOG_INFO, "Nuc statistics: %s\n", nucenc->stat_fname->s);
     nucenc->stat_fp = tsc_fopen((const char *)nucenc->stat_fname->s, "w");
     str_t *stat = str_new();
     str_append_cstr(stat, "m_blk_cnt,");
@@ -101,8 +102,8 @@ nucenc_t * nucenc_new(void)
 
     nucenc_init(nucenc);
 
-    tsc_log(TSC_LOG_INFO, "Nuccodec WINDOW_SZ: %d\n", WINDOW_SZ);
-    tsc_log(TSC_LOG_INFO, "Nuccodec ALPHA: %.1f\n", ALPHA);
+    tsc_log(TSC_LOG_INFO, "Nuc WINDOW_SZ: %d\n", WINDOW_SZ);
+    tsc_log(TSC_LOG_INFO, "Nuc ALPHA: %.1f\n", ALPHA);
 
     return nucenc;
 }
@@ -110,7 +111,6 @@ nucenc_t * nucenc_new(void)
 void nucenc_free(nucenc_t *nucenc)
 {
     tsc_fclose(nucenc->stat_fp);
-    tsc_log(TSC_LOG_INFO, "Nuccodec statistics: %s\n", nucenc->stat_fname->s);
 
     if (nucenc != NULL) {
         str_free(nucenc->tmp);
@@ -271,6 +271,8 @@ void nucenc_add_record(nucenc_t       *nucenc,
         return;
     }
 
+    uint32_t neo = 0;
+
     //
     // First record in block:
     // - Store RNAME
@@ -286,6 +288,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_copy_cstr(nucenc->rname_prev, rname);
 
         nucenc_expand(stogy, exs, cigar, seq);
+        neo = ceil(stogy->len);
 
         str_append_cstr(nucenc->tmp, "f");
         str_append_cstr(nucenc->tmp, rname);
@@ -297,7 +300,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_append_str(nucenc->tmp, exs);
         str_append_cstr(nucenc->tmp, "~");
 
-        cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
+        cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
 
@@ -322,6 +325,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
     str_t *exs = str_new();
 
     nucenc_expand(stogy, exs, cigar, seq);
+    neo = ceil(stogy->len);
 
     // Get matching NEO, POS, EXS from circular buffer
     size_t cbuf_idx = 0;
@@ -331,8 +335,14 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     do {
         uint32_t neo_ref = (uint32_t)cbufint64_get(nucenc->neo_cbuf, cbuf_idx);
-        if (neo_ref < neo_best) {
-            neo_best = neo_ref;
+
+        //if (neo_ref < neo_best) {
+        //    neo_best = neo_ref;
+        //    cbuf_idx_best = cbuf_idx;
+        //}
+        uint32_t neo_off = abs(100*(1-ALPHA)*(neo-neo_ref) + 100*ALPHA*(cbuf_idx));
+        if (neo_off < neo_best) {
+            neo_best = neo_off;
             cbuf_idx_best = cbuf_idx;
         }
         cbuf_idx++;
@@ -343,7 +353,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     // Compute and check position offset
     int64_t pos_off = pos - pos_ref;
-    uint32_t neo = 0;
 
     if (   pos_off > exs_ref->len
         || pos_off < 0
@@ -374,7 +383,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         cbufint64_clear(nucenc->pos_cbuf);
         cbufstr_clear(nucenc->exs_cbuf);
 
-        cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
+        cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
     } else {
@@ -387,6 +396,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         //
 
         nucenc_diff(mod, trail, pos_off, exs->s, exs_ref->s);
+        neo = ceil(stogy->len + mod->len);
 
         str_append_int(nucenc->tmp, pos_off);
         str_append_cstr(nucenc->tmp, ":");
@@ -401,7 +411,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
         }
         str_append_cstr(nucenc->tmp, "~");
 
-        neo = ceil((1-ALPHA)*pos_off + ALPHA*(stogy->len + mod->len));
         cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
@@ -739,7 +748,8 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             cbufstr_clear(nucdec->exs_cbuf);
 
             // Push NEO, POS, EXS to circular buffer
-            cbufint64_push(nucdec->neo_cbuf, (int64_t)ceil(ALPHA*stogy->len));
+            uint32_t neo = (uint32_t)ceil(stogy->len);
+            cbufint64_push(nucdec->neo_cbuf, (int64_t)neo);
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);
 
@@ -800,7 +810,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             }
 
             // Compute NEO
-            uint32_t neo = (uint32_t)ceil((1-ALPHA)*pos_off + ALPHA*(stogy->len + mod->len));
+            uint32_t neo = ceil(stogy->len);
 
             // Get matching NEO, POS, EXS from circular buffer
             size_t cbuf_idx = 0;
@@ -810,8 +820,14 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
 
             do {
                 uint32_t neo_ref = (uint32_t)cbufint64_get(nucdec->neo_cbuf, cbuf_idx);
-                if (neo_ref < neo_best) {
-                    neo_best = neo_ref;
+
+                //if (neo_ref < neo_best) {
+                //    neo_best = neo_ref;
+                //    cbuf_idx_best = cbuf_idx;
+                //}
+                uint32_t neo_off = abs(100*(1-ALPHA)*(neo-neo_ref) + 100*ALPHA*(cbuf_idx));
+                if (neo_off < neo_best) {
+                    neo_best = neo_off;
                     cbuf_idx_best = cbuf_idx;
                 }
                 cbuf_idx++;
@@ -827,6 +843,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             nucdec_alike(exs, exs_ref->s, pos_off, stogy->s, mod->s, trail->s);
 
             // Push NEO, POS, EXS to circular buffer
+            neo = ceil(stogy->len + mod->len);
             cbufint64_push(nucdec->neo_cbuf, neo);
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);

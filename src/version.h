@@ -39,8 +39,8 @@
 #define VERSION_MAJMAJ 0
 #define VERSION_MAJMIN 1
 #define VERSION_MINMAJ 0
-#define VERSION_MINMIN 0
-#define VERSION "01.00" // Must be consistent
+#define VERSION_MINMIN 1
+#define VERSION "01.01" // Must be consistent
 
 #endif //TSC_VERSION_H
 

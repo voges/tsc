@@ -45,7 +45,7 @@
 #if DBG
     #define DEBUG(c,...)\
         do {\
-            fprintf(stderr, "Debug: %s:%d: %s: "c"\n", __FILE__, __LINE__, \
+            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
                     __FUNCTION__, ##__VA_ARGS__);\
         } while (false)
 #else

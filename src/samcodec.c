@@ -521,6 +521,10 @@ void samenc_encode(samenc_t *samenc)
     tsc_log(TSC_LOG_INFO, "Wrote %zu block(s)\n", tscfh->blk_n);
     tsc_log(TSC_LOG_INFO, "Took %ld us ~= %.2f s\n",
             et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log(TSC_LOG_INFO, "%.2f\%\n",
+            100*(double)tsc_sz[TSC_NUC] /
+            (double)(sam_sz[SAM_RNAME]+sam_sz[SAM_POS]
+            +sam_sz[SAM_CIGAR]+sam_sz[SAM_SEQ]));
 
     // If selected, print detailed statistics
     if (tsc_stats) samenc_print_stats(sam_sz, tsc_sz, tscfh, et);

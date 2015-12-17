@@ -45,7 +45,7 @@
 #include <stdio.h>
 
 #define WINDOW_SZ 10
-#define ALPHA 0.5
+#define ALPHA 0.9
 
 // Encoder
 // -----------------------------------------------------------------------------

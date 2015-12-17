@@ -82,9 +82,9 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o output] [-fsv] <file.sam>\n");
-    printf("  Decompress: tsc -d [-o output] [-fsv] <file.tsc>\n");
-    printf("  Info      : tsc -i [-v] <file.tsc>\n");
+    printf("  Compress  : tsc [-o output] [-l loglevel] [-bfs] <file.sam>\n");
+    printf("  Decompress: tsc -d [-o output]  [-l loglevel] [-fs] <file.tsc>\n");
+    printf("  Info      : tsc -i  [-l loglevel] <file.tsc>\n");
     printf("\n");
     printf("Options:\n");
     printf("  -b  --blocksz     Specify block size\n");
@@ -95,8 +95,7 @@ static void print_help(void)
     printf("  -l, --log         Log level (0-3, default: 0)\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -v, --verbose     Verbose output (equals --log=2)\n");
-    printf("  -V, --version     Display program version\n");
+    printf("  -v, --version     Display program version\n");
     printf("\n");
 }
 
@@ -110,15 +109,14 @@ static void parse_options(int argc, char *argv[])
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
         { "info",       no_argument,       NULL, 'i'},
-        { "log",        required_argument, NULL, 'l'},
+        { "loglevel",   required_argument, NULL, 'l'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
-        { "verbose",    no_argument,       NULL, 'v'},
-        { "version",    no_argument,       NULL, 'V'},
+        { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhil:o:svV";
+    const char *short_options = "b:dfhil:o:sv";
 
     do {
         int opt_idx = 0;
@@ -130,6 +128,8 @@ static void parse_options(int argc, char *argv[])
             opt_blocksz = optarg;
             break;
         case 'd':
+            if (tsc_mode == TSC_MODE_INFO)
+                tsc_error("Cannot decompress and get info at once\n");
             tsc_mode = TSC_MODE_DECOMPRESS;
             break;
         case 'f':
@@ -140,6 +140,8 @@ static void parse_options(int argc, char *argv[])
             exit(EXIT_SUCCESS);
             break;
         case 'i':
+            if (tsc_mode == TSC_MODE_DECOMPRESS)
+                tsc_error("Cannot decompress and get info at once\n");
             tsc_mode = TSC_MODE_INFO;
             break;
         case 'l':
@@ -156,9 +158,6 @@ static void parse_options(int argc, char *argv[])
             opt_flag_stats = true;
             break;
         case 'v':
-            tsc_loglvl = TSC_LOG_VERBOSE;
-            break;
-        case 'V':
             print_version();
             print_copyright();
             exit(EXIT_SUCCESS);

@@ -76,30 +76,30 @@ void tsc_error(const char *fmt, ...)
     char *msg;
     vasprintf(&msg, fmt, args);
     va_end(args);
-    fprintf(stderr, "%s [error]: %s", tsc_prog_name->s, msg);
+    fprintf(stderr, "%s error: %s", tsc_prog_name->s, msg);
     free(msg);
     tsc_abort();
 }
 
 void tsc_log(tsc_loglvl_t loglvl, const char *fmt, ...)
 {
-    char *msg_head;
+    char *msg_head = "";
 
     switch (loglvl) {
     case TSC_LOG_DEFAULT:
-        asprintf(&msg_head,"%s [log]: ", tsc_prog_name->s);
+        //asprintf(&msg_head, "%s log: ", tsc_prog_name->s);
         break;
     case TSC_LOG_INFO:
-        asprintf(&msg_head,"%s [info]: ", tsc_prog_name->s);
+        //asprintf(&msg_head, "%s info: ", tsc_prog_name->s);
         break;
     case TSC_LOG_VERBOSE:
-        asprintf(&msg_head,"%s [verbose]: ", tsc_prog_name->s);
+        //asprintf(&msg_head, "%s verbose: ", tsc_prog_name->s);
         break;
     case TSC_LOG_WARN:
-        asprintf(&msg_head,"%s [warn]: ", tsc_prog_name->s);
+        //asprintf(&msg_head, "%s warn: ", tsc_prog_name->s);
         break;
     default:
-        fprintf(stderr, "%s [error]: Wrong log level", tsc_prog_name->s);
+        fprintf(stderr, "%s error: Non-existent log level", tsc_prog_name->s);
         tsc_abort();
     }
 
