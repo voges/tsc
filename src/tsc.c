@@ -1,4 +1,5 @@
-/* The copyright in this software is being made available under the BSD
+/*
+ * The copyright in this software is being made available under the TNT
  * License, included below. This software may be subject to other third party
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
@@ -8,17 +9,15 @@
  * Contact: <voges@tnt.uni-hannover.de>
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * * Redistribution in source or binary form is not permitted.
  *
- *  * Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  * Neither the name of the TNT nor the names of its contributors may be used
- *    to endorse or promote products derived from this software without
- *    specific prior written permission.
+ * * Use in source or binary form is only permitted in the context of scientific
+ *   research.
+ *
+ * * Commercial use without specific prior written permission is prohibited.
+ *   Neither the name of the TNT nor the names of its contributors may be used
+ *   to endorse or promote products derived from this software without specific
+ *   prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -82,20 +81,20 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o output] [-l loglevel] [-bfs] <file.sam>\n");
-    printf("  Decompress: tsc -d [-o output]  [-l loglevel] [-fs] <file.tsc>\n");
-    printf("  Info      : tsc -i  [-l loglevel] <file.tsc>\n");
+    printf("  Compress  : tsc [-o FILE] [-l LEVEL] [-b SIZE] [-fs] file.sam\n");
+    printf("  Decompress: tsc -d [-o FILE]  [-l LEVEL] [-fs] file.tsc\n");
+    printf("  Info      : tsc -i  [-l LEVEL] file.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b  --blocksz     Specify block size\n");
-    printf("  -d  --decompress  Decompress\n");
-    printf("  -f, --force       Force overwriting of output file(s)\n");
-    printf("  -h, --help        Print this help\n");
-    printf("  -i, --info        Print information about tsc file\n");
-    printf("  -l, --log         Log level (0-3, default: 0)\n");
-    printf("  -o, --output      Specify output file\n");
-    printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -v, --version     Display program version\n");
+    printf("  -b  --blocksz=SIZE Specify block SIZE\n");
+    printf("  -d  --decompress   Decompress\n");
+    printf("  -f, --force        Force overwriting of output file(s)\n");
+    printf("  -h, --help         Print this help\n");
+    printf("  -i, --info         Print information about tsc file\n");
+    printf("  -l, --log=LEVEL    Set log LEVEL (0-3, default: 0)\n");
+    printf("  -o, --output=FILE  Specify output FILE\n");
+    printf("  -s, --stats        Print (de-)compression statistics\n");
+    printf("  -v, --version      Display program version\n");
     printf("\n");
 }
 
