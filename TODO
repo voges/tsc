@@ -3,3 +3,8 @@
 * pthreads for sub-block codecs
 * which block size?
 * fix alpha / which alpha?
+* use zopfli compression instead of zlib compression?
+* use brotli (.br) compression?
+* possibly remove range coder
+* website for tsc?
+* upload repo to GitHub
