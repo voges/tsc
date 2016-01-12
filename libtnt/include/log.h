@@ -32,40 +32,24 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_PAIRCODEC_H
-#define TSC_PAIRCODEC_H
+#ifndef TNT_LOG_H
+#define TNT_LOG_H
 
-#include "common/str.h"
-#include <stdint.h>
-#include <stdio.h>
+// Safe debug macro
+/*
+#if TNT_DEBUG
+    #define TNT_DEBUG(c,...)\
+          do {\
+            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
+                    __FUNCTION__, ##__VA_ARGS__);\
+        } while (false)
+#else
+    #define TNT_DEBUG(c,...) do { } while (false)
+#endif
+*/
 
-typedef struct paircodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} paircodec_t;
+void tnt_log(const char *fmt, ...);
+void tnt_error(const char *fmt, ...);
 
-paircodec_t * paircodec_new(void);
-void paircodec_free(paircodec_t *paircodec);
-
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void paircodec_add_record(paircodec_t      *paircodec,
-                        const char     *rnext,
-                        const uint32_t pnext,
-                        const int64_t  tlen);
-size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t paircodec_decode_block(paircodec_t *paircodec,
-                              FILE      *fp,
-                              str_t     **rnext,
-                              uint32_t  *pnext,
-                              int64_t   *tlen);
-
-#endif // TSC_PAIRCODEC_H
+#endif // TNT_LOG_H
 

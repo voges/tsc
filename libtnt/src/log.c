@@ -32,28 +32,33 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-//
-// Wrapper functions to safely read/write different data types from/to files (or
-// streams).
-// The 'fwrite_uintXX' resp. 'fread_uintXX' functions are compatible with
-// each other. They are independent from the endianness of the system this code
-// will be built on.
-//
+#define _GNU_SOURCE
 
-#ifndef FRW_H
-#define FRW_H
-
-#include <stdint.h>
+#include "log.h"
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-size_t fwrite_byte(FILE *fp, const unsigned char byte);
-size_t fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n);
-size_t fwrite_uint32(FILE *fp, const uint32_t dword);
-size_t fwrite_uint64(FILE *fp, const uint64_t qword);
-size_t fread_byte(FILE *fp, unsigned char *byte);
-size_t fread_buf(FILE *fp, unsigned char *buf, const size_t n);
-size_t fread_uint32(FILE *fp, uint32_t *dword);
-size_t fread_uint64(FILE *fp, uint64_t *qword);
+void tnt_log(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "%s", msg);
+    free(msg);
+}
 
-#endif // FRW_H
+void tnt_error(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stderr, "Error: %s", msg);
+    free(msg);
+    exit(EXIT_FAILURE);
+}
 

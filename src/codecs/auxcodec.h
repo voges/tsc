@@ -35,7 +35,7 @@
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
 
-#include "../tvclib/str.h"
+#include "common/str.h"
 #include <stdint.h>
 #include <stdio.h>
 

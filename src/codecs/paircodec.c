@@ -34,65 +34,63 @@
 
 //
 // Pair block format:
-//   unsigned char  blk_id[8]: "pair---" + '\0'
-//   uint64_t       rec_cnt  : No. of lines in block
-//   uint64_t       data_sz  : Data size
-//   uint64_t       data_crc : CRC64 of compressed data
-//   unsigned char  *data    : Data
+//   unsigned char id[8]          : "pair---" + '\0'
+//   uint64_t      record_cnt     : No. of lines in block
+//   uint64_t      uncompressed_sz: Size of uncompressed data
+//   uint64_t      compressed_sz  : Compressed data size
+//   uint64_t      compressed_crc : CRC64 of compressed data
+//   unsigned char *compressed    : Compressed data
 //
 
 #include "paircodec.h"
-#include "../range.h"
-#include "../tsclib.h"
-#include "../tvclib/crc64.h"
-#include "../tvclib/frw.h"
+#include "tsclib.h"
+#include "common/crc64.h"
+#include "tnt.h"
+#include "zlib-wrap.h"
 #include <inttypes.h>
 #include <string.h>
 
-// Encoder
-// -----------------------------------------------------------------------------
-
-static void pairenc_init(pairenc_t *pairenc)
+static void paircodec_init(paircodec_t *paircodec)
 {
-    pairenc->in_sz = 0;
-    pairenc->rec_cnt = 0;
+    paircodec->record_cnt = 0;
+    str_clear(paircodec->uncompressed);
+    if (paircodec->compressed != NULL) free(paircodec->compressed);
+    paircodec->compressed = NULL;
+    paircodec->compressed_sz = 0;
 }
 
-pairenc_t * pairenc_new(void)
+paircodec_t * paircodec_new(void)
 {
-    pairenc_t *pairenc = (pairenc_t *)tsc_malloc(sizeof(pairenc_t));
-    pairenc->tmp = str_new();
-    pairenc_init(pairenc);
-    return pairenc;
+    paircodec_t *paircodec = (paircodec_t *)tnt_malloc(sizeof(paircodec_t));
+    paircodec->uncompressed = str_new();
+    paircodec_init(paircodec);
+    return paircodec;
 }
 
-void pairenc_free(pairenc_t *pairenc)
+void paircodec_free(paircodec_t *paircodec)
 {
-    if (pairenc != NULL) {
-        str_free(pairenc->tmp);
-        free(pairenc);
-        pairenc = NULL;
+    if (paircodec != NULL) {
+        str_free(paircodec->uncompressed);
+        if (paircodec->compressed != NULL) {
+            free(paircodec->compressed);
+            paircodec->compressed = NULL;
+        }
+        free(paircodec);
+        paircodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void pairenc_reset(pairenc_t *pairenc)
-{
-    str_clear(pairenc->tmp);
-    pairenc_init(pairenc);
-}
+// Encoder
+// -----------------------------------------------------------------------------
 
-void pairenc_add_record(pairenc_t      *pairenc,
-                        const char     *rnext,
-                        const uint32_t pnext,
-                        const int64_t  tlen)
+void paircodec_add_record(paircodec_t    *paircodec,
+                          const char     *rnext,
+                          const uint32_t pnext,
+                          const int64_t  tlen)
 {
-    pairenc->in_sz += strlen(rnext);
-    pairenc->in_sz += sizeof(pnext);
-    pairenc->in_sz += sizeof(tlen);
-
-    pairenc->rec_cnt++;
+    paircodec->record_cnt++;
 
     char pnext_cstr[101];
     char tlen_cstr[101];
@@ -100,43 +98,40 @@ void pairenc_add_record(pairenc_t      *pairenc,
     snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu32, pnext);
     snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen);
 
-    str_append_cstr(pairenc->tmp, rnext);
-    str_append_cstr(pairenc->tmp, "\t");
-    str_append_cstr(pairenc->tmp, pnext_cstr);
-    str_append_cstr(pairenc->tmp, "\t");
-    str_append_cstr(pairenc->tmp, tlen_cstr);
-    str_append_cstr(pairenc->tmp, "\n");
+    str_append_cstr(paircodec->uncompressed, rnext);
+    str_append_cstr(paircodec->uncompressed, "\t");
+    str_append_cstr(paircodec->uncompressed, pnext_cstr);
+    str_append_cstr(paircodec->uncompressed, "\t");
+    str_append_cstr(paircodec->uncompressed, tlen_cstr);
+    str_append_cstr(paircodec->uncompressed, "\n");
 }
 
-size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp)
+size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
 {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *tmp = (unsigned char *)pairenc->tmp->s;
-    unsigned int tmp_sz = (unsigned int)pairenc->tmp->len;
-    unsigned int data_sz = 0;
-    unsigned char *data = range_compress_o0(tmp, tmp_sz, &data_sz);
+    unsigned char *uncompressed = (unsigned char *)paircodec->uncompressed->s;
+    size_t uncompressed_sz = paircodec->uncompressed->len;
+    size_t compressed_sz = 0;
+    unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t data_crc = crc64(data, data_sz);
+    uint64_t compressed_crc = crc64(compressed, compressed_sz);
 
     // Write compressed block
-    unsigned char blk_id[8] = "pair---"; blk_id[7] = '\0';
-    ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)pairenc->rec_cnt);
-    ret += fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += fwrite_buf(fp, data, data_sz);
+    unsigned char id[8] = "pair---"; id[7] = '\0';
+    ret += tnt_fwrite_buf(fp, id, sizeof(id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)paircodec->record_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
 
-    tsc_log(TSC_LOG_VERBOSE,
-            "Compressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            pairenc->in_sz,
-            data_sz,
-            (double)data_sz / (double)pairenc->in_sz * 100);
+    // Free memory allocated by zlib_compress
+    free(compressed);
 
-    pairenc_reset(pairenc); // Reset encoder for next block
-    free(data); // Free memory used for encoded bitstream
+    paircodec_init(paircodec);
 
     return ret;
 }
@@ -144,39 +139,12 @@ size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp)
 // Decoder
 // -----------------------------------------------------------------------------
 
-static void pairdec_init(pairdec_t *pairdec)
-{
-    pairdec->out_sz = 0;
-}
-
-pairdec_t * pairdec_new(void)
-{
-    pairdec_t *pairdec = (pairdec_t *)tsc_malloc(sizeof(pairdec_t));
-    pairdec_init(pairdec);
-    return pairdec;
-}
-
-void pairdec_free(pairdec_t *pairdec)
-{
-    if (pairdec != NULL) {
-        free(pairdec);
-        pairdec = NULL;
-    } else {
-        tsc_error("Tried to free null pointer\n");
-    }
-}
-
-static void pairdec_reset(pairdec_t* pairdec)
-{
-    pairdec_init(pairdec);
-}
-
-static size_t pairdec_decode(pairdec_t     *pairdec,
-                             unsigned char *tmp,
-                             size_t        tmp_sz,
-                             str_t         **rnext,
-                             uint32_t      *pnext,
-                             int64_t       *tlen)
+static size_t paircodec_decode(paircodec_t     *paircodec,
+                               unsigned char *tmp,
+                               size_t        tmp_sz,
+                               str_t         **rnext,
+                               uint32_t      *pnext,
+                               int64_t       *tlen)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -216,53 +184,43 @@ static size_t pairdec_decode(pairdec_t     *pairdec,
     return ret;
 }
 
-size_t pairdec_decode_block(pairdec_t *pairdec,
-                            FILE      *fp,
-                            str_t     **rnext,
-                            uint32_t  *pnext,
-                            int64_t   *tlen)
+size_t paircodec_decode_block(paircodec_t *paircodec,
+                              FILE      *fp,
+                              str_t     **rnext,
+                              uint32_t  *pnext,
+                              int64_t   *tlen)
 {
-    unsigned char blk_id[8];
-    uint64_t      rec_cnt;
-    uint64_t      data_sz;
-    uint64_t      data_crc;
-    unsigned char *data;
+    size_t ret = 0;
+
+    unsigned char id[8];
+    uint64_t      record_cnt;
+    uint64_t      uncompressed_sz;
+    uint64_t      compressed_sz;
+    uint64_t      compressed_crc;
+    unsigned char *compressed;
 
     // Read block
-    fread_buf(fp, blk_id, sizeof(blk_id));
-    fread_uint64(fp, &rec_cnt);
-    fread_uint64(fp, &data_sz);
-    fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tsc_malloc((size_t)data_sz);
-    fread_buf(fp, data, data_sz);
-
-    // Compute tsc block size
-    size_t ret = sizeof(blk_id)
-               + sizeof(rec_cnt)
-               + sizeof(data_sz)
-               + sizeof(data_crc)
-               + data_sz;
+    ret += tnt_fread_buf(fp, id, sizeof(id));
+    ret += tnt_fread_uint64(fp, &record_cnt);
+    ret += tnt_fread_uint64(fp, &uncompressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
+    ret += tnt_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(data, data_sz) != data_crc)
+    if (crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for pair block\n");
 
     // Decompress block
-    unsigned int tmp_sz = 0;
-    unsigned char *tmp = range_decompress_o0(data, data_sz, &tmp_sz);
-    free(data);
+    unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
+    free(compressed);
 
     // Decode block
-    pairdec->out_sz = pairdec_decode(pairdec, tmp, tmp_sz, rnext, pnext, tlen);
-    free(tmp); // Free memory used for decoded bitstream
+    paircodec_decode(paircodec, uncompressed, uncompressed_sz, rnext, pnext, tlen);
+    free(uncompressed); // Free memory used for decoded bitstream
 
-    tsc_log(TSC_LOG_VERBOSE,
-            "Decompressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            data_sz,
-            pairdec->out_sz,
-            (double)pairdec->out_sz / (double)data_sz * 100);
-
-    pairdec_reset(pairdec);
+    paircodec_init(paircodec);
 
     return ret;
 }

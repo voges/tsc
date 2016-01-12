@@ -36,8 +36,9 @@
 #define TSC_SAMPARSER_H
 
 #include "samrec.h"
-#include "tvclib/str.h"
+#include "common/str.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 typedef struct samparser_t_ {
     FILE     *fp;   // file pointer

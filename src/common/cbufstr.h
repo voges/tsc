@@ -32,40 +32,25 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_PAIRCODEC_H
-#define TSC_PAIRCODEC_H
+#ifndef CBUFSTR_H
+#define CBUFSTR_H
 
-#include "common/str.h"
-#include <stdint.h>
-#include <stdio.h>
+#include "str.h"
+#include <stdlib.h>
 
-typedef struct paircodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} paircodec_t;
+typedef struct cbufstr_t_ {
+    size_t sz;    // size of circular buffer
+    str_t  **buf; // array holding the strings in the buffer
+    size_t nxt;   // next free position
+    size_t n;     // number of elements currently in buffer
+} cbufstr_t;
 
-paircodec_t * paircodec_new(void);
-void paircodec_free(paircodec_t *paircodec);
+cbufstr_t *cbufstr_new(const size_t sz);
+void cbufstr_free(cbufstr_t *cbufstr);
+void cbufstr_clear(cbufstr_t *cbufstr);
+void cbufstr_push(cbufstr_t *cbufstr, const char *s);
+str_t * cbufstr_top(cbufstr_t *cbufstr);
+str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
 
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void paircodec_add_record(paircodec_t      *paircodec,
-                        const char     *rnext,
-                        const uint32_t pnext,
-                        const int64_t  tlen);
-size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t paircodec_decode_block(paircodec_t *paircodec,
-                              FILE      *fp,
-                              str_t     **rnext,
-                              uint32_t  *pnext,
-                              int64_t   *tlen);
-
-#endif // TSC_PAIRCODEC_H
+#endif // CBUFSTR_H
 

@@ -34,18 +34,18 @@
 
 //
 // Aux block format:
-//   unsigned char  blk_id[8]: "aux----" + '\0'
-//   uint64_t       rec_cnt  : No. of lines in block
-//   uint64_t       data_sz  : Data size
-//   uint64_t       data_crc : CRC64 of compressed data
-//   unsigned char  *data    : Data
+//   unsigned char blk_id[8]: "aux----" + '\0'
+//   uint64_t      rec_cnt  : No. of lines in block
+//   uint64_t      data_sz  : Data size
+//   uint64_t      data_crc : CRC64 of compressed data
+//   unsigned char *data    : Data
 //
 
 #include "auxcodec.h"
-#include "../range.h"
-#include "../tsclib.h"
-#include "../tvclib/crc64.h"
-#include "../tvclib/frw.h"
+#include "range.h"
+#include "tsclib.h"
+#include "common/crc64.h"
+#include "tnt.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -60,7 +60,7 @@ static void auxenc_init(auxenc_t *auxenc)
 
 auxenc_t * auxenc_new(void)
 {
-    auxenc_t *auxenc = (auxenc_t *)tsc_malloc(sizeof(auxenc_t));
+    auxenc_t *auxenc = (auxenc_t *)tnt_malloc(sizeof(auxenc_t));
     auxenc->tmp = str_new();
     auxenc_init(auxenc);
     return auxenc;
@@ -123,17 +123,11 @@ size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp)
 
     // Write compressed block
     unsigned char blk_id[8] = "aux----"; blk_id[7] = '\0';
-    ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)auxenc->rec_cnt);
-    ret += fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += fwrite_buf(fp, data, data_sz);
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Compressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            auxenc->in_sz,
-            data_sz,
-            (double)data_sz / (double)auxenc->in_sz * 100);
+    ret += tnt_fwrite_buf(fp, blk_id, sizeof(blk_id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)auxenc->rec_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_crc);
+    ret += tnt_fwrite_buf(fp, data, data_sz);
 
     auxenc_reset(auxenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -151,7 +145,7 @@ static void auxdec_init(auxdec_t *auxdec)
 
 auxdec_t * auxdec_new(void)
 {
-    auxdec_t *auxdec = (auxdec_t *)tsc_malloc(sizeof(auxdec_t));
+    auxdec_t *auxdec = (auxdec_t *)tnt_malloc(sizeof(auxdec_t));
     auxdec_init(auxdec);
     return auxdec;
 }
@@ -235,12 +229,12 @@ size_t auxdec_decode_block(auxdec_t *auxdec,
     unsigned char *data;
 
     // Read block
-    fread_buf(fp, blk_id, sizeof(blk_id));
-    fread_uint64(fp, &rec_cnt);
-    fread_uint64(fp, &data_sz);
-    fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tsc_malloc((size_t)data_sz);
-    fread_buf(fp, data, data_sz);
+    tnt_fread_buf(fp, blk_id, sizeof(blk_id));
+    tnt_fread_uint64(fp, &rec_cnt);
+    tnt_fread_uint64(fp, &data_sz);
+    tnt_fread_uint64(fp, &data_crc);
+    data = (unsigned char *)tnt_malloc((size_t)data_sz);
+    tnt_fread_buf(fp, data, data_sz);
 
     // Compute tsc block size
     size_t ret = sizeof(blk_id)
@@ -261,12 +255,6 @@ size_t auxdec_decode_block(auxdec_t *auxdec,
     // Decode block
     auxdec->out_sz = auxdec_decode(auxdec, tmp, tmp_sz, flag, mapq, opt);
     free(tmp); // Free memory used for decoded bitstream
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Decompressed aux block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            data_sz,
-            auxdec->out_sz,
-            (double)auxdec->out_sz / (double)data_sz * 100);
 
     auxdec_reset(auxdec);
 

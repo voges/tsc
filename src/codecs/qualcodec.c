@@ -34,18 +34,18 @@
 
 //
 // Qual block format:
-//   unsigned char  blk_id[8]: "qual---" + '\0'
-//   uint64_t       rec_cnt  : No. of lines in block
-//   uint64_t       data_sz  : Data size
-//   uint64_t       data_crc : CRC64 of comptmpsed data
-//   unsigned char  *data    : Data
+//   unsigned char blk_id[8]: "qual---" + '\0'
+//   uint64_t      rec_cnt  : No. of lines in block
+//   uint64_t      data_sz  : Data size
+//   uint64_t      data_crc : CRC64 of comptmpsed data
+//   unsigned char *data    : Data
 //
 
 #include "qualcodec.h"
-#include "../range.h"
-#include "../tsclib.h"
-#include "../tvclib/crc64.h"
-#include "../tvclib/frw.h"
+#include "range.h"
+#include "tsclib.h"
+#include "common/crc64.h"
+#include "tnt.h"
 #include <string.h>
 
 // Encoder
@@ -59,7 +59,7 @@ static void qualenc_init(qualenc_t *qualenc)
 
 qualenc_t * qualenc_new(void)
 {
-    qualenc_t *qualenc = (qualenc_t *)tsc_malloc(sizeof(qualenc_t));
+    qualenc_t *qualenc = (qualenc_t *)tnt_malloc(sizeof(qualenc_t));
     qualenc->tmp = str_new();
     qualenc_init(qualenc);
     return qualenc;
@@ -107,17 +107,11 @@ size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
 
     // Write compressed block
     unsigned char blk_id[8] = "qual---"; blk_id[7] = '\0';
-    ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)qualenc->rec_cnt);
-    ret += fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += fwrite_buf(fp, data, data_sz);
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Compressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            qualenc->in_sz,
-            data_sz,
-            (double)data_sz / (double)qualenc->in_sz * 100);
+    ret += tnt_fwrite_buf(fp, blk_id, sizeof(blk_id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)qualenc->rec_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_crc);
+    ret += tnt_fwrite_buf(fp, data, data_sz);
 
     qualenc_reset(qualenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -135,7 +129,7 @@ static void qualdec_init(qualdec_t *qualdec)
 
 qualdec_t * qualdec_new(void)
 {
-    qualdec_t *qualdec = (qualdec_t *)tsc_malloc(sizeof(qualdec_t));
+    qualdec_t *qualdec = (qualdec_t *)tnt_malloc(sizeof(qualdec_t));
     qualdec_init(qualdec);
     return qualdec;
 }
@@ -185,12 +179,12 @@ size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
     unsigned char *data;
 
     // Read block
-    fread_buf(fp, blk_id, sizeof(blk_id));
-    fread_uint64(fp, &rec_cnt);
-    fread_uint64(fp, &data_sz);
-    fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tsc_malloc((size_t)data_sz);
-    fread_buf(fp, data, data_sz);
+    tnt_fread_buf(fp, blk_id, sizeof(blk_id));
+    tnt_fread_uint64(fp, &rec_cnt);
+    tnt_fread_uint64(fp, &data_sz);
+    tnt_fread_uint64(fp, &data_crc);
+    data = (unsigned char *)tnt_malloc((size_t)data_sz);
+    tnt_fread_buf(fp, data, data_sz);
 
     // Compute tsc block size
     size_t ret = sizeof(blk_id)
@@ -211,12 +205,6 @@ size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
     // Decode block
     qualdec->out_sz = qualdec_decode(qualdec, tmp, tmp_sz, qual);
     free(tmp); // Free memory used for decoded bitstream
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Decompressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            data_sz,
-            qualdec->out_sz,
-            (double)qualdec->out_sz / (double)data_sz * 100);
 
     qualdec_reset(qualdec);
 

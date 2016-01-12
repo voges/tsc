@@ -36,7 +36,7 @@
 #define TSC_IDCODEC_H
 
 
-#include "../tvclib/str.h"
+#include "common/str.h"
 #include <stdio.h>
 
 // Encoder

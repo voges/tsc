@@ -34,18 +34,18 @@
 
 //
 // Id block format:
-//   unsigned char  blk_id[8]: "id-----" + '\0'
-//   uint64_t       rec_cnt  : No. of lines in block
-//   uint64_t       data_sz  : Data size
-//   uint64_t       data_crc : CRC64 of comptmpsed data
-//   unsigned char  *data    : Data
+//   unsigned char blk_id[8]: "id-----" + '\0'
+//   uint64_t      rec_cnt  : No. of lines in block
+//   uint64_t      data_sz  : Data size
+//   uint64_t      data_crc : CRC64 of comptmpsed data
+//   unsigned char *data    : Data
 //
 
 #include "idcodec.h"
-#include "../range.h"
-#include "../tsclib.h"
-#include "../tvclib/crc64.h"
-#include "../tvclib/frw.h"
+#include "range.h"
+#include "tsclib.h"
+#include "common/crc64.h"
+#include "tnt.h"
 #include <string.h>
 
 // Encoder
@@ -59,7 +59,7 @@ static void idenc_init(idenc_t *idenc)
 
 idenc_t * idenc_new(void)
 {
-    idenc_t *idenc = (idenc_t *)tsc_malloc(sizeof(idenc_t));
+    idenc_t *idenc = (idenc_t *)tnt_malloc(sizeof(idenc_t));
     idenc->tmp = str_new();
     idenc_init(idenc);
     return idenc;
@@ -107,17 +107,11 @@ size_t idenc_write_block(idenc_t *idenc, FILE * fp)
 
     // Write compressed block
     unsigned char blk_id[8] = "id-----"; blk_id[7] = '\0';
-    ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)idenc->rec_cnt);
-    ret += fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += fwrite_buf(fp, data, data_sz);
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Compressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            idenc->in_sz,
-            data_sz,
-            (double)data_sz / (double)idenc->in_sz * 100);
+    ret += tnt_fwrite_buf(fp, blk_id, sizeof(blk_id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)idenc->rec_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)data_crc);
+    ret += tnt_fwrite_buf(fp, data, data_sz);
 
     idenc_reset(idenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
@@ -135,7 +129,7 @@ static void iddec_init(iddec_t *iddec)
 
 iddec_t * iddec_new(void)
 {
-    iddec_t *iddec = (iddec_t *)tsc_malloc(sizeof(iddec_t));
+    iddec_t *iddec = (iddec_t *)tnt_malloc(sizeof(iddec_t));
     iddec_init(iddec);
     return iddec;
 }
@@ -185,12 +179,12 @@ size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname)
     unsigned char *data;
 
     // Read block
-    fread_buf(fp, blk_id, sizeof(blk_id));
-    fread_uint64(fp, &rec_cnt);
-    fread_uint64(fp, &data_sz);
-    fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tsc_malloc((size_t)data_sz);
-    fread_buf(fp, data, data_sz);
+    tnt_fread_buf(fp, blk_id, sizeof(blk_id));
+    tnt_fread_uint64(fp, &rec_cnt);
+    tnt_fread_uint64(fp, &data_sz);
+    tnt_fread_uint64(fp, &data_crc);
+    data = (unsigned char *)tnt_malloc((size_t)data_sz);
+    tnt_fread_buf(fp, data, data_sz);
 
     // Compute tsc block size
     size_t ret = sizeof(blk_id)
@@ -211,12 +205,6 @@ size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname)
     // Decode block
     iddec->out_sz = iddec_decode(iddec, tmp, tmp_sz, qname);
     free(tmp); // Free memory used for decoded bitstream
-
-    tsc_log(TSC_LOG_VERBOSE,
-            "Decompressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            data_sz,
-            iddec->out_sz,
-            (double)iddec->out_sz / (double)data_sz * 100);
 
     iddec_reset(iddec);
 

@@ -42,9 +42,21 @@
 #include "codecs/nuccodec_o1.h"
 #include "codecs/paircodec.h"
 #include "codecs/qualcodec.h"
-#include "tvclib/str.h"
+#include "common/str.h"
 #include <stdio.h>
-
+/*
+typedef struct samcodec_t_ {
+    FILE         *ifp;
+    FILE         *ofp;
+    size_t       block_sz;
+    samparser_t  *samparser;
+    auxcodec_t   *auxcodec;
+    idcodec_t    *idcodec;
+    nuccodec_t   *nuccodec;
+    paircodec_t  *paircodec;
+    qualcodec_t  *qualcodec;
+} samcodec_t;
+*/
 typedef struct samenc_t_ {
     FILE         *ifp;
     FILE         *ofp;
@@ -53,7 +65,7 @@ typedef struct samenc_t_ {
     auxenc_t     *auxenc;
     idenc_t      *idenc;
     nucenc_t     *nucenc;
-    pairenc_t    *pairenc;
+    paircodec_t    *paircodec;
     qualenc_t    *qualenc;
 } samenc_t;
 
@@ -67,7 +79,7 @@ typedef struct samdec_t_ {
     auxdec_t  *auxdec;
     iddec_t   *iddec;
     nucdec_t  *nucdec;
-    pairdec_t *pairdec;
+    paircodec_t *paircodec;
     qualdec_t *qualdec;
 } samdec_t;
 

@@ -35,10 +35,9 @@
 #ifndef TSC_NUCCODEC_O1_H
 #define TSC_NUCCODEC_O1_H
 
-#include "../tvclib/bbuf.h"
-#include "../tvclib/cbufint64.h"
-#include "../tvclib/cbufstr.h"
-#include "../tvclib/str.h"
+#include "common/cbufint64.h"
+#include "common/cbufstr.h"
+#include "common/str.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -51,22 +50,16 @@
 
 typedef struct nucenc_t_ {
     size_t in_sz;       // Accumulated input size
-    size_t rec_blk_cnt; // No. of records processed in the current block
-    size_t rec_tot_cnt; // Total # of records processed
+    size_t record_cnt; // No. of records processed in the current block
     bool   first;       // 'false', if first line has not been processed yet
-    str_t  *tmp;        // Temporal storage for e.g. prediction residues
     str_t  *rname_prev; // Holding current RNAME
 
-    // Statistics
-    str_t  *stat_fname; // File name for statistics file
-    FILE   *stat_fp;    // File pointer to statistics file
-    size_t m_blk_cnt;
-    size_t m_tot_cnt;
-    size_t i_blk_cnt;
-    size_t i_tot_cnt;
-    double stogy_mu;  // Mean STOGY length
-    double mod_mu;    // Mean MOD length
-    double trail_mu;  // Mean TRAIL length
+    // Tsc records
+    str_t *ctrl;
+    str_t *poff;
+    str_t *stogy;
+    str_t *mod;
+    str_t *trail;
 
     // Circular buffers
     cbufint64_t *neo_cbuf;
