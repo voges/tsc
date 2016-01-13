@@ -47,11 +47,11 @@ static void tscfh_init(tscfh_t *tscfh)
     tscfh->magic[2] = 'c';
     tscfh->magic[3] = '\0';
     tscfh->flags    = 0x0;
-    tscfh->ver[0]   = VERSION_MAJMAJ + 48; // ASCII offset
-    tscfh->ver[1]   = VERSION_MAJMIN + 48;
+    tscfh->ver[0]   = TSC_VERSION_MAJMAJ + 48; // ASCII offset
+    tscfh->ver[1]   = TSC_VERSION_MAJMIN + 48;
     tscfh->ver[2]   = '.';
-    tscfh->ver[3]   = VERSION_MINMAJ + 48;
-    tscfh->ver[4]   = VERSION_MINMIN + 48;
+    tscfh->ver[3]   = TSC_VERSION_MINMAJ + 48;
+    tscfh->ver[4]   = TSC_VERSION_MINMIN + 48;
     tscfh->ver[5]   = '\0';
     tscfh->rec_n    = 0;
     tscfh->blk_n    = 0;
@@ -175,7 +175,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
 {
     if (tscsh->data_sz == 0 || tscsh->data == NULL) {
-        printf("Attention: empty SAM header\n");
+        tsc_log("Attention: empty SAM header\n");
         return 0;
     }
 
@@ -201,9 +201,9 @@ static void tscbh_init(tscbh_t *tscbh)
     tscbh->fpos_nxt = 0;
     tscbh->blk_cnt  = 0;
     tscbh->rec_cnt  = 0;
-    tscbh->rec_n    = 0;
+    tscbh->rec_max  = 0;
     tscbh->rec_cnt  = 0;
-    tscbh->chr_cnt  = 0;
+    tscbh->rname    = 0;
     tscbh->pos_min  = 0;
     tscbh->pos_max  = 0;
 }
@@ -233,8 +233,8 @@ size_t tscbh_read(tscbh_t *tscbh, FILE *fp)
     ret += tnt_fread_uint64(fp, &(tscbh->fpos_nxt));
     ret += tnt_fread_uint64(fp, &(tscbh->blk_cnt));
     ret += tnt_fread_uint64(fp, &(tscbh->rec_cnt));
-    ret += tnt_fread_uint64(fp, &(tscbh->rec_n));
-    ret += tnt_fread_uint64(fp, &(tscbh->chr_cnt));
+    ret += tnt_fread_uint64(fp, &(tscbh->rec_max));
+    ret += tnt_fread_uint64(fp, &(tscbh->rname));
     ret += tnt_fread_uint64(fp, &(tscbh->pos_min));
     ret += tnt_fread_uint64(fp, &(tscbh->pos_max));
 
@@ -251,8 +251,8 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
     ret += tnt_fwrite_uint64(fp, tscbh->fpos_nxt);
     ret += tnt_fwrite_uint64(fp, tscbh->blk_cnt);
     ret += tnt_fwrite_uint64(fp, tscbh->rec_cnt);
-    ret += tnt_fwrite_uint64(fp, tscbh->rec_n);
-    ret += tnt_fwrite_uint64(fp, tscbh->chr_cnt);
+    ret += tnt_fwrite_uint64(fp, tscbh->rec_max);
+    ret += tnt_fwrite_uint64(fp, tscbh->rname);
     ret += tnt_fwrite_uint64(fp, tscbh->pos_min);
     ret += tnt_fwrite_uint64(fp, tscbh->pos_max);
 
@@ -267,8 +267,8 @@ size_t tscbh_size(tscbh_t *tscbh)
            + sizeof(tscbh->fpos_nxt)
            + sizeof(tscbh->blk_cnt)
            + sizeof(tscbh->rec_cnt)
-           + sizeof(tscbh->rec_n)
-           + sizeof(tscbh->chr_cnt)
+           + sizeof(tscbh->rec_max)
+           + sizeof(tscbh->rname)
            + sizeof(tscbh->pos_min)
            + sizeof(tscbh->pos_max);
 }

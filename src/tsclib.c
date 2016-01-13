@@ -84,7 +84,7 @@ void tsc_log(const char *fmt, ...)
 
 void tsc_error(const char *fmt, ...)
 {
-    tsc_cleanup();
+
 
     va_list args;
     va_start(args, fmt);
@@ -93,5 +93,6 @@ void tsc_error(const char *fmt, ...)
     va_end(args);
     fprintf(stdout, "Error: %s", msg);
     free(msg);
+    tsc_abort();
 }
 

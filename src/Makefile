@@ -1,6 +1,6 @@
 EXEC         = tsc
 CC           = gcc
-CFLAGS       = $(INCLUDE_DIRS) -Wall #-Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wundef #-Wconversion -Wextra
+CFLAGS       = $(INCLUDE_DIRS) -Wall -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wconversion -Wextra #-Wundef
 INCLUDE_DIRS = -I../libtnt/include -I.
 LIB_DIRS     = -L../libtnt/lib
 LDFLAGS      = -lm -lz -ltnt

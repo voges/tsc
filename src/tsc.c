@@ -81,9 +81,9 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o FILE] [-l LEVEL] [-b SIZE] [-fs] file.sam\n");
-    printf("  Decompress: tsc -d [-o FILE]  [-l LEVEL] [-fs] file.tsc\n");
-    printf("  Info      : tsc -i  [-l LEVEL] file.tsc\n");
+    printf("  Compress  : tsc [-o FILE] [-b SIZE] [-fs] file.sam\n");
+    printf("  Decompress: tsc -d [-o FILE] [-fs] file.tsc\n");
+    printf("  Info      : tsc -i file.tsc\n");
     printf("\n");
     printf("Options:\n");
     printf("  -b  --blocksz=SIZE Specify block SIZE\n");
@@ -166,7 +166,7 @@ static void parse_options(int argc, char *argv[])
         opt_input = argv[optind];
 }
 
-static const char *fext(const char* path)
+static const char * fext(const char *path)
 {
     const char *dot = strrchr(path, '.');
     if (!dot || dot == path) { return ""; }
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 {
     tsc_prog_name = str_new();
     tsc_version = str_new();
-    str_append_cstr(tsc_version, VERSION);
+    str_append_cstr(tsc_version, TSC_VERSION);
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
@@ -263,9 +263,9 @@ int main(int argc, char *argv[])
         tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "r");
         tsc_out_fp = tnt_fopen((const char *)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
-        samenc_encode(samenc);
-        samenc_free(samenc);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
+        samcodec_encode(samcodec);
+        samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
         tnt_fclose(tsc_in_fp);
         tnt_fclose(tsc_out_fp);
@@ -293,9 +293,9 @@ int main(int argc, char *argv[])
         tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_out_fp = tnt_fopen((const char *)tsc_out_fname->s, "w");
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
-        samdec_t * samdec = samdec_new(tsc_in_fp, tsc_out_fp);
-        samdec_decode(samdec);
-        samdec_free(samdec);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, 0);
+        samcodec_decode(samcodec);
+        samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
         tnt_fclose(tsc_in_fp);
         tnt_fclose(tsc_out_fp);
@@ -307,9 +307,9 @@ int main(int argc, char *argv[])
         // Read information from compressed tsc file
         tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_log("Reading information: %s\n", tsc_in_fname->s);
-        samdec_t *samdec = samdec_new(tsc_in_fp, NULL);
-        samdec_info(samdec);
-        samdec_free(samdec);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, NULL, 0);
+        samcodec_info(samcodec);
+        samcodec_free(samcodec);
         tnt_fclose(tsc_in_fp);
     }
 

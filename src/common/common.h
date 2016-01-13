@@ -32,13 +32,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_COMMON_H
-#define TSC_COMMON_H
+#ifndef COMMON_H
+#define COMMON_H
 
 #include <stdlib.h>
 
 long tvdiff(struct timeval tv0, struct timeval tv1);
 size_t ndigits(int64_t x);
 
-#endif // TSC_COMMON_H
+#endif // COMMON_H
 

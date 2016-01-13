@@ -52,20 +52,20 @@ void paircodec_free(paircodec_t *paircodec);
 // Encoder methods
 // -----------------------------------------------------------------------------
 
-void paircodec_add_record(paircodec_t      *paircodec,
-                        const char     *rnext,
-                        const uint32_t pnext,
-                        const int64_t  tlen);
+void paircodec_add_record(paircodec_t   *paircodec,
+                         const char     *rnext,
+                         const uint32_t pnext,
+                         const int64_t  tlen);
 size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp);
 
 // Decoder methods
 // -----------------------------------------------------------------------------
 
 size_t paircodec_decode_block(paircodec_t *paircodec,
-                              FILE      *fp,
-                              str_t     **rnext,
-                              uint32_t  *pnext,
-                              int64_t   *tlen);
+                              FILE        *fp,
+                              str_t       **rnext,
+                              uint32_t    *pnext,
+                              int64_t     *tlen);
 
 #endif // TSC_PAIRCODEC_H
 

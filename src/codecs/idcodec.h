@@ -39,30 +39,26 @@
 #include "common/str.h"
 #include <stdio.h>
 
-// Encoder
+typedef struct idcodec_t_ {
+    size_t        record_cnt; // No. of records processed in the current block
+    str_t         *uncompressed;
+    unsigned char *compressed;
+    size_t        compressed_sz;
+} idcodec_t;
+
+idcodec_t * idcodec_new(void);
+void idcodec_free(idcodec_t *idcodec);
+
+// Encoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct idenc_t_ {
-    size_t in_sz;   // Accumulated input size
-    size_t rec_cnt; // No. of records processed in the current block
-    str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} idenc_t;
+void idcodec_add_record(idcodec_t *idcodec, const char *qname);
+size_t idcodec_write_block(idcodec_t *idcodec, FILE *fp);
 
-idenc_t * idenc_new(void);
-void idenc_free(idenc_t *idenc);
-void idenc_add_record(idenc_t *idenc, const char *qname);
-size_t idenc_write_block(idenc_t *idenc, FILE *fp);
-
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct iddec_t_ {
-    size_t out_sz; // Accumulated output size
-} iddec_t;
-
-iddec_t * iddec_new(void);
-void iddec_free(iddec_t *iddec);
-size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname);
+size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname);
 
 #endif // TSC_IDCODEC_H
 

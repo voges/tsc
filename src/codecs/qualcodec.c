@@ -33,126 +33,104 @@
  */
 
 //
-// Qual block format:
-//   unsigned char blk_id[8]: "qual---" + '\0'
-//   uint64_t      rec_cnt  : No. of lines in block
-//   uint64_t      data_sz  : Data size
-//   uint64_t      data_crc : CRC64 of comptmpsed data
-//   unsigned char *data    : Data
+// Pair block format:
+//   unsigned char id[8]          : "qual---" + '\0'
+//   uint64_t      record_cnt     : No. of lines in block
+//   uint64_t      uncompressed_sz: Size of uncompressed data
+//   uint64_t      compressed_sz  : Compressed data size
+//   uint64_t      compressed_crc : CRC64 of compressed data
+//   unsigned char *compressed    : Compressed data
 //
 
 #include "qualcodec.h"
-#include "range.h"
 #include "tsclib.h"
-#include "common/crc64.h"
 #include "tnt.h"
+#include "zlib_wrap.h"
 #include <string.h>
 
-// Encoder
-// -----------------------------------------------------------------------------
-
-static void qualenc_init(qualenc_t *qualenc)
+static void qualcodec_init(qualcodec_t *qualcodec)
 {
-    qualenc->in_sz = 0;
-    qualenc->rec_cnt = 0;
+    qualcodec->record_cnt = 0;
+    str_clear(qualcodec->uncompressed);
+    if (qualcodec->compressed != NULL) {
+        free(qualcodec->compressed);
+        qualcodec->compressed = NULL;
+    }
+    qualcodec->compressed_sz = 0;
 }
 
-qualenc_t * qualenc_new(void)
+qualcodec_t * qualcodec_new(void)
 {
-    qualenc_t *qualenc = (qualenc_t *)tnt_malloc(sizeof(qualenc_t));
-    qualenc->tmp = str_new();
-    qualenc_init(qualenc);
-    return qualenc;
+    qualcodec_t *qualcodec = (qualcodec_t *)tnt_malloc(sizeof(qualcodec_t));
+    qualcodec->uncompressed = str_new();
+    qualcodec->compressed = NULL;
+    qualcodec_init(qualcodec);
+    return qualcodec;
 }
 
-void qualenc_free(qualenc_t* qualenc)
+void qualcodec_free(qualcodec_t *qualcodec)
 {
-    if (qualenc != NULL) {
-        str_free(qualenc->tmp);
-        free(qualenc);
-        qualenc = NULL;
+    if (qualcodec != NULL) {
+        str_free(qualcodec->uncompressed);
+        if (qualcodec->compressed != NULL) {
+            free(qualcodec->compressed);
+            qualcodec->compressed = NULL;
+        }
+        free(qualcodec);
+        qualcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void qualenc_reset(qualenc_t *qualenc)
+// Encoder methods
+// -----------------------------------------------------------------------------
+
+void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual)
 {
-    str_clear(qualenc->tmp);
-    qualenc_init(qualenc);
+    qualcodec->record_cnt++;
+
+    str_append_cstr(qualcodec->uncompressed, qual);
+    str_append_cstr(qualcodec->uncompressed, "\n");
 }
 
-void qualenc_add_record(qualenc_t *qualenc, const char *qual)
-{
-    qualenc->in_sz += strlen(qual);
-
-    qualenc->rec_cnt++;
-
-    str_append_cstr(qualenc->tmp, qual);
-    str_append_cstr(qualenc->tmp, "\n");
-}
-
-size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
+size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE * fp)
 {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *tmp = (unsigned char *)qualenc->tmp->s;
-    unsigned int tmp_sz = (unsigned int)qualenc->tmp->len;
-    unsigned int data_sz = 0;
-    unsigned char *data = range_compress_o1(tmp, tmp_sz, &data_sz);
+    unsigned char *uncompressed = (unsigned char *)qualcodec->uncompressed->s;
+    size_t uncompressed_sz = qualcodec->uncompressed->len;
+    size_t compressed_sz = 0;
+    unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t data_crc = crc64(data, data_sz);
+    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
 
     // Write compressed block
-    unsigned char blk_id[8] = "qual---"; blk_id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)qualenc->rec_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += tnt_fwrite_buf(fp, data, data_sz);
+    unsigned char id[8] = "qual---"; id[7] = '\0';
+    ret += tnt_fwrite_buf(fp, id, sizeof(id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)qualcodec->record_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
 
-    qualenc_reset(qualenc); // Reset encoder for next block
-    free(data); // Free memory used for encoded bitstream
+    // Free memory allocated by zlib_compress
+    free(compressed);
+
+    qualcodec_init(qualcodec);
 
     return ret;
 }
 
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-static void qualdec_init(qualdec_t *qualdec)
-{
-    qualdec->out_sz = 0;
-}
-
-qualdec_t * qualdec_new(void)
-{
-    qualdec_t *qualdec = (qualdec_t *)tnt_malloc(sizeof(qualdec_t));
-    qualdec_init(qualdec);
-    return qualdec;
-}
-
-void qualdec_free(qualdec_t *qualdec)
-{
-    if (qualdec != NULL) {
-        free(qualdec);
-        qualdec = NULL;
-    } else {
-        tsc_error("Tried to free null\n");
-    }
-}
-
-static void qualdec_reset(qualdec_t *qualdec)
-{
-    qualdec_init(qualdec);
-}
-
-static size_t qualdec_decode(qualdec_t     *qualdec,
-                             unsigned char *tmp,
-                             size_t        tmp_sz,
-                             str_t**       qual)
+static size_t qualcodec_decode(qualcodec_t   *qualcodec,
+                               unsigned char *tmp,
+                               size_t        tmp_sz,
+                               str_t**       qual)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -170,43 +148,39 @@ static size_t qualdec_decode(qualdec_t     *qualdec,
     return ret;
 }
 
-size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
+size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual)
 {
-    unsigned char blk_id[8];
-    uint64_t      rec_cnt;
-    uint64_t      data_sz;
-    uint64_t      data_crc;
-    unsigned char *data;
+    size_t ret = 0;
+
+    unsigned char id[8];
+    uint64_t      record_cnt;
+    uint64_t      uncompressed_sz;
+    uint64_t      compressed_sz;
+    uint64_t      compressed_crc;
+    unsigned char *compressed;
 
     // Read block
-    tnt_fread_buf(fp, blk_id, sizeof(blk_id));
-    tnt_fread_uint64(fp, &rec_cnt);
-    tnt_fread_uint64(fp, &data_sz);
-    tnt_fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tnt_malloc((size_t)data_sz);
-    tnt_fread_buf(fp, data, data_sz);
-
-    // Compute tsc block size
-    size_t ret = sizeof(blk_id)
-               + sizeof(rec_cnt)
-               + sizeof(data_sz)
-               + sizeof(data_crc)
-               + data_sz;
+    ret += tnt_fread_buf(fp, id, sizeof(id));
+    ret += tnt_fread_uint64(fp, &record_cnt);
+    ret += tnt_fread_uint64(fp, &uncompressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
+    ret += tnt_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(data, data_sz) != data_crc)
+    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for qual block\n");
 
     // Decompress block
-    unsigned int tmp_sz = 0;
-    unsigned char *tmp = range_decompress_o1(data, data_sz, &tmp_sz);
-    free(data);
+    unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
+    free(compressed);
 
     // Decode block
-    qualdec->out_sz = qualdec_decode(qualdec, tmp, tmp_sz, qual);
-    free(tmp); // Free memory used for decoded bitstream
+    qualcodec_decode(qualcodec, uncompressed, uncompressed_sz, qual);
+    free(uncompressed); // Free memory used for decoded bitstream
 
-    qualdec_reset(qualdec);
+    qualcodec_init(qualcodec);
 
     return ret;
 }

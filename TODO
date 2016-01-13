@@ -8,3 +8,5 @@
 * possibly remove range coder
 * website for tsc?
 * upload repo to GitHub
+* trigger new block w/ each new rname
+* repair compiler warnings

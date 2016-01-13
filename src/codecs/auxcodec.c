@@ -34,65 +34,63 @@
 
 //
 // Aux block format:
-//   unsigned char blk_id[8]: "aux----" + '\0'
-//   uint64_t      rec_cnt  : No. of lines in block
-//   uint64_t      data_sz  : Data size
-//   uint64_t      data_crc : CRC64 of compressed data
-//   unsigned char *data    : Data
+//   unsigned char id[8]          :"aux----" + '\0'
+//   uint64_t      record_cnt     : No. of lines in block
+//   uint64_t      uncompressed_sz: Size of uncompressed data
+//   uint64_t      compressed_sz  : Compressed data size
+//   uint64_t      compressed_crc : CRC64 of compressed data
+//   unsigned char *compressed    : Compressed data
 //
 
 #include "auxcodec.h"
-#include "range.h"
 #include "tsclib.h"
-#include "common/crc64.h"
 #include "tnt.h"
+#include "zlib_wrap.h"
 #include <inttypes.h>
 #include <string.h>
 
-// Encoder
-// -----------------------------------------------------------------------------
-
-static void auxenc_init(auxenc_t *auxenc)
+static void auxcodec_init(auxcodec_t *auxcodec)
 {
-    auxenc->in_sz = 0;
-    auxenc->rec_cnt = 0;
+    auxcodec->record_cnt = 0;
+    str_clear(auxcodec->uncompressed);
+    if (auxcodec->compressed != NULL) free(auxcodec->compressed);
+    auxcodec->compressed = NULL;
+    auxcodec->compressed_sz = 0;
 }
 
-auxenc_t * auxenc_new(void)
+auxcodec_t * auxcodec_new(void)
 {
-    auxenc_t *auxenc = (auxenc_t *)tnt_malloc(sizeof(auxenc_t));
-    auxenc->tmp = str_new();
-    auxenc_init(auxenc);
-    return auxenc;
+    auxcodec_t *auxcodec = (auxcodec_t *)tnt_malloc(sizeof(auxcodec_t));
+    auxcodec->uncompressed = str_new();
+    auxcodec->compressed = NULL;
+    auxcodec_init(auxcodec);
+    return auxcodec;
 }
 
-void auxenc_free(auxenc_t *auxenc)
+void auxcodec_free(auxcodec_t *auxcodec)
 {
-    if (auxenc != NULL) {
-        str_free(auxenc->tmp);
-        free(auxenc);
-        auxenc = NULL;
+    if (auxcodec != NULL) {
+        str_free(auxcodec->uncompressed);
+        if (auxcodec->compressed != NULL) {
+            free(auxcodec->compressed);
+            auxcodec->compressed = NULL;
+        }
+        free(auxcodec);
+        auxcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void auxenc_reset(auxenc_t *auxenc)
-{
-    str_clear(auxenc->tmp);
-    auxenc_init(auxenc);
-}
+// Encoder methods
+// -----------------------------------------------------------------------------
 
-void auxenc_add_record(auxenc_t       *auxenc,
-                       const uint16_t flag,
-                       const uint8_t  mapq,
-                       const char     *opt)
+void auxcodec_add_record(auxcodec_t     *auxcodec,
+                         const uint16_t flag,
+                         const uint8_t  mapq,
+                         const char     *opt)
 {
-    auxenc->in_sz += sizeof(flag);
-    auxenc->in_sz += sizeof(mapq);
-    auxenc->in_sz += strlen(opt);
-
-    auxenc->rec_cnt++;
+    auxcodec->record_cnt++;
 
     char flag_cstr[101];
     char mapq_cstr[101];
@@ -100,77 +98,53 @@ void auxenc_add_record(auxenc_t       *auxenc,
     snprintf(flag_cstr, sizeof(flag_cstr), "%"PRIu16, flag);
     snprintf(mapq_cstr, sizeof(mapq_cstr), "%"PRIu8, mapq);
 
-    str_append_cstr(auxenc->tmp, flag_cstr);
-    str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, mapq_cstr);
-    str_append_cstr(auxenc->tmp, "\t");
-    str_append_cstr(auxenc->tmp, opt);
-    str_append_cstr(auxenc->tmp, "\n");
+    str_append_cstr(auxcodec->uncompressed, flag_cstr);
+    str_append_cstr(auxcodec->uncompressed, "\t");
+    str_append_cstr(auxcodec->uncompressed, mapq_cstr);
+    str_append_cstr(auxcodec->uncompressed, "\t");
+    str_append_cstr(auxcodec->uncompressed, opt);
+    str_append_cstr(auxcodec->uncompressed, "\n");
 }
 
-size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp)
+size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp)
 {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *tmp = (unsigned char *)auxenc->tmp->s;
-    unsigned int tmp_sz = (unsigned int)auxenc->tmp->len;
-    unsigned int data_sz = 0;
-    unsigned char *data = range_compress_o0(tmp, tmp_sz, &data_sz);
+    unsigned char *uncompressed = (unsigned char *)auxcodec->uncompressed->s;
+    size_t uncompressed_sz = auxcodec->uncompressed->len;
+    size_t compressed_sz = 0;
+    unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t data_crc = crc64(data, data_sz);
+    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
 
     // Write compressed block
-    unsigned char blk_id[8] = "aux----"; blk_id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)auxenc->rec_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)data_crc);
-    ret += tnt_fwrite_buf(fp, data, data_sz);
+    unsigned char id[8] = "aux----"; id[7] = '\0';
+    ret += tnt_fwrite_buf(fp, id, sizeof(id));
+    ret += tnt_fwrite_uint64(fp, (uint64_t)auxcodec->record_cnt);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
 
-    auxenc_reset(auxenc); // Reset encoder for next block
-    free(data); // Free memory used for encoded bitstream
+    // Free memory allocated by zlib_compress
+    free(compressed);
+
+    auxcodec_init(auxcodec);
 
     return ret;
 }
 
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-static void auxdec_init(auxdec_t *auxdec)
-{
-    auxdec->out_sz = 0;
-}
-
-auxdec_t * auxdec_new(void)
-{
-    auxdec_t *auxdec = (auxdec_t *)tnt_malloc(sizeof(auxdec_t));
-    auxdec_init(auxdec);
-    return auxdec;
-}
-
-void auxdec_free(auxdec_t *auxdec)
-{
-    if (auxdec != NULL) {
-        free(auxdec);
-        auxdec = NULL;
-    } else {
-        tsc_error("Tried to free null pointer\n");
-    }
-}
-
-static void auxdec_reset(auxdec_t* auxdec)
-{
-    auxdec_init(auxdec);
-}
-
-static size_t auxdec_decode(auxdec_t      *auxdec,
-                            unsigned char *tmp,
-                            size_t         tmp_sz,
-                            uint16_t      *flag,
-                            uint8_t       *mapq,
-                            str_t         **opt)
+static size_t auxcodec_decode(auxcodec_t    *auxcodec,
+                              unsigned char *tmp,
+                              size_t        tmp_sz,
+                              uint16_t      *flag,
+                              uint8_t       *mapq,
+                              str_t         **opt)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -216,47 +190,43 @@ static size_t auxdec_decode(auxdec_t      *auxdec,
     return ret;
 }
 
-size_t auxdec_decode_block(auxdec_t *auxdec,
-                           FILE     *fp,
-                           uint16_t *flag,
-                           uint8_t  *mapq,
-                           str_t    **opt)
+size_t auxcodec_decode_block(auxcodec_t *auxcodec,
+                            FILE        *fp,
+                            uint16_t    *flag,
+                            uint8_t     *mapq,
+                            str_t       **opt)
 {
-    unsigned char blk_id[8];
-    uint64_t      rec_cnt;
-    uint64_t      data_sz;
-    uint64_t      data_crc;
-    unsigned char *data;
+    size_t ret = 0;
+
+    unsigned char id[8];
+    uint64_t      record_cnt;
+    uint64_t      uncompressed_sz;
+    uint64_t      compressed_sz;
+    uint64_t      compressed_crc;
+    unsigned char *compressed;
 
     // Read block
-    tnt_fread_buf(fp, blk_id, sizeof(blk_id));
-    tnt_fread_uint64(fp, &rec_cnt);
-    tnt_fread_uint64(fp, &data_sz);
-    tnt_fread_uint64(fp, &data_crc);
-    data = (unsigned char *)tnt_malloc((size_t)data_sz);
-    tnt_fread_buf(fp, data, data_sz);
-
-    // Compute tsc block size
-    size_t ret = sizeof(blk_id)
-               + sizeof(rec_cnt)
-               + sizeof(data_sz)
-               + sizeof(data_crc)
-               + data_sz;
+    ret += tnt_fread_buf(fp, id, sizeof(id));
+    ret += tnt_fread_uint64(fp, &record_cnt);
+    ret += tnt_fread_uint64(fp, &uncompressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_sz);
+    ret += tnt_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
+    ret += tnt_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(data, data_sz) != data_crc)
+    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for aux block\n");
 
     // Decompress block
-    unsigned int tmp_sz = 0;
-    unsigned char *tmp = range_decompress_o0(data, data_sz, &tmp_sz);
-    free(data);
+    unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
+    free(compressed);
 
     // Decode block
-    auxdec->out_sz = auxdec_decode(auxdec, tmp, tmp_sz, flag, mapq, opt);
-    free(tmp); // Free memory used for decoded bitstream
+    auxcodec_decode(auxcodec, uncompressed, uncompressed_sz, flag, mapq, opt);
+    free(uncompressed); // Free memory used for decoded bitstream
 
-    auxdec_reset(auxdec);
+    auxcodec_init(auxcodec);
 
     return ret;
 }

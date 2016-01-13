@@ -44,9 +44,8 @@
 
 #include "paircodec.h"
 #include "tsclib.h"
-#include "common/crc64.h"
 #include "tnt.h"
-#include "zlib-wrap.h"
+#include "zlib_wrap.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -54,8 +53,10 @@ static void paircodec_init(paircodec_t *paircodec)
 {
     paircodec->record_cnt = 0;
     str_clear(paircodec->uncompressed);
-    if (paircodec->compressed != NULL) free(paircodec->compressed);
-    paircodec->compressed = NULL;
+    if (paircodec->compressed != NULL) {
+        free(paircodec->compressed);
+        paircodec->compressed = NULL;
+    }
     paircodec->compressed_sz = 0;
 }
 
@@ -63,6 +64,7 @@ paircodec_t * paircodec_new(void)
 {
     paircodec_t *paircodec = (paircodec_t *)tnt_malloc(sizeof(paircodec_t));
     paircodec->uncompressed = str_new();
+    paircodec->compressed = NULL;
     paircodec_init(paircodec);
     return paircodec;
 }
@@ -82,7 +84,7 @@ void paircodec_free(paircodec_t *paircodec)
     }
 }
 
-// Encoder
+// Encoder methods
 // -----------------------------------------------------------------------------
 
 void paircodec_add_record(paircodec_t    *paircodec,
@@ -117,7 +119,7 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "pair---"; id[7] = '\0';
@@ -136,10 +138,10 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
     return ret;
 }
 
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t paircodec_decode(paircodec_t     *paircodec,
+static size_t paircodec_decode(paircodec_t   *paircodec,
                                unsigned char *tmp,
                                size_t        tmp_sz,
                                str_t         **rnext,
@@ -185,10 +187,10 @@ static size_t paircodec_decode(paircodec_t     *paircodec,
 }
 
 size_t paircodec_decode_block(paircodec_t *paircodec,
-                              FILE      *fp,
-                              str_t     **rnext,
-                              uint32_t  *pnext,
-                              int64_t   *tlen)
+                              FILE        *fp,
+                              str_t       **rnext,
+                              uint32_t    *pnext,
+                              int64_t     *tlen)
 {
     size_t ret = 0;
 
@@ -209,7 +211,7 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
     ret += tnt_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(compressed, compressed_sz) != compressed_crc)
+    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for pair block\n");
 
     // Decompress block

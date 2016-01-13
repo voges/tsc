@@ -33,14 +33,12 @@
  */
 
 //
-// File format:
-// ------------
+// Tsc file format:
+// ----------------
 //   * Tsc stores the SAM header as plain ASCII text.
 //   * Tsc uses dedicated sub-block codecs which generate 'sub-blocks'.
-//   * For fast random-access a LUT (look-up table) containing (amongst others)
-//     64-bit offsets to the block headers, is stored at the end of the file.
-//     Additionally, to minimize fseek operations, the position of the next
-//     block is stored in each block header.
+//   * For fast random-access and for minimizing fseek operations, the position
+//   * of the next block is stored in each block header.
 //
 //   [File header            ]
 //   [SAM header             ]
@@ -99,10 +97,10 @@ typedef struct tscbh_t_ {
                        // (the last block has all zeros here)
     uint64_t blk_cnt;  // block count, starting with 0
     uint64_t rec_cnt;  // no. of records in this block
-    uint64_t rec_n;    // no. of records in this block (pre-defined)
-    uint64_t chr_cnt;  // chromosome number
-    uint64_t pos_min;  // smallest position contained in block
-    uint64_t pos_max;  // largest position contained in block
+    uint64_t rec_max;  // max no. of records in this block
+    uint64_t rname;    // RNAME
+    uint64_t pos_min;  // smallest POSition contained in block
+    uint64_t pos_max;  // largest POSition contained in block
 } tscbh_t;
 
 tscbh_t * tscbh_new(void);

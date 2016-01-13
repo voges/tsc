@@ -68,21 +68,6 @@
 static void samparser_init(samparser_t *samparser, FILE *fp)
 {
     samparser->fp = fp;
-    bool samheader = false;
-
-    // Read the SAM header
-    while (fgets(samparser->curr.line, sizeof(samparser->curr.line),
-                 samparser->fp)) {
-        if (*(samparser->curr.line) == '@') {
-            str_append_cstr(samparser->head, samparser->curr.line);
-            samheader = true;
-        } else {
-            if (!samheader) tsc_error("SAM header missing\n");
-            long offset = -strlen(samparser->curr.line);
-            fseek(samparser->fp, offset, SEEK_CUR);
-            break;
-        }
-    }
 }
 
 samparser_t * samparser_new(FILE *fp)
@@ -101,6 +86,24 @@ void samparser_free(samparser_t *samparser)
         samparser = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
+    }
+}
+
+void samparser_head(samparser_t *samparser)
+{
+    // Read the SAM header
+    bool samheader = false;
+    while (fgets(samparser->curr.line, sizeof(samparser->curr.line),
+                 samparser->fp)) {
+        if (*(samparser->curr.line) == '@') {
+            str_append_cstr(samparser->head, samparser->curr.line);
+            samheader = true;
+        } else {
+            if (!samheader) tsc_error("SAM header missing\n");
+            long offset = -strlen(samparser->curr.line);
+            fseek(samparser->fp, offset, SEEK_CUR);
+            break;
+        }
     }
 }
 

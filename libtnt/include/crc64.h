@@ -32,13 +32,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRC64_H
-#define CRC64_H
+#ifndef TNT_CRC64_H
+#define TNT_CRC64_H
 
 #include <stdint.h>
 #include <stdlib.h>
 
-uint64_t crc64(const unsigned char *buf, size_t buf_sz);
+uint64_t tnt_crc64(const unsigned char *buf, size_t buf_sz);
 
-#endif // CRC64_H
+#endif // TNT_CRC64_H
 

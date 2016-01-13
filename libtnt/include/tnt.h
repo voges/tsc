@@ -36,6 +36,7 @@
 #define TNT_TNT_H
 
 #include "constants.h"
+#include "crc64.h"
 #include "error.h"
 #include "io.h"
 #include "log.h"
