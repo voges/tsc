@@ -44,7 +44,7 @@
 
 #include "paircodec.h"
 #include "tsclib.h"
-#include "tnt.h"
+#include "osro.h"
 #include "zlib_wrap.h"
 #include <inttypes.h>
 #include <string.h>
@@ -62,7 +62,7 @@ static void paircodec_init(paircodec_t *paircodec)
 
 paircodec_t * paircodec_new(void)
 {
-    paircodec_t *paircodec = (paircodec_t *)tnt_malloc(sizeof(paircodec_t));
+    paircodec_t *paircodec = (paircodec_t *)osro_malloc(sizeof(paircodec_t));
     paircodec->uncompressed = str_new();
     paircodec->compressed = NULL;
     paircodec_init(paircodec);
@@ -119,16 +119,16 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "pair---"; id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, id, sizeof(id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)paircodec->record_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
+    ret += osro_fwrite_buf(fp, id, sizeof(id));
+    ret += osro_fwrite_uint64(fp, (uint64_t)paircodec->record_cnt);
+    ret += osro_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
     free(compressed);
@@ -141,8 +141,7 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t paircodec_decode(paircodec_t   *paircodec,
-                               unsigned char *tmp,
+static size_t paircodec_decode(unsigned char *tmp,
                                size_t        tmp_sz,
                                str_t         **rnext,
                                uint32_t      *pnext,
@@ -173,7 +172,7 @@ static size_t paircodec_decode(paircodec_t   *paircodec,
                 ret += strlen((const char *)cstr);
                 break;
             case 1:
-                pnext[line] = strtoll((const char *)cstr, NULL, 10);
+                pnext[line] = (uint32_t)strtoul((const char *)cstr, NULL, 10);
                 ret += sizeof(*pnext);
                 break;
             default:
@@ -202,16 +201,16 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
     unsigned char *compressed;
 
     // Read block
-    ret += tnt_fread_buf(fp, id, sizeof(id));
-    ret += tnt_fread_uint64(fp, &record_cnt);
-    ret += tnt_fread_uint64(fp, &uncompressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_crc);
-    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
-    ret += tnt_fread_buf(fp, compressed, compressed_sz);
+    ret += osro_fread_buf(fp, id, sizeof(id));
+    ret += osro_fread_uint64(fp, &record_cnt);
+    ret += osro_fread_uint64(fp, &uncompressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)osro_malloc((size_t)compressed_sz);
+    ret += osro_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
+    if (osro_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for pair block\n");
 
     // Decompress block
@@ -219,7 +218,7 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
     free(compressed);
 
     // Decode block
-    paircodec_decode(paircodec, uncompressed, uncompressed_sz, rnext, pnext, tlen);
+    paircodec_decode(uncompressed, uncompressed_sz, rnext, pnext, tlen);
     free(uncompressed); // Free memory used for decoded bitstream
 
     paircodec_init(paircodec);

@@ -1,9 +1,9 @@
 EXEC         = tsc
 CC           = gcc
-CFLAGS       = $(INCLUDE_DIRS) -Wall -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wconversion -Wextra #-Wundef
-INCLUDE_DIRS = -I../libtnt/include -I.
-LIB_DIRS     = -L../libtnt/lib
-LDFLAGS      = -lm -lz -ltnt
+CFLAGS       = $(INCLUDE_DIRS) -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wconversion #-Wundef
+INCLUDE_DIRS = -I../../libosro/include -I.
+LIB_DIRS     = -L../../libosro/lib
+LDFLAGS      = -lm -lz -losro
 
 TSC_SRCS     = samcodec.c samparser.c tsc.c tscfmt.c tsclib.c
 CODECS_SRCS := $(shell find codecs -name '*.c')

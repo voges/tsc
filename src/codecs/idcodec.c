@@ -44,7 +44,7 @@
 
 #include "idcodec.h"
 #include "tsclib.h"
-#include "tnt.h"
+#include "osro.h"
 #include "zlib_wrap.h"
 #include <string.h>
 
@@ -61,7 +61,7 @@ static void idcodec_init(idcodec_t *idcodec)
 
 idcodec_t * idcodec_new(void)
 {
-    idcodec_t *idcodec = (idcodec_t *)tnt_malloc(sizeof(idcodec_t));
+    idcodec_t *idcodec = (idcodec_t *)osro_malloc(sizeof(idcodec_t));
     idcodec->uncompressed = str_new();
     idcodec->compressed = NULL;
     idcodec_init(idcodec);
@@ -105,16 +105,16 @@ size_t idcodec_write_block(idcodec_t *idcodec, FILE * fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "id-----"; id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, id, sizeof(id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)idcodec->record_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
+    ret += osro_fwrite_buf(fp, id, sizeof(id));
+    ret += osro_fwrite_uint64(fp, (uint64_t)idcodec->record_cnt);
+    ret += osro_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
     free(compressed);
@@ -127,8 +127,7 @@ size_t idcodec_write_block(idcodec_t *idcodec, FILE * fp)
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t idcodec_decode(idcodec_t     *idcodec,
-                             unsigned char *tmp,
+static size_t idcodec_decode(unsigned char *tmp,
                              size_t        tmp_sz,
                              str_t**       qname)
 {
@@ -160,16 +159,16 @@ size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname)
     unsigned char *compressed;
 
     // Read block
-    ret += tnt_fread_buf(fp, id, sizeof(id));
-    ret += tnt_fread_uint64(fp, &record_cnt);
-    ret += tnt_fread_uint64(fp, &uncompressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_crc);
-    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
-    ret += tnt_fread_buf(fp, compressed, compressed_sz);
+    ret += osro_fread_buf(fp, id, sizeof(id));
+    ret += osro_fread_uint64(fp, &record_cnt);
+    ret += osro_fread_uint64(fp, &uncompressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)osro_malloc((size_t)compressed_sz);
+    ret += osro_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
+    if (osro_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for id block\n");
 
     // Decompress block
@@ -177,7 +176,7 @@ size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname)
     free(compressed);
 
     // Decode block
-    idcodec_decode(idcodec, uncompressed, uncompressed_sz, qname);
+    idcodec_decode(uncompressed, uncompressed_sz, qname);
     free(uncompressed); // Free memory used for decoded bitstream
 
     idcodec_init(idcodec);

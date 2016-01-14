@@ -35,7 +35,7 @@
 #ifndef TSC_SAMREC_H
 #define TSC_SAMREC_H
 
-#include "tnt.h"
+#include "osro.h"
 #include <stdint.h>
 
 //

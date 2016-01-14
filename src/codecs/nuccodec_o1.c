@@ -64,7 +64,7 @@
 //
 
 #include "nuccodec_o1.h"
-#include "tnt.h"
+#include "osro.h"
 #include "tsclib.h"
 #include "zlib_wrap.h"
 #include <ctype.h>
@@ -91,7 +91,7 @@ static void nuccodec_init(nuccodec_t *nuccodec)
 
 nuccodec_t * nuccodec_new(void)
 {
-    nuccodec_t *nuccodec = (nuccodec_t *)tnt_malloc(sizeof(nuccodec_t));
+    nuccodec_t *nuccodec = (nuccodec_t *)osro_malloc(sizeof(nuccodec_t));
 
     nuccodec->rname_prev = str_new();
     nuccodec->ctrl = str_new();
@@ -152,12 +152,12 @@ static void nuccodec_expand(str_t      *stogy,
 
     for (cigar_idx = 0; cigar_idx < cigar_len; cigar_idx++) {
         if (isdigit(cigar[cigar_idx])) {
-            op_len = op_len * 10 + cigar[cigar_idx] - '0';
+            op_len = op_len * 10 + (size_t)cigar[cigar_idx] - (size_t)'0';
             continue;
         }
 
         // Copy CIGAR part to STOGY
-        str_append_int(stogy, op_len);
+        str_append_int(stogy, (int64_t)op_len);
         str_append_char(stogy, cigar[cigar_idx]);
 
         switch (cigar[cigar_idx]) {
@@ -208,7 +208,7 @@ static void nuccodec_diff(str_t          *mod,
     size_t idx_ref = pos_off;
     while (exs[idx] && exs_ref[idx_ref]) {
         if (exs[idx] != exs_ref[idx_ref]) {
-            str_append_int(mod, idx);
+            str_append_int(mod, (int64_t)idx);
             str_append_char(mod, exs[idx]);
         }
         idx++;
@@ -274,7 +274,7 @@ void nuccodec_add_record(nuccodec_t     *nuccodec,
         str_copy_cstr(nuccodec->rname_prev, rname);
 
         nuccodec_expand(stogy, exs, cigar, seq);
-        neo = ceil(stogy->len);
+        neo = (uint32_t)ceil((double)stogy->len);
 
         str_append_cstr(nuccodec->ctrl, "f");
         str_append_cstr(nuccodec->ctrl, rname);
@@ -311,7 +311,7 @@ void nuccodec_add_record(nuccodec_t     *nuccodec,
     str_t *exs = str_new();
 
     nuccodec_expand(stogy, exs, cigar, seq);
-    neo = ceil(stogy->len);
+    neo = (uint32_t)ceil((double)stogy->len);
 
     // Get matching NEO, POS, EXS from circular buffer
     size_t cbuf_idx = 0;
@@ -321,7 +321,7 @@ void nuccodec_add_record(nuccodec_t     *nuccodec,
 
     do {
         uint32_t neo_ref = (uint32_t)cbufint64_get(nuccodec->neo_cbuf, cbuf_idx);
-        uint32_t neo_off = abs(100*(1-TSC_NUCCODEC_O1_ALPHA)*(neo-neo_ref) + 100*TSC_NUCCODEC_O1_ALPHA*(cbuf_idx));
+        uint32_t neo_off = (uint32_t)abs((int)(100*(1-TSC_NUCCODEC_O1_ALPHA)*(neo-neo_ref) + 100*TSC_NUCCODEC_O1_ALPHA*((double)cbuf_idx)));
 
         if (neo_off < neo_best) {
             neo_best = neo_off;
@@ -336,7 +336,7 @@ void nuccodec_add_record(nuccodec_t     *nuccodec,
     // Compute and check position offset
     int64_t pos_off = pos - pos_ref;
 
-    if (   pos_off > exs_ref->len
+    if (   pos_off > (int64_t)exs_ref->len
         || pos_off < 0
         || strcmp(rname, nuccodec->rname_prev->s)) {
 
@@ -376,8 +376,8 @@ void nuccodec_add_record(nuccodec_t     *nuccodec,
         // - Push NEO, POS, and EXS to circular buffer
         //
 
-        nuccodec_diff(mod, trail, pos_off, exs->s, exs_ref->s);
-        neo = ceil(stogy->len + mod->len);
+        nuccodec_diff(mod, trail, (uint32_t)pos_off, exs->s, exs_ref->s);
+        neo = (uint32_t)ceil((double)(stogy->len + mod->len));
 
         str_append_int(nuccodec->poff, pos_off);
         str_append_cstr(nuccodec->poff, ":");
@@ -437,48 +437,48 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp)
     // Compute CRCs for sub-blocks
     //
 
-    uint64_t ctrl_compressed_crc = tnt_crc64(ctrl_compressed, ctrl_compressed_sz);
-    uint64_t poff_compressed_crc = tnt_crc64(poff_compressed, poff_compressed_sz);
-    uint64_t stogy_compressed_crc = tnt_crc64(stogy_compressed, stogy_compressed_sz);
-    uint64_t mod_compressed_crc = tnt_crc64(mod_compressed, mod_compressed_sz);
-    uint64_t trail_compressed_crc = tnt_crc64(trail_compressed, trail_compressed_sz);
+    uint64_t ctrl_compressed_crc = osro_crc64(ctrl_compressed, ctrl_compressed_sz);
+    uint64_t poff_compressed_crc = osro_crc64(poff_compressed, poff_compressed_sz);
+    uint64_t stogy_compressed_crc = osro_crc64(stogy_compressed, stogy_compressed_sz);
+    uint64_t mod_compressed_crc = osro_crc64(mod_compressed, mod_compressed_sz);
+    uint64_t trail_compressed_crc = osro_crc64(trail_compressed, trail_compressed_sz);
 
     //
     // Write block header
     //
 
     unsigned char id[8] = "nuc----"; id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, id, sizeof(id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)nuccodec->record_cnt);
+    ret += osro_fwrite_buf(fp, id, sizeof(id));
+    ret += osro_fwrite_uint64(fp, (uint64_t)nuccodec->record_cnt);
 
     //
     // Write compressed sub-blocks
     //
 
-    ret += tnt_fwrite_uint64(fp, (uint64_t)ctrl_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)ctrl_compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)ctrl_compressed_crc);
-    ret += tnt_fwrite_buf(fp, ctrl_compressed, ctrl_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)ctrl_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)ctrl_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)ctrl_compressed_crc);
+    ret += osro_fwrite_buf(fp, ctrl_compressed, ctrl_compressed_sz);
 
-    ret += tnt_fwrite_uint64(fp, (uint64_t)poff_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)poff_compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)poff_compressed_crc);
-    ret += tnt_fwrite_buf(fp, poff_compressed, poff_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)poff_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)poff_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)poff_compressed_crc);
+    ret += osro_fwrite_buf(fp, poff_compressed, poff_compressed_sz);
 
-    ret += tnt_fwrite_uint64(fp, (uint64_t)stogy_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)stogy_compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)stogy_compressed_crc);
-    ret += tnt_fwrite_buf(fp, stogy_compressed, stogy_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)stogy_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)stogy_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)stogy_compressed_crc);
+    ret += osro_fwrite_buf(fp, stogy_compressed, stogy_compressed_sz);
 
-    ret += tnt_fwrite_uint64(fp, (uint64_t)mod_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)mod_compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)mod_compressed_crc);
-    ret += tnt_fwrite_buf(fp, mod_compressed, mod_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)mod_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)mod_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)mod_compressed_crc);
+    ret += osro_fwrite_buf(fp, mod_compressed, mod_compressed_sz);
 
-    ret += tnt_fwrite_uint64(fp, (uint64_t)trail_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)trail_compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)trail_compressed_crc);
-    ret += tnt_fwrite_buf(fp, trail_compressed, trail_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)trail_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)trail_compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)trail_compressed_crc);
+    ret += osro_fwrite_buf(fp, trail_compressed, trail_compressed_sz);
 
     //
     // Free memory used for encoded bitstreams
@@ -513,12 +513,12 @@ static void nuccodec_contract(str_t      *cigar,
 
     for (stogy_idx = 0; stogy_idx < stogy_len; stogy_idx++) {
         if (isdigit(stogy[stogy_idx])) {
-            op_len = op_len * 10 + stogy[stogy_idx] - '0';
+            op_len = op_len * 10 + (size_t)stogy[stogy_idx] - (size_t)'0';
             continue;
         }
 
         // Regenerate CIGAR
-        str_append_int(cigar, op_len);
+        str_append_int(cigar, (int64_t)op_len);
         str_append_char(cigar, stogy[stogy_idx]);
 
         switch (stogy[stogy_idx]) {
@@ -567,7 +567,7 @@ static void nuccodec_alike(str_t          *exs,
     size_t match_len = 0;
     for (stogy_idx = 0; stogy_idx < stogy_len; stogy_idx++) {
         if (isdigit(stogy[stogy_idx])) {
-            op_len = op_len * 10 + stogy[stogy_idx] - '0';
+            op_len = op_len * 10 + (size_t)stogy[stogy_idx] - (size_t)'0';
             continue;
         }
 
@@ -599,7 +599,7 @@ static void nuccodec_alike(str_t          *exs,
 
     for (mod_idx = 0; mod_idx < mod_len; mod_idx++) {
         if (isdigit(mod[mod_idx])) {
-            mod_pos = mod_pos * 10 + mod[mod_idx] - '0';
+            mod_pos = mod_pos * 10 + (size_t)(mod[mod_idx] - '0');
             continue;
         }
 
@@ -613,15 +613,10 @@ static void nuccodec_alike(str_t          *exs,
 
 static void nuccodec_decode_records(nuccodec_t    *nuccodec,
                                     unsigned char *ctrl,
-                                    size_t        ctrl_sz,
                                     unsigned char *poff,
-                                    size_t        poff_sz,
                                     unsigned char *stogy,
-                                    size_t        stogy_sz,
                                     unsigned char *mod,
-                                    size_t        mod_sz,
                                     unsigned char *trail,
-                                    size_t        trail_sz,
                                     str_t         **rname,
                                     uint32_t      *pos,
                                     str_t         **cigar,
@@ -649,8 +644,8 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
 
         // Get CTRL
         str_t *ctrl_curr = str_new();
-        while (*ctrl != '~') str_append_char(ctrl_curr, *ctrl++);
-        str_append_char(ctrl_curr, *ctrl++);
+        while (*ctrl != '~') str_append_char(ctrl_curr, (char)*ctrl++);
+        str_append_char(ctrl_curr, (char)*ctrl++);
 
         if (ctrl_curr->s[0] == 'm') {
 
@@ -670,7 +665,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             // Get POS
             itr++;
             while (ctrl_curr->s[itr] != ':') {
-                *_pos_ = *_pos_ * 10 + ctrl_curr->s[itr] - '0';
+                *_pos_ = *_pos_ * 10 + (uint32_t)(ctrl_curr->s[itr] - '0');
                 ++itr;
             }
 
@@ -709,7 +704,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             // Get POS
             ++itr;
             while (ctrl_curr->s[itr] != ':')
-                *_pos_ = *_pos_ * 10 + ctrl_curr->s[itr++] - '0';
+                *_pos_ = *_pos_ * 10 + (uint32_t)(ctrl_curr->s[itr++] - '0');
 
             // Get STOGY
             itr++;
@@ -727,7 +722,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             cbufstr_clear(nuccodec->exs_cbuf);
 
             // Push NEO, POS, EXS to circular buffer
-            uint32_t neo = (uint32_t)ceil(stogy_curr->len);
+            uint32_t neo = (uint32_t)ceil((double)stogy_curr->len);
             cbufint64_push(nuccodec->neo_cbuf, (int64_t)neo);
             cbufint64_push(nuccodec->pos_cbuf, *_pos_);
             cbufstr_push(nuccodec->exs_cbuf, exs_curr->s);
@@ -761,20 +756,20 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             str_copy_str(_rname_, rname_prev);
 
             // Get STOGY
-            while (*stogy !=':') str_append_char(stogy_curr, *stogy++);
+            while (*stogy !=':') str_append_char(stogy_curr, (char)*stogy++);
             stogy++;
 
             // Get MOD
-            while (*mod !=':') str_append_char(mod_curr, *mod++);
+            while (*mod !=':') str_append_char(mod_curr, (char)*mod++);
             mod++;
 
             // Get TRAIL
             while (*trail !=':')
-                str_append_char(trail_curr, *trail++);
+                str_append_char(trail_curr, (char)*trail++);
             trail++;
 
             // Compute NEO
-            uint32_t neo = ceil(stogy_curr->len);
+            uint32_t neo = (uint32_t)ceil((double)stogy_curr->len);
 
             // Get matching NEO, POS, EXS from circular buffer
             size_t cbuf_idx = 0;
@@ -784,7 +779,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
 
             do {
                 uint32_t neo_ref = (uint32_t)cbufint64_get(nuccodec->neo_cbuf, cbuf_idx);
-                uint32_t neo_off = abs(100*(1-TSC_NUCCODEC_O1_ALPHA)*(neo-neo_ref) + 100*TSC_NUCCODEC_O1_ALPHA*(cbuf_idx));
+                uint32_t neo_off = (uint32_t)abs((int)(100*(1-TSC_NUCCODEC_O1_ALPHA)*(neo-neo_ref) + 100*TSC_NUCCODEC_O1_ALPHA*((double)cbuf_idx)));
 
                 if (neo_off < neo_best) {
                     neo_best = neo_off;
@@ -797,13 +792,13 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             str_t *exs_ref = cbufstr_get(nuccodec->exs_cbuf, cbuf_idx_best);
 
             // Compute POS
-            *_pos_ = poff_curr + pos_ref;
+            *_pos_ = (uint32_t)(poff_curr + pos_ref);
 
             // Reintegrate MOD and TRAIL into EXS
-            nuccodec_alike(exs_curr, exs_ref->s, poff_curr, stogy_curr->s, mod_curr->s, trail_curr->s);
+            nuccodec_alike(exs_curr, exs_ref->s, (uint32_t)poff_curr, stogy_curr->s, mod_curr->s, trail_curr->s);
 
             // Push NEO, POS, EXS to circular buffer
-            neo = ceil(stogy_curr->len + mod_curr->len);
+            neo = (uint32_t)ceil((double)(stogy_curr->len + mod_curr->len));
             cbufint64_push(nuccodec->neo_cbuf, neo);
             cbufint64_push(nuccodec->pos_cbuf, *_pos_);
             cbufstr_push(nuccodec->exs_cbuf, exs_curr->s);
@@ -842,8 +837,8 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
 
     unsigned char blk_id[8];
     uint64_t record_cnt;
-    ret += tnt_fread_buf(fp, blk_id, sizeof(blk_id));
-    ret += tnt_fread_uint64(fp, &record_cnt);
+    ret += osro_fread_buf(fp, blk_id, sizeof(blk_id));
+    ret += osro_fread_uint64(fp, &record_cnt);
 
     //
     // Read compressed sub-blocks
@@ -853,65 +848,65 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
     uint64_t ctrl_compressed_sz;
     uint64_t ctrl_compressed_crc;
     unsigned char *ctrl_compressed;
-    ret += tnt_fread_uint64(fp, &ctrl_sz);
-    ret += tnt_fread_uint64(fp, &ctrl_compressed_sz);
-    ret += tnt_fread_uint64(fp, &ctrl_compressed_crc);
-    ctrl_compressed = (unsigned char *)tnt_malloc((size_t)ctrl_compressed_sz);
-    ret += tnt_fread_buf(fp, ctrl_compressed, ctrl_compressed_sz);
+    ret += osro_fread_uint64(fp, &ctrl_sz);
+    ret += osro_fread_uint64(fp, &ctrl_compressed_sz);
+    ret += osro_fread_uint64(fp, &ctrl_compressed_crc);
+    ctrl_compressed = (unsigned char *)osro_malloc((size_t)ctrl_compressed_sz);
+    ret += osro_fread_buf(fp, ctrl_compressed, ctrl_compressed_sz);
 
     uint64_t poff_sz;
     uint64_t poff_compressed_sz;
     uint64_t poff_compressed_crc;
     unsigned char *poff_compressed;
-    ret += tnt_fread_uint64(fp, &poff_sz);
-    ret += tnt_fread_uint64(fp, &poff_compressed_sz);
-    ret += tnt_fread_uint64(fp, &poff_compressed_crc);
-    poff_compressed = (unsigned char *)tnt_malloc((size_t)poff_compressed_sz);
-    ret += tnt_fread_buf(fp, poff_compressed, poff_compressed_sz);
+    ret += osro_fread_uint64(fp, &poff_sz);
+    ret += osro_fread_uint64(fp, &poff_compressed_sz);
+    ret += osro_fread_uint64(fp, &poff_compressed_crc);
+    poff_compressed = (unsigned char *)osro_malloc((size_t)poff_compressed_sz);
+    ret += osro_fread_buf(fp, poff_compressed, poff_compressed_sz);
 
     uint64_t stogy_sz;
     uint64_t stogy_compressed_sz;
     uint64_t stogy_compressed_crc;
     unsigned char *stogy_compressed;
-    ret += tnt_fread_uint64(fp, &stogy_sz);
-    ret += tnt_fread_uint64(fp, &stogy_compressed_sz);
-    ret += tnt_fread_uint64(fp, &stogy_compressed_crc);
-    stogy_compressed = (unsigned char *)tnt_malloc((size_t)stogy_compressed_sz);
-    ret += tnt_fread_buf(fp, stogy_compressed, stogy_compressed_sz);
+    ret += osro_fread_uint64(fp, &stogy_sz);
+    ret += osro_fread_uint64(fp, &stogy_compressed_sz);
+    ret += osro_fread_uint64(fp, &stogy_compressed_crc);
+    stogy_compressed = (unsigned char *)osro_malloc((size_t)stogy_compressed_sz);
+    ret += osro_fread_buf(fp, stogy_compressed, stogy_compressed_sz);
 
     uint64_t mod_sz;
     uint64_t mod_compressed_sz;
     uint64_t mod_compressed_crc;
     unsigned char *mod_compressed;
-    ret += tnt_fread_uint64(fp, &mod_sz);
-    ret += tnt_fread_uint64(fp, &mod_compressed_sz);
-    ret += tnt_fread_uint64(fp, &mod_compressed_crc);
-    mod_compressed = (unsigned char *)tnt_malloc((size_t)mod_compressed_sz);
-    ret += tnt_fread_buf(fp, mod_compressed, mod_compressed_sz);
+    ret += osro_fread_uint64(fp, &mod_sz);
+    ret += osro_fread_uint64(fp, &mod_compressed_sz);
+    ret += osro_fread_uint64(fp, &mod_compressed_crc);
+    mod_compressed = (unsigned char *)osro_malloc((size_t)mod_compressed_sz);
+    ret += osro_fread_buf(fp, mod_compressed, mod_compressed_sz);
 
     uint64_t trail_sz;
     uint64_t trail_compressed_sz;
     uint64_t trail_compressed_crc;
     unsigned char *trail_compressed;
-    ret += tnt_fread_uint64(fp, &trail_sz);
-    ret += tnt_fread_uint64(fp, &trail_compressed_sz);
-    ret += tnt_fread_uint64(fp, &trail_compressed_crc);
-    trail_compressed = (unsigned char *)tnt_malloc((size_t)trail_compressed_sz);
-    ret += tnt_fread_buf(fp, trail_compressed, trail_compressed_sz);
+    ret += osro_fread_uint64(fp, &trail_sz);
+    ret += osro_fread_uint64(fp, &trail_compressed_sz);
+    ret += osro_fread_uint64(fp, &trail_compressed_crc);
+    trail_compressed = (unsigned char *)osro_malloc((size_t)trail_compressed_sz);
+    ret += osro_fread_buf(fp, trail_compressed, trail_compressed_sz);
 
     //
     // CRC check
     //
 
-    if (tnt_crc64(ctrl_compressed, ctrl_compressed_sz) != ctrl_compressed_crc)
+    if (osro_crc64(ctrl_compressed, ctrl_compressed_sz) != ctrl_compressed_crc)
         tsc_error("CRC64 check failed for nuc-ctrl block\n");
-    if (tnt_crc64(ctrl_compressed, ctrl_compressed_sz) != ctrl_compressed_crc)
+    if (osro_crc64(ctrl_compressed, ctrl_compressed_sz) != ctrl_compressed_crc)
         tsc_error("CRC64 check failed for nuc-poff block\n");
-    if (tnt_crc64(stogy_compressed, stogy_compressed_sz) != stogy_compressed_crc)
+    if (osro_crc64(stogy_compressed, stogy_compressed_sz) != stogy_compressed_crc)
         tsc_error("CRC64 check failed for nuc-stogy block\n");
-    if (tnt_crc64(mod_compressed, mod_compressed_sz) != mod_compressed_crc)
+    if (osro_crc64(mod_compressed, mod_compressed_sz) != mod_compressed_crc)
         tsc_error("CRC64 check failed for nuc-mod block\n");
-    if (tnt_crc64(trail_compressed, trail_compressed_sz) != trail_compressed_crc)
+    if (osro_crc64(trail_compressed, trail_compressed_sz) != trail_compressed_crc)
         tsc_error("CRC64 check failed for nuc-trail block\n");
 
     //
@@ -934,19 +929,13 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
     //
 
     // Terminate buffers
-    ctrl = tnt_realloc(ctrl, ++ctrl_sz); ctrl[ctrl_sz-1] = '\0';
-    poff = tnt_realloc(poff, ++poff_sz); poff[poff_sz-1] = '\0';
-    stogy = tnt_realloc(stogy, ++stogy_sz); stogy[stogy_sz-1] = '\0';
-    mod = tnt_realloc(mod, ++mod_sz); mod[mod_sz-1] = '\0';
-    trail = tnt_realloc(trail, ++trail_sz); trail[trail_sz-1] = '\0';
+    ctrl = osro_realloc(ctrl, ++ctrl_sz); ctrl[ctrl_sz-1] = '\0';
+    poff = osro_realloc(poff, ++poff_sz); poff[poff_sz-1] = '\0';
+    stogy = osro_realloc(stogy, ++stogy_sz); stogy[stogy_sz-1] = '\0';
+    mod = osro_realloc(mod, ++mod_sz); mod[mod_sz-1] = '\0';
+    trail = osro_realloc(trail, ++trail_sz); trail[trail_sz-1] = '\0';
 
-    nuccodec_decode_records(nuccodec,
-                            ctrl, ctrl_sz,
-                            poff, poff_sz,
-                            stogy, stogy_sz,
-                            mod, mod_sz,
-                            trail, trail_sz,
-                            rname, pos, cigar, seq);
+    nuccodec_decode_records(nuccodec, ctrl, poff, stogy, mod, trail, rname, pos, cigar, seq);
 
     //
     // Free memory used for decoded bitstreams

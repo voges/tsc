@@ -72,7 +72,7 @@ static void samparser_init(samparser_t *samparser, FILE *fp)
 
 samparser_t * samparser_new(FILE *fp)
 {
-    samparser_t *samparser = (samparser_t *)tnt_malloc(sizeof(samparser_t));
+    samparser_t *samparser = (samparser_t *)osro_malloc(sizeof(samparser_t));
     samparser->head = str_new();
     samparser_init(samparser, fp);
     return samparser;
@@ -100,8 +100,8 @@ void samparser_head(samparser_t *samparser)
             samheader = true;
         } else {
             if (!samheader) tsc_error("SAM header missing\n");
-            long offset = -strlen(samparser->curr.line);
-            fseek(samparser->fp, offset, SEEK_CUR);
+            size_t offset = -strlen(samparser->curr.line);
+            fseek(samparser->fp, (long)offset, SEEK_CUR);
             break;
         }
     }
@@ -120,14 +120,14 @@ static void samparser_parse(samparser_t *samparser)
 
     while (*c) {
         if (*c == '\t') {
-            if (f ==  1) samparser->curr.flag  = atoi(c + 1);
+            if (f ==  1) samparser->curr.flag  = (uint16_t)atoi(c + 1);
             if (f ==  2) samparser->curr.rname = c + 1;
-            if (f ==  3) samparser->curr.pos   = atoi(c + 1);
-            if (f ==  4) samparser->curr.mapq  = atoi(c + 1);
+            if (f ==  3) samparser->curr.pos   = (uint32_t)atoi(c + 1);
+            if (f ==  4) samparser->curr.mapq  = (uint8_t)atoi(c + 1);
             if (f ==  5) samparser->curr.cigar = c + 1;
             if (f ==  6) samparser->curr.rnext = c + 1;
-            if (f ==  7) samparser->curr.pnext = atoi(c + 1);
-            if (f ==  8) samparser->curr.tlen  = atoi(c + 1);
+            if (f ==  7) samparser->curr.pnext = (uint32_t)atoi(c + 1);
+            if (f ==  8) samparser->curr.tlen  = (int64_t)atoi(c + 1);
             if (f ==  9) samparser->curr.seq   = c + 1;
             if (f == 10) samparser->curr.qual  = c + 1;
             if (f == 11) samparser->curr.opt   = c + 1;

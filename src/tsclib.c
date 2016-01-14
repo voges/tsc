@@ -35,7 +35,7 @@
 #define _GNU_SOURCE
 
 #include "tsclib.h"
-#include "tnt.h"
+#include "osro.h"
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -53,9 +53,9 @@ static bool tsc_yesno(void)
 void tsc_cleanup(void)
 {
     if (tsc_in_fp != NULL)
-        tnt_fclose(tsc_in_fp);
+        osro_fclose(tsc_in_fp);
     if (tsc_out_fp != NULL)
-        tnt_fclose(tsc_out_fp);
+        osro_fclose(tsc_out_fp);
     if (tsc_out_fname->len > 0) {
         tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
         if (tsc_yesno()) {

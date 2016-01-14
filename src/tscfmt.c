@@ -33,7 +33,7 @@
  */
 
 #include "tscfmt.h"
-#include "tnt.h"
+#include "osro.h"
 #include "tsclib.h"
 #include "version.h"
 #include <inttypes.h>
@@ -60,7 +60,7 @@ static void tscfh_init(tscfh_t *tscfh)
 
 tscfh_t * tscfh_new(void)
 {
-    tscfh_t *tscfh = (tscfh_t *)tnt_malloc(sizeof(tscfh_t));
+    tscfh_t *tscfh = (tscfh_t *)osro_malloc(sizeof(tscfh_t));
     tscfh_init(tscfh);
     return tscfh;
 }
@@ -79,12 +79,12 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
 {
     size_t ret = 0;
 
-    ret += tnt_fread_buf(fp, tscfh->magic, sizeof(tscfh->magic));
-    ret += tnt_fread_byte(fp, &(tscfh->flags));
-    ret += tnt_fread_buf(fp, tscfh->ver, sizeof(tscfh->ver));
-    ret += tnt_fread_uint64(fp, &(tscfh->rec_n));
-    ret += tnt_fread_uint64(fp, &(tscfh->blk_n));
-    ret += tnt_fread_uint64(fp, &(tscfh->sblk_n));
+    ret += osro_fread_buf(fp, tscfh->magic, sizeof(tscfh->magic));
+    ret += osro_fread_byte(fp, &(tscfh->flags));
+    ret += osro_fread_buf(fp, tscfh->ver, sizeof(tscfh->ver));
+    ret += osro_fread_uint64(fp, &(tscfh->rec_n));
+    ret += osro_fread_uint64(fp, &(tscfh->blk_n));
+    ret += osro_fread_uint64(fp, &(tscfh->sblk_n));
 
     // Sanity check
     if (strncmp((const char *)tscfh->magic, "tsc", 3))
@@ -109,12 +109,12 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
 {
     size_t ret = 0;
 
-    ret += tnt_fwrite_buf(fp, tscfh->magic, sizeof(tscfh->magic));
-    ret += tnt_fwrite_byte(fp, tscfh->flags);
-    ret += tnt_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
-    ret += tnt_fwrite_uint64(fp, tscfh->rec_n);
-    ret += tnt_fwrite_uint64(fp, tscfh->blk_n);
-    ret += tnt_fwrite_uint64(fp, tscfh->sblk_n);
+    ret += osro_fwrite_buf(fp, tscfh->magic, sizeof(tscfh->magic));
+    ret += osro_fwrite_byte(fp, tscfh->flags);
+    ret += osro_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
+    ret += osro_fwrite_uint64(fp, tscfh->rec_n);
+    ret += osro_fwrite_uint64(fp, tscfh->blk_n);
+    ret += osro_fwrite_uint64(fp, tscfh->sblk_n);
 
     DEBUG("Wrote tsc file header\n");
 
@@ -140,7 +140,7 @@ static void tscsh_init(tscsh_t *tscsh)
 
 tscsh_t * tscsh_new(void)
 {
-    tscsh_t *tscsh = (tscsh_t *)tnt_malloc(sizeof(tscsh_t));
+    tscsh_t *tscsh = (tscsh_t *)osro_malloc(sizeof(tscsh_t));
     tscsh_init(tscsh);
     return tscsh;
 }
@@ -163,9 +163,9 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
 {
     size_t ret = 0;
 
-    ret += tnt_fread_uint64(fp, &(tscsh->data_sz));
-    tscsh->data = (unsigned char *)tnt_malloc((size_t)tscsh->data_sz);
-    ret += tnt_fread_buf(fp, tscsh->data, tscsh->data_sz);
+    ret += osro_fread_uint64(fp, &(tscsh->data_sz));
+    tscsh->data = (unsigned char *)osro_malloc((size_t)tscsh->data_sz);
+    ret += osro_fread_buf(fp, tscsh->data, tscsh->data_sz);
 
     DEBUG("Read SAM header\n");
 
@@ -181,8 +181,8 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
 
     size_t ret = 0;
 
-    ret += tnt_fwrite_uint64(fp, tscsh->data_sz);
-    ret += tnt_fwrite_buf(fp, tscsh->data, tscsh->data_sz);
+    ret += osro_fwrite_uint64(fp, tscsh->data_sz);
+    ret += osro_fwrite_buf(fp, tscsh->data, tscsh->data_sz);
 
     DEBUG("Wrote SAM header\n");
 
@@ -210,7 +210,7 @@ static void tscbh_init(tscbh_t *tscbh)
 
 tscbh_t * tscbh_new(void)
 {
-    tscbh_t *tscbh = (tscbh_t *)tnt_malloc(sizeof(tscbh_t));
+    tscbh_t *tscbh = (tscbh_t *)osro_malloc(sizeof(tscbh_t));
     tscbh_init(tscbh);
     return tscbh;
 }
@@ -229,14 +229,14 @@ size_t tscbh_read(tscbh_t *tscbh, FILE *fp)
 {
     size_t ret = 0;
 
-    ret += tnt_fread_uint64(fp, &(tscbh->fpos));
-    ret += tnt_fread_uint64(fp, &(tscbh->fpos_nxt));
-    ret += tnt_fread_uint64(fp, &(tscbh->blk_cnt));
-    ret += tnt_fread_uint64(fp, &(tscbh->rec_cnt));
-    ret += tnt_fread_uint64(fp, &(tscbh->rec_max));
-    ret += tnt_fread_uint64(fp, &(tscbh->rname));
-    ret += tnt_fread_uint64(fp, &(tscbh->pos_min));
-    ret += tnt_fread_uint64(fp, &(tscbh->pos_max));
+    ret += osro_fread_uint64(fp, &(tscbh->fpos));
+    ret += osro_fread_uint64(fp, &(tscbh->fpos_nxt));
+    ret += osro_fread_uint64(fp, &(tscbh->blk_cnt));
+    ret += osro_fread_uint64(fp, &(tscbh->rec_cnt));
+    ret += osro_fread_uint64(fp, &(tscbh->rec_max));
+    ret += osro_fread_uint64(fp, &(tscbh->rname));
+    ret += osro_fread_uint64(fp, &(tscbh->pos_min));
+    ret += osro_fread_uint64(fp, &(tscbh->pos_max));
 
     DEBUG("Read block header %"PRIu64"\n", tscbh->blk_cnt);
 
@@ -247,14 +247,14 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
 {
     size_t ret = 0;
 
-    ret += tnt_fwrite_uint64(fp, tscbh->fpos);
-    ret += tnt_fwrite_uint64(fp, tscbh->fpos_nxt);
-    ret += tnt_fwrite_uint64(fp, tscbh->blk_cnt);
-    ret += tnt_fwrite_uint64(fp, tscbh->rec_cnt);
-    ret += tnt_fwrite_uint64(fp, tscbh->rec_max);
-    ret += tnt_fwrite_uint64(fp, tscbh->rname);
-    ret += tnt_fwrite_uint64(fp, tscbh->pos_min);
-    ret += tnt_fwrite_uint64(fp, tscbh->pos_max);
+    ret += osro_fwrite_uint64(fp, tscbh->fpos);
+    ret += osro_fwrite_uint64(fp, tscbh->fpos_nxt);
+    ret += osro_fwrite_uint64(fp, tscbh->blk_cnt);
+    ret += osro_fwrite_uint64(fp, tscbh->rec_cnt);
+    ret += osro_fwrite_uint64(fp, tscbh->rec_max);
+    ret += osro_fwrite_uint64(fp, tscbh->rname);
+    ret += osro_fwrite_uint64(fp, tscbh->pos_min);
+    ret += osro_fwrite_uint64(fp, tscbh->pos_max);
 
     DEBUG("Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
 

@@ -3,11 +3,8 @@
 *.o
 *.a
 *.so
-*.tmp
-~$*
-
-# Created by Dolphin file manager
-.directory
+~$i* # temporary MS office files
+.directory # created by dolphin file manager
 
 # Doxygen documentation
 src/doxygen

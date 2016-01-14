@@ -44,7 +44,7 @@
 
 #include "qualcodec.h"
 #include "tsclib.h"
-#include "tnt.h"
+#include "osro.h"
 #include "zlib_wrap.h"
 #include <string.h>
 
@@ -61,7 +61,7 @@ static void qualcodec_init(qualcodec_t *qualcodec)
 
 qualcodec_t * qualcodec_new(void)
 {
-    qualcodec_t *qualcodec = (qualcodec_t *)tnt_malloc(sizeof(qualcodec_t));
+    qualcodec_t *qualcodec = (qualcodec_t *)osro_malloc(sizeof(qualcodec_t));
     qualcodec->uncompressed = str_new();
     qualcodec->compressed = NULL;
     qualcodec_init(qualcodec);
@@ -105,16 +105,16 @@ size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE * fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "qual---"; id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, id, sizeof(id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)qualcodec->record_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
+    ret += osro_fwrite_buf(fp, id, sizeof(id));
+    ret += osro_fwrite_uint64(fp, (uint64_t)qualcodec->record_cnt);
+    ret += osro_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
     free(compressed);
@@ -127,8 +127,7 @@ size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE * fp)
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t qualcodec_decode(qualcodec_t   *qualcodec,
-                               unsigned char *tmp,
+static size_t qualcodec_decode(unsigned char *tmp,
                                size_t        tmp_sz,
                                str_t**       qual)
 {
@@ -160,16 +159,16 @@ size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual)
     unsigned char *compressed;
 
     // Read block
-    ret += tnt_fread_buf(fp, id, sizeof(id));
-    ret += tnt_fread_uint64(fp, &record_cnt);
-    ret += tnt_fread_uint64(fp, &uncompressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_crc);
-    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
-    ret += tnt_fread_buf(fp, compressed, compressed_sz);
+    ret += osro_fread_buf(fp, id, sizeof(id));
+    ret += osro_fread_uint64(fp, &record_cnt);
+    ret += osro_fread_uint64(fp, &uncompressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)osro_malloc((size_t)compressed_sz);
+    ret += osro_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
+    if (osro_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for qual block\n");
 
     // Decompress block
@@ -177,7 +176,7 @@ size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual)
     free(compressed);
 
     // Decode block
-    qualcodec_decode(qualcodec, uncompressed, uncompressed_sz, qual);
+    qualcodec_decode(uncompressed, uncompressed_sz, qual);
     free(uncompressed); // Free memory used for decoded bitstream
 
     qualcodec_init(qualcodec);

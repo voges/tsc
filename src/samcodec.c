@@ -34,7 +34,7 @@
 
 #include "samcodec.h"
 #include "common/common.h"
-#include "tnt.h"
+#include "osro.h"
 #include "tscfmt.h"
 #include "tsclib.h"
 #include "version.h"
@@ -95,7 +95,7 @@ static void samcodec_init(samcodec_t   *samcodec,
 
 samcodec_t * samcodec_new(FILE *ifp, FILE *ofp, unsigned int blk_sz)
 {
-    samcodec_t *samcodec = (samcodec_t *)tnt_malloc(sizeof(samcodec_t));
+    samcodec_t *samcodec = (samcodec_t *)osro_malloc(sizeof(samcodec_t));
     samcodec->samparser = samparser_new(ifp);
     samcodec->auxcodec = auxcodec_new();
     samcodec->idcodec = idcodec_new();
@@ -314,12 +314,12 @@ static void samcodec_print_stats(const size_t  *sam_sz,
             (double)et[ET_REM] / (double)1000000,
             (100*(double)et[ET_REM] / (double)et[ET_TOT]),
 
-            (sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
-            (sam_aux_sz / MB) / ((double)et[ET_AUX] / (double)1000000),
-            (sam_id_sz / MB) / ((double)et[ET_ID] / (double)1000000),
-            (sam_nuc_sz / MB) / ((double)et[ET_NUC] / (double)1000000),
-            (sam_pair_sz / MB) / ((double)et[ET_PAIR] / (double)1000000),
-            (sam_qual_sz / MB) / ((double)et[ET_QUAL] / (double)1000000));
+            ((double)sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
+            ((double)sam_aux_sz / MB) / ((double)et[ET_AUX] / (double)1000000),
+            ((double)sam_id_sz / MB) / ((double)et[ET_ID] / (double)1000000),
+            ((double)sam_nuc_sz / MB) / ((double)et[ET_NUC] / (double)1000000),
+            ((double)sam_pair_sz / MB) / ((double)et[ET_PAIR] / (double)1000000),
+            ((double)sam_qual_sz / MB) / ((double)et[ET_QUAL] / (double)1000000));
 }
 
 void samcodec_encode(samcodec_t *samcodec)
@@ -338,7 +338,7 @@ void samcodec_encode(samcodec_t *samcodec)
     // Set up tsc file header, then seek past it for now
     tscfh->flags = 0x1; // LSB signals SAM
     tscfh->sblk_n = 3; // aux, nux, qual
-    fseek(samcodec->ofp, tscfh_size(tscfh), SEEK_SET);
+    fseek(samcodec->ofp, (long)tscfh_size(tscfh), SEEK_SET);
 
     // Copy SAM header to tsc file
     samparser_head(samcodec->samparser);
@@ -359,7 +359,7 @@ void samcodec_encode(samcodec_t *samcodec)
             if (tscbh->blk_cnt > 0) {
                 fseek(samcodec->ofp, fpos_prev, SEEK_SET);
                 fseek(samcodec->ofp, (long)sizeof(tscbh->fpos), SEEK_CUR);
-                tnt_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
+                osro_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
                 fseek(samcodec->ofp, fpos_curr, SEEK_SET);
             }
             fpos_prev = fpos_curr;
@@ -460,7 +460,7 @@ void samcodec_encode(samcodec_t *samcodec)
     if (tscbh->blk_cnt > 0) {
         fseek(samcodec->ofp, fpos_prev, SEEK_SET);
         fseek(samcodec->ofp, (long)sizeof(tscbh->fpos), SEEK_CUR);
-        tnt_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
+        osro_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
         fseek(samcodec->ofp, fpos_curr, SEEK_SET);
     }
     fpos_prev = fpos_curr;
@@ -538,25 +538,25 @@ void samcodec_decode(samcodec_t *samcodec)
 
     // Read SAM header from tsc file and write it to SAM file
     tsc_sz[TSC_SH] = tscsh_read(tscsh, samcodec->ifp);
-    sam_sz[SAM_HEAD] += tnt_fwrite_buf(samcodec->ofp, tscsh->data, tscsh->data_sz);
+    sam_sz[SAM_HEAD] += osro_fwrite_buf(samcodec->ofp, tscsh->data, tscsh->data_sz);
 
     size_t b = 0;
     for (b = 0; b < tscfh->blk_n; b++) {
         tsc_sz[TSC_BH] += tscbh_read(tscbh, samcodec->ifp);
 
         // Allocate memory to prepare decoding of the sub-blocks
-        str_t   **qname=(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint16_t *flag =(uint16_t *)tnt_malloc(sizeof(uint16_t)*tscbh->rec_cnt);
-        str_t   **rname=(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint32_t *pos  =(uint32_t *)tnt_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
-        uint8_t *mapq  =(uint8_t *)tnt_malloc(sizeof(uint8_t)*tscbh->rec_cnt);
-        str_t   **cigar=(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **rnext=(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint32_t *pnext=(uint32_t *)tnt_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
-        int64_t *tlen  =(int64_t *)tnt_malloc(sizeof(int64_t)*tscbh->rec_cnt);
-        str_t   **seq  =(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **qual =(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **opt  =(str_t **)tnt_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **qname=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint16_t *flag =(uint16_t *)osro_malloc(sizeof(uint16_t)*tscbh->rec_cnt);
+        str_t   **rname=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint32_t *pos  =(uint32_t *)osro_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
+        uint8_t *mapq  =(uint8_t *)osro_malloc(sizeof(uint8_t)*tscbh->rec_cnt);
+        str_t   **cigar=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **rnext=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint32_t *pnext=(uint32_t *)osro_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
+        int64_t *tlen  =(int64_t *)osro_malloc(sizeof(int64_t)*tscbh->rec_cnt);
+        str_t   **seq  =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **qual =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **opt  =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
 
         size_t r = 0;
         for (r = 0; r < tscbh->rec_cnt; r++) {
@@ -666,11 +666,11 @@ void samcodec_decode(samcodec_t *samcodec)
             // Write data to file
             size_t f = 0;
             for (f = 0; f < 12; f++) {
-                sam_sz[f] += tnt_fwrite_buf(samcodec->ofp, (unsigned char *)sam_fields[f], strlen(sam_fields[f]));
+                sam_sz[f] += osro_fwrite_buf(samcodec->ofp, (unsigned char *)sam_fields[f], strlen(sam_fields[f]));
                 if (f != 11 && strlen(sam_fields[f + 1]))
-                    sam_sz[SAM_CTRL] += tnt_fwrite_byte(samcodec->ofp, '\t');
+                    sam_sz[SAM_CTRL] += osro_fwrite_byte(samcodec->ofp, '\t');
             }
-            sam_sz[SAM_CTRL] += tnt_fwrite_byte(samcodec->ofp, '\n');
+            sam_sz[SAM_CTRL] += osro_fwrite_byte(samcodec->ofp, '\n');
 
             // Free the memory used for the current line
             str_free(qname[r]);

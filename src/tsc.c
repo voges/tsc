@@ -33,7 +33,7 @@
  */
 
 #include "samcodec.h"
-#include "tnt.h"
+#include "osro.h"
 #include "tsclib.h"
 #include "version.h"
 #include <getopt.h>
@@ -260,15 +260,15 @@ int main(int argc, char *argv[])
         }
 
         // Invoke compressor
-        tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "r");
-        tsc_out_fp = tnt_fopen((const char *)tsc_out_fname->s, "wb");
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "r");
+        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
         samcodec_encode(samcodec);
         samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
-        tnt_fclose(tsc_in_fp);
-        tnt_fclose(tsc_out_fp);
+        osro_fclose(tsc_in_fp);
+        osro_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
@@ -290,27 +290,27 @@ int main(int argc, char *argv[])
         }
 
         // Invoke decompressor
-        tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_out_fp = tnt_fopen((const char *)tsc_out_fname->s, "w");
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "w");
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, 0);
         samcodec_decode(samcodec);
         samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
-        tnt_fclose(tsc_in_fp);
-        tnt_fclose(tsc_out_fp);
+        osro_fclose(tsc_in_fp);
+        osro_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
             tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file
-        tsc_in_fp = tnt_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_log("Reading information: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, NULL, 0);
         samcodec_info(samcodec);
         samcodec_free(samcodec);
-        tnt_fclose(tsc_in_fp);
+        osro_fclose(tsc_in_fp);
     }
 
     str_free(tsc_prog_name);

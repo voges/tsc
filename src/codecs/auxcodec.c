@@ -44,7 +44,7 @@
 
 #include "auxcodec.h"
 #include "tsclib.h"
-#include "tnt.h"
+#include "osro.h"
 #include "zlib_wrap.h"
 #include <inttypes.h>
 #include <string.h>
@@ -60,7 +60,7 @@ static void auxcodec_init(auxcodec_t *auxcodec)
 
 auxcodec_t * auxcodec_new(void)
 {
-    auxcodec_t *auxcodec = (auxcodec_t *)tnt_malloc(sizeof(auxcodec_t));
+    auxcodec_t *auxcodec = (auxcodec_t *)osro_malloc(sizeof(auxcodec_t));
     auxcodec->uncompressed = str_new();
     auxcodec->compressed = NULL;
     auxcodec_init(auxcodec);
@@ -117,16 +117,16 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = tnt_crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "aux----"; id[7] = '\0';
-    ret += tnt_fwrite_buf(fp, id, sizeof(id));
-    ret += tnt_fwrite_uint64(fp, (uint64_t)auxcodec->record_cnt);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += tnt_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += tnt_fwrite_buf(fp, compressed, compressed_sz);
+    ret += osro_fwrite_buf(fp, id, sizeof(id));
+    ret += osro_fwrite_uint64(fp, (uint64_t)auxcodec->record_cnt);
+    ret += osro_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
     free(compressed);
@@ -139,8 +139,7 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp)
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t auxcodec_decode(auxcodec_t    *auxcodec,
-                              unsigned char *tmp,
+static size_t auxcodec_decode(unsigned char *tmp,
                               size_t        tmp_sz,
                               uint16_t      *flag,
                               uint8_t       *mapq,
@@ -167,11 +166,11 @@ static size_t auxcodec_decode(auxcodec_t    *auxcodec,
             tmp[i] = '\0';
             switch (idx++) {
             case 0:
-                flag[line] = strtoll((const char *)cstr, NULL, 10);
+                flag[line] = (uint16_t)strtoul((const char *)cstr, NULL, 10);
                 ret += sizeof(*flag);
                 break;
             case 1:
-                mapq[line] = strtoll((const char *)cstr, NULL, 10);
+                mapq[line] = (uint8_t)strtoul((const char *)cstr, NULL, 10);
                 ret += sizeof(*mapq);
                 break;
             case 2:
@@ -206,16 +205,16 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec,
     unsigned char *compressed;
 
     // Read block
-    ret += tnt_fread_buf(fp, id, sizeof(id));
-    ret += tnt_fread_uint64(fp, &record_cnt);
-    ret += tnt_fread_uint64(fp, &uncompressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_sz);
-    ret += tnt_fread_uint64(fp, &compressed_crc);
-    compressed = (unsigned char *)tnt_malloc((size_t)compressed_sz);
-    ret += tnt_fread_buf(fp, compressed, compressed_sz);
+    ret += osro_fread_buf(fp, id, sizeof(id));
+    ret += osro_fread_uint64(fp, &record_cnt);
+    ret += osro_fread_uint64(fp, &uncompressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_sz);
+    ret += osro_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)osro_malloc((size_t)compressed_sz);
+    ret += osro_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (tnt_crc64(compressed, compressed_sz) != compressed_crc)
+    if (osro_crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for aux block\n");
 
     // Decompress block
@@ -223,7 +222,7 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec,
     free(compressed);
 
     // Decode block
-    auxcodec_decode(auxcodec, uncompressed, uncompressed_sz, flag, mapq, opt);
+    auxcodec_decode(uncompressed, uncompressed_sz, flag, mapq, opt);
     free(uncompressed); // Free memory used for decoded bitstream
 
     auxcodec_init(auxcodec);
