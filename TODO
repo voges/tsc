@@ -3,8 +3,13 @@
 * pthreads for sub-block codecs
 * which block size?
 * fix alpha / which alpha?
+* which window size?
 * use zopfli compression instead of zlib compression?
 * use brotli (.br) compression?
 * website for tsc?
-* upload repo to GitHub
+* upload repo to GitHub?
+* license?
 * trigger new block w/ each new rname
+* update LUT (tsc -i): should display block-wise rnames, too
+* tsc-1.5: this should be the SNP version (SNPs are stored in OPT (MD tag)
+* print block-wise mapq statistics (should correlate with CR)
