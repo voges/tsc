@@ -1,8 +1,0 @@
-1) Please first install libosro somewhere on your system:
-cd libosro-1.1
-make
-make install prefix=/your/prefix/path/
-
-2) Then compile the tsc sources:
-cd src
-make
