@@ -3,8 +3,8 @@ CC           = gcc
 CFLAGS       = $(INCLUDE_PATHS) -Wall -Wextra -Wfloat-equal -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wunreachable-code -Wconversion #-Wundef
 LDFLAGS      = $(LIBRARY_PATHS) -lm -lz -losro
 
-INCLUDE_PATHS = -I. -I../libosro-1.1_install/include/
-LIBRARY_PATHS = -L../libosro-1.1_install/lib/
+INCLUDE_PATHS = #-I. -I../libosro-1.1_install/include/
+LIBRARY_PATHS = #-L../libosro-1.1_install/lib/
 
 TSC_SRCS     = samcodec.c samparser.c tsc.c tscfmt.c tsclib.c
 CODECS_SRCS := $(shell find codecs -name '*.c')
