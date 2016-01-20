@@ -1,10 +1,11 @@
-* zlib: block-based -> stream-based
+* zlib: block-based -> stream-based (compress() > deflate(), uncompress() > inflate())
 * rm tsc record ~
+* support reads with negative position offset?
 * pthreads for sub-block codecs
 * which block size?
 * fix alpha / which alpha?
 * which window size?
-* use zopfli compression instead of zlib compression?
+* use zopfli compression instead of zlib compression (should be 3-8% smaller, but 2-3 orders of magnitude slower)?
 * use brotli (.br) compression?
 * website for tsc?
 * upload repo to GitHub?
