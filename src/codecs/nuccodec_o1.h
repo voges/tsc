@@ -47,19 +47,20 @@
 
 typedef struct nuccodec_t_ {
     // Only used in encoder
-    size_t record_cnt;  // No. of records processed in the current block
-    bool   first;       // 'false', if first line has not been processed yet
-    str_t  *rname_prev; // Holding current RNAME
-    str_t  *ctrl;
-    str_t  *poff;
-    str_t  *stogy;
-    str_t  *mod;
-    str_t  *trail;
+    size_t  record_cnt;  // No. of records processed in the current block
+    bool    first;       // 'false', if first line has not been processed yet
+    str_t   *rname_prev; // Holding current RNAME
+    uint32_t pos_prev;   // Previous POSition 
+    str_t   *ctrl;
+    str_t   *poff;
+    str_t   *stogy;
+    str_t   *mod;
+    str_t   *trail;
 
-    // Circular buffers
-    cbufint64_t *neo_cbuf;
+    // Circular buffers and local reference string
     cbufint64_t *pos_cbuf;
     cbufstr_t   *exs_cbuf;
+    str_t       *ref;
 } nuccodec_t;
 
 nuccodec_t * nuccodec_new(void);
