@@ -163,62 +163,61 @@ static void samcodec_print_stats(const size_t  *sam_sz,
                         + tsc_sz[TSC_QUAL];
 
     fprintf(stdout,
+            "\nsamcodec stats:\n"
+            "---------------\n"
+            "Number of records   : %12"PRIu64"\n"
+            "Number of blocks    : %12"PRIu64"\n"
             "\n"
-            "\tStatistics:\n"
-            "\t-----------\n"
-            "\tNumber of records   : %12"PRIu64"\n"
-            "\tNumber of blocks    : %12"PRIu64"\n"
+            "SAM file size       : %12zu (%6.2f%%)\n"
+            "  QNAME             : %12zu (%6.2f%%)\n"
+            "  FLAG              : %12zu (%6.2f%%)\n"
+            "  RNAME             : %12zu (%6.2f%%)\n"
+            "  POS               : %12zu (%6.2f%%)\n"
+            "  MAPQ              : %12zu (%6.2f%%)\n"
+            "  CIGAR             : %12zu (%6.2f%%)\n"
+            "  RNEXT             : %12zu (%6.2f%%)\n"
+            "  PNEXT             : %12zu (%6.2f%%)\n"
+            "  TLEN              : %12zu (%6.2f%%)\n"
+            "  SEQ               : %12zu (%6.2f%%)\n"
+            "  QUAL              : %12zu (%6.2f%%)\n"
+            "  OPT               : %12zu (%6.2f%%)\n"
+            "  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
+            "  HEAD (SAM header) : %12zu (%6.2f%%)\n"
             "\n"
-            "\tSAM file size       : %12zu (%6.2f%%)\n"
-            "\t  QNAME             : %12zu (%6.2f%%)\n"
-            "\t  FLAG              : %12zu (%6.2f%%)\n"
-            "\t  RNAME             : %12zu (%6.2f%%)\n"
-            "\t  POS               : %12zu (%6.2f%%)\n"
-            "\t  MAPQ              : %12zu (%6.2f%%)\n"
-            "\t  CIGAR             : %12zu (%6.2f%%)\n"
-            "\t  RNEXT             : %12zu (%6.2f%%)\n"
-            "\t  PNEXT             : %12zu (%6.2f%%)\n"
-            "\t  TLEN              : %12zu (%6.2f%%)\n"
-            "\t  SEQ               : %12zu (%6.2f%%)\n"
-            "\t  QUAL              : %12zu (%6.2f%%)\n"
-            "\t  OPT               : %12zu (%6.2f%%)\n"
-            "\t  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
-            "\t  HEAD (SAM header) : %12zu (%6.2f%%)\n"
+            "Tsc file size       : %12zu (%6.2f%%)\n"
+            "  File header       : %12zu (%6.2f%%)\n"
+            "  SAM header        : %12zu (%6.2f%%)\n"
+            "  Block header(s)   : %12zu (%6.2f%%)\n"
+            "  Aux               : %12zu (%6.2f%%)\n"
+            "  Id                : %12zu (%6.2f%%)\n"
+            "  Nuc               : %12zu (%6.2f%%)\n"
+            "  Pair              : %12zu (%6.2f%%)\n"
+            "  Qual              : %12zu (%6.2f%%)\n"
             "\n"
-            "\tTsc file size       : %12zu (%6.2f%%)\n"
-            "\t  File header       : %12zu (%6.2f%%)\n"
-            "\t  SAM header        : %12zu (%6.2f%%)\n"
-            "\t  Block header(s)   : %12zu (%6.2f%%)\n"
-            "\t  Aux               : %12zu (%6.2f%%)\n"
-            "\t  Id                : %12zu (%6.2f%%)\n"
-            "\t  Nuc               : %12zu (%6.2f%%)\n"
-            "\t  Pair              : %12zu (%6.2f%%)\n"
-            "\t  Qual              : %12zu (%6.2f%%)\n"
+            "Compression ratios             SAM /          tsc\n"
+            "  Total             : %12zu / %12zu (%6.2f%%)\n"
+            "  Aux               : %12zu / %12zu (%6.2f%%)\n"
+            "  Id                : %12zu / %12zu (%6.2f%%)\n"
+            "  Nuc               : %12zu / %12zu (%6.2f%%)\n"
+            "  Pair              : %12zu / %12zu (%6.2f%%)\n"
+            "  Qual              : %12zu / %12zu (%6.2f%%)\n"
             "\n"
-            "\tCompression ratios             SAM /          tsc\n"
-            "\t  Total             : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Aux               : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Id                : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Nuc               : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Pair              : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual              : %12zu / %12zu (%6.2f%%)\n"
+            "Timing\n"
+            "  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n"
-            "\tTiming\n"
-            "\t  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\n"
-            "\tSpeed\n"
-            "\t  Total             : %12.2f MB/s\n"
-            "\t  Aux               : %12.2f MB/s\n"
-            "\t  Id                : %12.2f MB/s\n"
-            "\t  Nuc               : %12.2f MB/s\n"
-            "\t  Pair              : %12.2f MB/s\n"
-            "\t  Qual              : %12.2f MB/s\n"
+            "Speed\n"
+            "  Total             : %12.2f MB/s\n"
+            "  Aux               : %12.2f MB/s\n"
+            "  Id                : %12.2f MB/s\n"
+            "  Nuc               : %12.2f MB/s\n"
+            "  Pair              : %12.2f MB/s\n"
+            "  Qual              : %12.2f MB/s\n"
             "\n",
             tscfh->rec_n,
             tscfh->blk_n,
@@ -337,7 +336,7 @@ void samcodec_encode(samcodec_t *samcodec)
 
     // Set up tsc file header, then seek past it for now
     tscfh->flags = 0x1; // LSB signals SAM
-    tscfh->sblk_n = 3; // aux, nux, qual
+    tscfh->sblk_n = 5; // aux, id, nux, pair, qual
     fseek(samcodec->ofp, (long)tscfh_size(tscfh), SEEK_SET);
 
     // Copy SAM header to tsc file
@@ -349,6 +348,7 @@ void samcodec_encode(samcodec_t *samcodec)
 
     // Set up block header
     tscbh->rec_max = samcodec->blk_sz;
+    tsc_log("Block size: %d\n", samcodec->blk_sz);
 
     samrec_t *samrec = &(samcodec->samparser->curr);
     while (samparser_next(samcodec->samparser)) {
@@ -399,39 +399,27 @@ void samcodec_encode(samcodec_t *samcodec)
 
         // Add record to encoders
         gettimeofday(&tv0, NULL);
-        auxcodec_add_record(samcodec->auxcodec,
-                            samrec->flag,
-                            samrec->mapq,
-                            samrec->opt);
+        auxcodec_add_record(samcodec->auxcodec, samrec->flag, samrec->mapq, samrec->opt);
         gettimeofday(&tv1, NULL);
         et[ET_AUX] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        idcodec_add_record(samcodec->idcodec,
-                         samrec->qname);
+        idcodec_add_record(samcodec->idcodec,  samrec->qname);
         gettimeofday(&tv1, NULL);
         et[ET_ID] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        nuccodec_add_record(samcodec->nuccodec,
-                            samrec->rname,
-                            samrec->pos,
-                            samrec->cigar,
-                            samrec->seq);
+        nuccodec_add_record(samcodec->nuccodec, /*samrec->flag,*/ samrec->rname, samrec->pos, samrec->cigar, samrec->seq);
         gettimeofday(&tv1, NULL);
         et[ET_NUC] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        paircodec_add_record(samcodec->paircodec,
-                           samrec->rnext,
-                           samrec->pnext,
-                           samrec->tlen);
+        paircodec_add_record(samcodec->paircodec, samrec->rnext, samrec->pnext, samrec->tlen);
         gettimeofday(&tv1, NULL);
         et[ET_QUAL] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        qualcodec_add_record(samcodec->qualcodec,
-                             samrec->qual);
+        qualcodec_add_record(samcodec->qualcodec,  samrec->qual);
         gettimeofday(&tv1, NULL);
         et[ET_QUAL] += tvdiff(tv0, tv1);
 
@@ -512,6 +500,7 @@ void samcodec_encode(samcodec_t *samcodec)
     tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
     tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
     tsc_log("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log("Nuccodec CR: %.2f%%\n", 100*(double)tsc_sz[TSC_NUC]/(double)(sam_sz[SAM_RNAME]+sam_sz[SAM_POS]+sam_sz[SAM_CIGAR]+sam_sz[SAM_SEQ]));
 
     // If selected, print detailed statistics
     if (tsc_stats) samcodec_print_stats(sam_sz, tsc_sz, tscfh, et);

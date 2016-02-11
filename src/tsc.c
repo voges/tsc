@@ -81,19 +81,19 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o FILE] [-b SIZE] [-fs] file.sam\n");
+    printf("  Compress  : tsc [-o FILE] [-b BSIZE] [-fs] file.sam\n");
     printf("  Decompress: tsc -d [-o FILE] [-fs] file.tsc\n");
     printf("  Info      : tsc -i file.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b  --blocksz=SIZE Specify block SIZE\n");
-    printf("  -d  --decompress   Decompress\n");
-    printf("  -f, --force        Force overwriting of output file(s)\n");
-    printf("  -h, --help         Print this help\n");
-    printf("  -i, --info         Print information about tsc file\n");
-    printf("  -o, --output=FILE  Specify output FILE\n");
-    printf("  -s, --stats        Print (de-)compression statistics\n");
-    printf("  -v, --version      Display program version\n");
+    printf("  -b  --blocksz=BSIZE  Specify Block SIZE\n");
+    printf("  -d  --decompress     Decompress\n");
+    printf("  -f, --force          Force overwriting of output file(s)\n");
+    printf("  -h, --help           Print this help\n");
+    printf("  -i, --info           Print information about tsc file\n");
+    printf("  -o, --output=FILE    Specify output FILE\n");
+    printf("  -s, --stats          Print (de-)compression statistics\n");
+    printf("  -v, --version        Display program version\n");
     printf("\n");
 }
 

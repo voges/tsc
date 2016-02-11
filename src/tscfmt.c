@@ -42,20 +42,20 @@
 // File header
 static void tscfh_init(tscfh_t *tscfh)
 {
-    tscfh->magic[0] = 't';
-    tscfh->magic[1] = 's';
-    tscfh->magic[2] = 'c';
-    tscfh->magic[3] = '\0';
-    tscfh->flags    = 0x0;
-    tscfh->ver[0]   = TSC_VERSION_MAJMAJ + 48; // ASCII offset
-    tscfh->ver[1]   = TSC_VERSION_MAJMIN + 48;
-    tscfh->ver[2]   = '.';
-    tscfh->ver[3]   = TSC_VERSION_MINMAJ + 48;
-    tscfh->ver[4]   = TSC_VERSION_MINMIN + 48;
-    tscfh->ver[5]   = '\0';
-    tscfh->rec_n    = 0;
-    tscfh->blk_n    = 0;
-    tscfh->sblk_n   = 0;
+    tscfh->magic[0]  = 't';
+    tscfh->magic[1]  = 's';
+    tscfh->magic[2]  = 'c';
+    tscfh->magic[3]  = '\0';
+    tscfh->flags     = 0x0;
+    tscfh->ver[0]    = TSC_VERSION_MAJMAJ + 48; // ASCII offset
+    tscfh->ver[1]    = TSC_VERSION_MAJMIN + 48;
+    tscfh->ver[2]    = '.';
+    tscfh->ver[3]    = TSC_VERSION_MINMAJ + 48;
+    tscfh->ver[4]    = TSC_VERSION_MINMIN + 48;
+    tscfh->ver[5]    = '\0';
+    tscfh->rec_n     = 0;
+    tscfh->blk_n     = 0;
+    tscfh->sblk_n    = 0;
 }
 
 tscfh_t * tscfh_new(void)
