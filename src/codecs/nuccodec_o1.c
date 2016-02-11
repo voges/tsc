@@ -922,6 +922,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             str_copy_str(nuccodec->rname_prev, _rname_);
             nuccodec->pos_prev = *_pos_;
 
+            free(modpos_curr);
             str_free(exs_curr);
             str_free(trail_curr);
             str_free(inserts_curr);
@@ -929,7 +930,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
         } else {
             tsc_error("Invalid ctrl string\n");
         }
-        DEBUG("%s %d %s %s\n", _rname_->s, *_pos_, _cigar_->s, _seq_->s);
+        //DEBUG("%s %d %s %s\n", _rname_->s, *_pos_, _cigar_->s, _seq_->s);
         ctrl++;
         record_idx++;
     }
@@ -937,9 +938,9 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
 
 static unsigned char * read_zlib_block(FILE *fp, size_t *sz)
 {
-    uint64_t data_sz;
-    uint64_t data_compressed_sz;
-    uint64_t data_compressed_crc;
+    uint64_t data_sz = 0;
+    uint64_t data_compressed_sz = 0;
+    uint64_t data_compressed_crc = 0;
     unsigned char *data_compressed;
     *sz += osro_fread_uint64(fp, &data_sz);
     *sz += osro_fread_uint64(fp, &data_compressed_sz);
@@ -956,9 +957,9 @@ static unsigned char * read_zlib_block(FILE *fp, size_t *sz)
 
 static unsigned char * read_rangeO1_block(FILE *fp, size_t *sz)
 {
-    uint64_t data_sz;
-    uint64_t data_compressed_sz;
-    uint64_t data_compressed_crc;
+    uint64_t data_sz = 0;
+    uint64_t data_compressed_sz = 0;
+    uint64_t data_compressed_crc = 0;
     unsigned char *data_compressed;
     *sz += osro_fread_uint64(fp, &data_compressed_sz);
     *sz += osro_fread_uint64(fp, &data_compressed_crc);
