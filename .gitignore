@@ -16,4 +16,4 @@ bin/
 
 # Tsc files
 *.tsc*
-libosro-1.1_install
+libosro-1.0_install/*
