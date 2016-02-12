@@ -4,3 +4,4 @@
 * upload repo to GitHub?
 * license?
 * update LUT (tsc -i): should display block-wise rnames, too
+* fix fopen() call (crashes when access to output location is not allowed)

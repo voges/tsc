@@ -211,7 +211,7 @@ static void samcodec_print_stats(const size_t  *sam_sz,
             "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n"
-            "Speed\n"
+            "Speed (with respect to SAM sizes)\n"
             "  Total             : %12.2f MB/s\n"
             "  Aux               : %12.2f MB/s\n"
             "  Id                : %12.2f MB/s\n"
