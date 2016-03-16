@@ -1,7 +1,3 @@
-* zlib: block-based -> stream-based (compress() > deflate(), uncompress() > inflate())
-* pthreads for sub-block codecs
-* website for tsc?
-* upload repo to GitHub?
-* license?
+* nuccodec: improved CIGAR (a.k.a. indel coding)?
 * update LUT (tsc -i): should display block-wise rnames, too
-* fix fopen() call (crashes when access to output location is not allowed)
+

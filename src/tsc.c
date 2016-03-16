@@ -70,7 +70,7 @@ static void print_version(void)
 
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015\n");
+    printf("Copyright (c) 2015-2016\n");
     printf("Leibniz Universitaet Hannover, Institut fuer "
            "Informationsverarbeitung (TNT)\n");
     printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
