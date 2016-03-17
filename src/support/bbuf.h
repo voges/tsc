@@ -33,25 +33,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CBUFSTR_H
-#define CBUFSTR_H
+#ifndef TSC_BBUF_H
+#define TSC_BBUF_H
 
-#include "str.h"
+#include <stdint.h>
 #include <stdlib.h>
 
-typedef struct cbufstr_t_ {
-    size_t sz;    // size of circular buffer
-    str_t  **buf; // array holding the strings in the buffer
-    size_t nxt;   // next free position
-    size_t n;     // number of elements currently in buffer
-} cbufstr_t;
+typedef struct bbuf_t_ {
+    unsigned char *bytes;
+    size_t        sz;
+} bbuf_t;
 
-cbufstr_t *cbufstr_new(const size_t sz);
-void cbufstr_free(cbufstr_t *cbufstr);
-void cbufstr_clear(cbufstr_t *cbufstr);
-void cbufstr_push(cbufstr_t *cbufstr, const char *s);
-str_t * cbufstr_top(cbufstr_t *cbufstr);
-str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
+bbuf_t * bbuf_new(void);
+void bbuf_free(bbuf_t *bbuf);
+void bbuf_clear(bbuf_t *bbuf);
+void bbuf_reserve(bbuf_t *bbuf, const size_t sz);
+void bbuf_extend(bbuf_t *bbuf, const size_t ex);
+void bbuf_trunc(bbuf_t *bbuf, const size_t tr);
+void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app);
+void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte);
+void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x);
+void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n);
 
-#endif // CBUFSTR_H
+#endif // TSC_BBUF_H
 

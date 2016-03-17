@@ -32,14 +32,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OSRO_MALLOC_H
-#define OSRO_MALLOC_H
+#include "tsclib/mem.h"
+#include <stdio.h>
 
-#include <stdlib.h>
+void * tsc_malloc(const size_t size)
+{
+    void *p = malloc(size);
+    if (p == NULL) {
+        fprintf(stderr, "Cannot allocate %zu bytes\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}
 
-void * osro_malloc(const size_t n);
-void * osro_realloc(void *ptr, const size_t n);
-void osro_free(void *ptr);
+void * tsc_realloc(void *ptr, const size_t size)
+{
+    void *p = realloc(ptr, size);
+    if (p == NULL) {
+        fprintf(stderr, "Cannot allocate %zu bytes\n", size);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}
 
-#endif // OSRO_MALLOC_H
+void tsc_free(void *ptr)
+{
+    if (ptr != NULL) {
+        free(ptr);
+        ptr = NULL;
+    } else {
+        fprintf(stderr, "Tried to free null pointer\n");
+        exit(EXIT_FAILURE);
+    }
+}
 

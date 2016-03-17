@@ -33,8 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CBUFINT64_H
-#define CBUFINT64_H
+#ifndef TSC_CBUFINT64_H
+#define TSC_CBUFINT64_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -53,5 +53,5 @@ void cbufint64_push(cbufint64_t *cbufint64, const int64_t x);
 int64_t cbufint64_top(cbufint64_t *cbufint64);
 int64_t cbufint64_get(const cbufint64_t *cbufint64, const size_t pos);
 
-#endif // CBUFINT64_H
+#endif // TSC_CBUFINT64_H
 

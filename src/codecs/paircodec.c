@@ -43,10 +43,12 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "paircodec.h"
-#include "tsclib.h"
-#include "osro.h"
-#include "zlib_wrap.h"
+#include "codecs/paircodec.h"
+#include "codecs/zlib_wrap.h"
+#include "support/crc64.h"
+#include "tsclib/fio.h"
+#include "tsclib/log.h"
+#include "tsclib/mem.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -63,7 +65,7 @@ static void paircodec_init(paircodec_t *paircodec)
 
 paircodec_t * paircodec_new(void)
 {
-    paircodec_t *paircodec = (paircodec_t *)osro_malloc(sizeof(paircodec_t));
+    paircodec_t *paircodec = (paircodec_t *)tsc_malloc(sizeof(paircodec_t));
     paircodec->uncompressed = str_new();
     paircodec->compressed = NULL;
     paircodec_init(paircodec);
@@ -120,16 +122,16 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp)
     unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
-    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
+    uint64_t compressed_crc = crc64(compressed, compressed_sz);
 
     // Write compressed block
     unsigned char id[8] = "pair---"; id[7] = '\0';
-    ret += osro_fwrite_buf(fp, id, sizeof(id));
-    ret += osro_fwrite_uint64(fp, (uint64_t)paircodec->record_cnt);
-    ret += osro_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
+    ret += tsc_fwrite_buf(fp, id, sizeof(id));
+    ret += tsc_fwrite_uint64(fp, (uint64_t)paircodec->record_cnt);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
     free(compressed);
@@ -202,16 +204,16 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
     unsigned char *compressed;
 
     // Read block
-    ret += osro_fread_buf(fp, id, sizeof(id));
-    ret += osro_fread_uint64(fp, &record_cnt);
-    ret += osro_fread_uint64(fp, &uncompressed_sz);
-    ret += osro_fread_uint64(fp, &compressed_sz);
-    ret += osro_fread_uint64(fp, &compressed_crc);
-    compressed = (unsigned char *)osro_malloc((size_t)compressed_sz);
-    ret += osro_fread_buf(fp, compressed, compressed_sz);
+    ret += tsc_fread_buf(fp, id, sizeof(id));
+    ret += tsc_fread_uint64(fp, &record_cnt);
+    ret += tsc_fread_uint64(fp, &uncompressed_sz);
+    ret += tsc_fread_uint64(fp, &compressed_sz);
+    ret += tsc_fread_uint64(fp, &compressed_crc);
+    compressed = (unsigned char *)tsc_malloc((size_t)compressed_sz);
+    ret += tsc_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (osro_crc64(compressed, compressed_sz) != compressed_crc)
+    if (crc64(compressed, compressed_sz) != compressed_crc)
         tsc_error("CRC64 check failed for pair block\n");
 
     // Decompress block

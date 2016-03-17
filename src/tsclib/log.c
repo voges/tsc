@@ -33,13 +33,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef COMMON_H
-#define COMMON_H
+#define _GNU_SOURCE
 
+#include "tsclib/log.h"
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-long tvdiff(struct timeval tv0, struct timeval tv1);
-size_t ndigits(int64_t x);
+void tsc_log(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "%s", msg);
+    free(msg);
+}
 
-#endif // COMMON_H
-
+void tsc_error(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "Error: %s", msg);
+    free(msg);
+    exit(EXIT_FAILURE);
+}

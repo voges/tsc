@@ -36,8 +36,7 @@
 #ifndef TSC_IDCODEC_H
 #define TSC_IDCODEC_H
 
-
-#include "common/str.h"
+#include "tsclib/str.h"
 #include <stdio.h>
 
 typedef struct idcodec_t_ {

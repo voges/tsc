@@ -10,10 +10,7 @@
 src/doxygen
 
 # Executables
-src/tsc
-src/detsc
-bin/
+build/
 
 # Tsc files
 *.tsc*
-libosro-1.0_install/*

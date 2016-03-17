@@ -32,10 +32,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "osro_io.h"
+#include "tsclib/fio.h"
 #include <stdlib.h>
 
-FILE * osro_fopen(const char *fname, const char *mode)
+FILE * tsc_fopen(const char *fname, const char *mode)
 {
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
@@ -46,7 +46,7 @@ FILE * osro_fopen(const char *fname, const char *mode)
     return fp;
 }
 
-void osro_fclose(FILE *fp)
+void tsc_fclose(FILE *fp)
 {
     if (fp != NULL) {
         fclose(fp);
@@ -57,7 +57,7 @@ void osro_fclose(FILE *fp)
     }
 }
 
-size_t osro_fwrite_byte(FILE *fp, const unsigned char byte)
+size_t tsc_fwrite_byte(FILE *fp, const unsigned char byte)
 {
     if (fwrite(&byte, 1, 1, fp) != 1) {
         fprintf(stderr, "Error: Could not write byte\n");
@@ -66,7 +66,7 @@ size_t osro_fwrite_byte(FILE *fp, const unsigned char byte)
     return 1;
 }
 
-size_t osro_fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n)
+size_t tsc_fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n)
 {
     if (fwrite(buf, 1, n, fp) != n) {
         fprintf(stderr, "Error: Could not write %zu byte(s)\n", n);
@@ -75,39 +75,39 @@ size_t osro_fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n)
     return n;
 }
 
-size_t osro_fwrite_uint32(FILE *fp, const uint32_t dword)
+size_t tsc_fwrite_uint32(FILE *fp, const uint32_t dword)
 {
-    osro_fwrite_byte(fp, (unsigned char)(dword >> 24) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(dword >> 16) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(dword >>  8) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(dword      ) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(dword >> 24) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(dword >> 16) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(dword >>  8) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(dword      ) & 0xFF);
     return sizeof(uint32_t);
 }
 
-size_t osro_fwrite_uint64(FILE *fp, const uint64_t qword)
+size_t tsc_fwrite_uint64(FILE *fp, const uint64_t qword)
 {
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 56) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 48) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 40) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 32) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 24) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >> 16) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword >>  8) & 0xFF);
-    osro_fwrite_byte(fp, (unsigned char)(qword      ) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 56) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 48) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 40) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 32) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 24) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >> 16) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword >>  8) & 0xFF);
+    tsc_fwrite_byte(fp, (unsigned char)(qword      ) & 0xFF);
     return sizeof(uint64_t);
 }
 
-size_t osro_fread_byte(FILE *fp, unsigned char *byte)
+size_t tsc_fread_byte(FILE *fp, unsigned char *byte)
 {
     return fread(byte, 1, 1, fp);
 }
 
-size_t osro_fread_buf(FILE *fp, unsigned char *buf, const size_t n)
+size_t tsc_fread_buf(FILE *fp, unsigned char *buf, const size_t n)
 {
     return fread(buf, 1, n, fp);
 }
 
-size_t osro_fread_uint32(FILE *fp, uint32_t *dword)
+size_t tsc_fread_uint32(FILE *fp, uint32_t *dword)
 {
     unsigned char *bytes = (unsigned char *)malloc(sizeof(uint32_t));
     if (!bytes) abort();
@@ -127,7 +127,7 @@ size_t osro_fread_uint32(FILE *fp, uint32_t *dword)
     return ret;
 }
 
-size_t osro_fread_uint64(FILE *fp, uint64_t *qword)
+size_t tsc_fread_uint64(FILE *fp, uint64_t *qword)
 {
     unsigned char *bytes = (unsigned char *)malloc(sizeof(uint64_t));
     if (!bytes) abort();

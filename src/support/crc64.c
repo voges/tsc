@@ -44,7 +44,7 @@
  * Check ("123456789"): 0xe9c6d914c4b8d9ca
  */
 
-#include "osro_crc64.h"
+#include "support/crc64.h"
 
 static const uint64_t crc64_tab[256] = {
     UINT64_C(0x0000000000000000), UINT64_C(0x7ad870c830358979),
@@ -177,7 +177,7 @@ static const uint64_t crc64_tab[256] = {
     UINT64_C(0x536fa08fdfd90e51), UINT64_C(0x29b7d047efec8728),
 };
 
-uint64_t osro_crc64(const unsigned char *buf, size_t buf_sz)
+uint64_t crc64(const unsigned char *buf, size_t buf_sz)
 {
     uint64_t crc = 0;
     while (buf_sz--)

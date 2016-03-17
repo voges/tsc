@@ -33,91 +33,95 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbufstr.h"
+#include "support/bbuf.h"
 #include <stdio.h>
+#include <string.h>
 
-static void cbufstr_init(cbufstr_t *cbufstr, const size_t sz)
+static void bbuf_init(bbuf_t *bbuf)
 {
-    cbufstr->sz = sz;
-    cbufstr->nxt = 0;
-    cbufstr->n = 0;
+    bbuf->bytes = NULL;
+    bbuf->sz = 0;
 }
 
-cbufstr_t * cbufstr_new(const size_t sz)
+bbuf_t * bbuf_new(void)
 {
-    cbufstr_t *cbufstr = (cbufstr_t *)malloc(sizeof(cbufstr_t));
-    if (!cbufstr) abort();
-    cbufstr->buf = (str_t **)malloc(sizeof(str_t*) * sz);
-    if (!cbufstr->buf) abort();
-    size_t i = 0;
-    for (i = 0; i < sz; i++)
-        cbufstr->buf[i] = str_new();
-    cbufstr_init(cbufstr, sz);
-    return cbufstr;
+    bbuf_t *bbuf = (bbuf_t *)malloc(sizeof(bbuf_t));
+    if (!bbuf) abort();
+    bbuf_init(bbuf);
+    return bbuf;
 }
 
-void cbufstr_free(cbufstr_t *cbufstr)
+void bbuf_free(bbuf_t *bbuf)
 {
-    if (cbufstr != NULL) {
-        size_t i = 0;
-        for (i = 0; i < cbufstr->sz; i++)
-            str_free(cbufstr->buf[i]);
-        free(cbufstr->buf);
-        free(cbufstr);
-        cbufstr = NULL;
+    if (bbuf != NULL) {
+        if (bbuf->bytes != NULL) {
+            free(bbuf->bytes);
+            bbuf->bytes = NULL;
+        }
+        free(bbuf);
+        bbuf = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);
     }
 }
 
-void cbufstr_clear(cbufstr_t *cbufstr)
+void bbuf_clear(bbuf_t *bbuf)
 {
-    size_t i = 0;
-    for (i = 0; i < cbufstr->sz; i++)
-        str_clear(cbufstr->buf[i]);
-    cbufstr->nxt = 0;
-    cbufstr->n = 0;
+    if (bbuf->bytes != NULL) {
+        free(bbuf->bytes);
+        bbuf->bytes = NULL;
+    }
+    bbuf->sz = 0;
 }
 
-void cbufstr_push(cbufstr_t *cbufstr, const char *s)
+void bbuf_reserve(bbuf_t *bbuf, const size_t sz)
 {
-    str_copy_cstr(cbufstr->buf[cbufstr->nxt++], s);
-    if (cbufstr->nxt == cbufstr->sz)
-        cbufstr->nxt = 0;
-    if (cbufstr->n < cbufstr->sz)
-        cbufstr->n++;
+    bbuf->sz = sz;
+    bbuf->bytes = (unsigned char *)realloc(bbuf->bytes, bbuf->sz);
+    if (!bbuf->bytes) abort();
 }
 
-str_t * cbufstr_top(cbufstr_t *cbufstr)
+void bbuf_extend(bbuf_t *bbuf, const size_t ex)
 {
-    if (cbufstr->n == 0) {
-        fprintf(stderr, "Error: Tried to access empty cbufstr\n");
-        exit(EXIT_FAILURE);
-    }
-
-    size_t nxt = cbufstr->nxt;
-    size_t last = 0;
-
-    if (nxt == 0)
-        last = cbufstr->sz - 1;
-    else
-        last = cbufstr->nxt - 1;
-
-    return cbufstr->buf[last];
+    bbuf_reserve(bbuf, bbuf->sz + ex);
 }
 
-str_t * cbufstr_get(const cbufstr_t *cbufstr, size_t pos)
+void bbuf_trunc(bbuf_t *bbuf, const size_t tr)
 {
-    if (cbufstr->n == 0) {
-        fprintf(stderr, "Error: Tried to access empty cbufstr\n");
-        exit(EXIT_FAILURE);
-    }
-    if (pos > (cbufstr->n - 1)) {
-        fprintf(stderr, "Error: Not enough elements in cbufstr\n");
-        exit(EXIT_FAILURE);
-    }
+    bbuf->sz -= tr;
+    bbuf_reserve(bbuf, bbuf->sz);
+}
 
-    return cbufstr->buf[pos];
+void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app)
+{
+    bbuf_extend(bbuf, app->sz);
+    memcpy(bbuf->bytes + bbuf->sz, app->bytes, app->sz);
+    bbuf->sz += app->sz;
+}
+
+void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte)
+{
+    bbuf_extend(bbuf, 1);
+    bbuf->bytes[bbuf->sz++] = byte;
+}
+
+void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x)
+{
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 56) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 48) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 40) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 32) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 24) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 16) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >>  8) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x      ) & 0xFF);
+}
+
+void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n)
+{
+    bbuf_extend(bbuf, n);
+    memcpy(bbuf->bytes + bbuf->sz, buf, n);
+    bbuf->sz += n;
 }
 

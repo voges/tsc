@@ -32,12 +32,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OSRO_CONSTANTS_H
-#define OSRO_CONSTANTS_H
+#ifndef TSC_CRC64_H
+#define TSC_CRC64_H
 
-#define KB 1000LL
-#define MB (KB*1000LL)
-#define GB (MB*1000LL)
+#include <stdint.h>
+#include <stdlib.h>
 
-#endif // OSRO_CONSTANTS_H
+uint64_t crc64(const unsigned char *buf, size_t buf_sz);
+
+#endif // TSC_CRC64_H
 

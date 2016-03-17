@@ -33,44 +33,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_TSCLIB_H
-#define TSC_TSCLIB_H
+#ifndef TSC_CBUFSTR_H
+#define TSC_CBUFSTR_H
 
-#include "common/str.h"
-#include <stdbool.h>
-#include <stdio.h>
+#include "tsclib/str.h"
+#include <stdlib.h>
 
-// Safe debug macro
-#if DBG
-    #define DEBUG(c,...)\
-        do {\
-            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
-                    __FUNCTION__, ##__VA_ARGS__);\
-        } while (false)
-#else
-    #define DEBUG(c,...) do { } while (false)
-#endif
+typedef struct cbufstr_t_ {
+    size_t sz;    // size of circular buffer
+    str_t  **buf; // array holding the strings in the buffer
+    size_t nxt;   // next free position
+    size_t n;     // number of elements currently in buffer
+} cbufstr_t;
 
-typedef enum {
-    TSC_MODE_COMPRESS,
-    TSC_MODE_DECOMPRESS,
-    TSC_MODE_INFO
-} tsc_mode_t;
+cbufstr_t *cbufstr_new(const size_t sz);
+void cbufstr_free(cbufstr_t *cbufstr);
+void cbufstr_clear(cbufstr_t *cbufstr);
+void cbufstr_push(cbufstr_t *cbufstr, const char *s);
+str_t * cbufstr_top(cbufstr_t *cbufstr);
+str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
 
-extern str_t *tsc_prog_name;
-extern str_t *tsc_version;
-extern str_t *tsc_in_fname;
-extern str_t *tsc_out_fname;
-extern FILE *tsc_in_fp;
-extern FILE *tsc_out_fp;
-extern tsc_mode_t tsc_mode;
-extern bool tsc_stats;
-extern unsigned int tsc_blocksz;
-
-void tsc_cleanup(void);
-void tsc_abort(void);
-void tsc_log(const char *fmt, ...);
-void tsc_error(const char *fmt, ...);
-
-#endif // TSC_TSCLIB_H
+#endif // TSC_CBUFSTR_H
 

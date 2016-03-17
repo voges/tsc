@@ -33,7 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "str.h"
+#include "tsclib/str.h"
+#include "tsclib/mem.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -50,8 +51,7 @@ static void str_init(str_t *str)
 
 str_t * str_new(void)
 {
-    str_t *str = (str_t *)malloc(sizeof(str_t));
-    if (!str) abort();
+    str_t *str = (str_t *)tsc_malloc(sizeof(str_t));
     str_init(str);
     return str;
 }
@@ -83,8 +83,7 @@ void str_clear(str_t *str)
 void str_reserve(str_t *str, const size_t sz)
 {
     str->sz = sz;
-    str->s = (char *)realloc(str->s, str->sz * sizeof(char));
-    if (!(str->s)) abort();
+    str->s = (char *)tsc_realloc(str->s, str->sz * sizeof(char));
 }
 
 void str_extend(str_t *str, const size_t ex)

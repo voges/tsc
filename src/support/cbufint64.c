@@ -33,95 +33,85 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bbuf.h"
+#include "support/cbufint64.h"
 #include <stdio.h>
 #include <string.h>
 
-static void bbuf_init(bbuf_t *bbuf)
+static void cbufint64_init(cbufint64_t *cbufint64, const size_t sz)
 {
-    bbuf->bytes = NULL;
-    bbuf->sz = 0;
+    cbufint64->sz = sz;
+    cbufint64->nxt = 0;
+    cbufint64->n = 0;
 }
 
-bbuf_t * bbuf_new(void)
+cbufint64_t * cbufint64_new(const size_t sz)
 {
-    bbuf_t *bbuf = (bbuf_t *)malloc(sizeof(bbuf_t));
-    if (!bbuf) abort();
-    bbuf_init(bbuf);
-    return bbuf;
+    cbufint64_t *cbufint64 = (cbufint64_t *)malloc(sizeof(cbufint64_t));
+    if (!cbufint64) abort();
+    cbufint64->buf = (int64_t *)malloc(sizeof(int64_t) * sz);
+    if (!cbufint64->buf) abort();
+    memset(cbufint64->buf, 0x00, sz * sizeof(int64_t));
+    cbufint64_init(cbufint64, sz);
+    return cbufint64;
 }
 
-void bbuf_free(bbuf_t *bbuf)
+void cbufint64_free(cbufint64_t *cbufint64)
 {
-    if (bbuf != NULL) {
-        if (bbuf->bytes != NULL) {
-            free(bbuf->bytes);
-            bbuf->bytes = NULL;
-        }
-        free(bbuf);
-        bbuf = NULL;
+    if (cbufint64 != NULL) {
+        free(cbufint64->buf);
+        free(cbufint64);
+        cbufint64 = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);
     }
 }
 
-void bbuf_clear(bbuf_t *bbuf)
+void cbufint64_clear(cbufint64_t *cbufint64)
 {
-    if (bbuf->bytes != NULL) {
-        free(bbuf->bytes);
-        bbuf->bytes = NULL;
+    memset(cbufint64->buf, 0x00, cbufint64->sz * sizeof(int64_t));
+    cbufint64->nxt = 0;
+    cbufint64->n = 0;
+}
+
+void cbufint64_push(cbufint64_t *cbufint64, int64_t x)
+{
+    cbufint64->buf[cbufint64->nxt++] = x;
+    if (cbufint64->nxt == cbufint64->sz)
+        cbufint64->nxt = 0;
+    if (cbufint64->n < cbufint64->sz)
+        cbufint64->n++;
+}
+
+int64_t cbufint64_top(cbufint64_t *cbufint64)
+{
+    if (cbufint64->n == 0) {
+        fprintf(stderr, "Error: Tried to access empty cbufint64\n");
+        exit(EXIT_FAILURE);
     }
-    bbuf->sz = 0;
+
+    size_t nxt = cbufint64->nxt;
+    size_t last = 0;
+
+    if (nxt == 0)
+        last = cbufint64->sz - 1;
+    else
+        last = cbufint64->nxt - 1;
+
+    return cbufint64->buf[last];
 }
 
-void bbuf_reserve(bbuf_t *bbuf, const size_t sz)
+int64_t cbufint64_get(const cbufint64_t *cbufint64, size_t pos)
 {
-    bbuf->sz = sz;
-    bbuf->bytes = (unsigned char *)realloc(bbuf->bytes, bbuf->sz);
-    if (!bbuf->bytes) abort();
-}
+    if (cbufint64->n == 0) {
+        fprintf(stderr, "Error: Tried to access empty cbufint64\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pos > (cbufint64->n - 1)) {
+        fprintf(stderr, "Error: Not enough elements in cbufint64\n");
+        exit(EXIT_FAILURE);
+    }
 
-void bbuf_extend(bbuf_t *bbuf, const size_t ex)
-{
-    bbuf_reserve(bbuf, bbuf->sz + ex);
-}
-
-void bbuf_trunc(bbuf_t *bbuf, const size_t tr)
-{
-    bbuf->sz -= tr;
-    bbuf_reserve(bbuf, bbuf->sz);
-}
-
-void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app)
-{
-    bbuf_extend(bbuf, app->sz);
-    memcpy(bbuf->bytes + bbuf->sz, app->bytes, app->sz);
-    bbuf->sz += app->sz;
-}
-
-void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte)
-{
-    bbuf_extend(bbuf, 1);
-    bbuf->bytes[bbuf->sz++] = byte;
-}
-
-void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x)
-{
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 56) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 48) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 40) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 32) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 24) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >> 16) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x >>  8) & 0xFF);
-    bbuf_append_byte(bbuf, (unsigned char)(x      ) & 0xFF);
-}
-
-void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n)
-{
-    bbuf_extend(bbuf, n);
-    memcpy(bbuf->bytes + bbuf->sz, buf, n);
-    bbuf->sz += n;
+    return cbufint64->buf[pos];
 }
 

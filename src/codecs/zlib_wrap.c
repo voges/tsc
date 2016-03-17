@@ -33,9 +33,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "zlib.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <zlib.h>
 
 unsigned char * zlib_compress(unsigned char *in,
                               size_t        in_sz,

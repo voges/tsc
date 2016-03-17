@@ -32,15 +32,32 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OSRO_OSRO_H
-#define OSRO_OSRO_H
+//
+// Wrapper functions to safely read/write different data types from/to files (or
+// streams).
+// The 'tsc_fwrite_uintXX' resp. 'tsc_fread_uintXX' functions are compatible
+// with each other. They are independent from the endianness of the system this
+// code is built on.
+//
 
-#include "osro_constants.h"
-#include "osro_crc64.h"
-#include "osro_error.h"
-#include "osro_io.h"
-#include "osro_log.h"
-#include "osro_malloc.h"
+#ifndef TSC_FIO_H
+#define TSC_FIO_H
 
-#endif // OSRO_OSRO_H
+#include <stdint.h>
+#include <stdio.h>
+
+FILE * tsc_fopen(const char *fname, const char *mode);
+void tsc_fclose(FILE *fp);
+
+size_t tsc_fwrite_byte(FILE *fp, const unsigned char byte);
+size_t tsc_fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n);
+size_t tsc_fwrite_uint32(FILE *fp, const uint32_t dword);
+size_t tsc_fwrite_uint64(FILE *fp, const uint64_t qword);
+
+size_t tsc_fread_byte(FILE *fp, unsigned char *byte);
+size_t tsc_fread_buf(FILE *fp, unsigned char *buf, const size_t n);
+size_t tsc_fread_uint32(FILE *fp, uint32_t *dword);
+size_t tsc_fread_uint64(FILE *fp, uint64_t *qword);
+
+#endif // TSC_FIO_H
 

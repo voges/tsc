@@ -33,67 +33,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _GNU_SOURCE
+#ifndef TSC_STR_H
+#define TSC_STR_H
 
-#include "tsclib.h"
-#include "osro.h"
-#include <unistd.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-static bool tsc_yesno(void)
-{
-    int c = getchar();
-    bool yes = c == 'y' || c == 'Y';
-    while (c != '\n' && c != EOF)
-        c = getchar();
-    return yes;
-}
+typedef struct str_t_ {
+    char   *s;  // Null-terminated string
+    size_t len; // Length of s
+    size_t sz;  // Bytes allocated for s
+} str_t;
 
-void tsc_cleanup(void)
-{
-    if (tsc_in_fp != NULL)
-        osro_fclose(tsc_in_fp);
-    if (tsc_out_fp != NULL)
-        osro_fclose(tsc_out_fp);
-    if (tsc_out_fname->len > 0) {
-        tsc_log("Do you want to remove %s (y/n)? ", tsc_out_fname->s);
-        if (tsc_yesno()) {
-            unlink((const char *)tsc_out_fname->s);
-            tsc_log("Removed %s\n", tsc_out_fname->s);
-        }
-    }
-}
+str_t * str_new(void);
+void str_free(str_t *str);
+void str_clear(str_t *str);
+void str_reserve(str_t *str, const size_t sz);
+void str_extend(str_t *str, const size_t ex);
+void str_trunc(str_t *str, const size_t tr);
+void str_append_str(str_t *str, const str_t *app);
+void str_append_cstr(str_t *str , const char *cstr);
+void str_append_cstrn(str_t *str, const char *cstr, const size_t len);
+void str_append_char(str_t *str, const char c);
+void str_append_int(str_t *str, const int64_t num);
+void str_append_double2(str_t *str, const double dbl);
+void str_copy_str(str_t *dest, const str_t *src);
+void str_copy_cstr(str_t *dest, const char *src);
 
-void tsc_abort(void)
-{
-    tsc_cleanup();
-    exit(EXIT_FAILURE);
-}
-
-void tsc_log(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    char *msg;
-    vasprintf(&msg, fmt, args);
-    va_end(args);
-    fprintf(stdout, "%s", msg);
-    free(msg);
-}
-
-void tsc_error(const char *fmt, ...)
-{
-
-
-    va_list args;
-    va_start(args, fmt);
-    char *msg;
-    vasprintf(&msg, fmt, args);
-    va_end(args);
-    fprintf(stdout, "Error: %s", msg);
-    free(msg);
-    tsc_abort();
-}
+#endif // TSC_STR_H
 

@@ -33,27 +33,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BBUF_H
-#define BBUF_H
+#ifndef TSC_TSC_H
+#define TSC_TSC_H
 
-#include <stdint.h>
-#include <stdlib.h>
+#include "tsclib/str.h"
+#include <stdbool.h>
+#include <stdio.h>
 
-typedef struct bbuf_t_ {
-    unsigned char *bytes;
-    size_t        sz;
-} bbuf_t;
+#define KB 1000LL
+#define MB (KB*1000LL)
+#define GB (MB*1000LL)
 
-bbuf_t * bbuf_new(void);
-void bbuf_free(bbuf_t *bbuf);
-void bbuf_clear(bbuf_t *bbuf);
-void bbuf_reserve(bbuf_t *bbuf, const size_t sz);
-void bbuf_extend(bbuf_t *bbuf, const size_t ex);
-void bbuf_trunc(bbuf_t *bbuf, const size_t tr);
-void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app);
-void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte);
-void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x);
-void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n);
+// Safe debug macro
+#if DBG
+    #define DEBUG(c,...)\
+        do {\
+            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
+                    __FUNCTION__, ##__VA_ARGS__);\
+        } while (false)
+#else
+    #define DEBUG(c,...) do { } while (false)
+#endif
 
-#endif // BBUF_H
+typedef enum {
+    TSC_MODE_COMPRESS,
+    TSC_MODE_DECOMPRESS,
+    TSC_MODE_INFO
+} tsc_mode_t;
+
+extern str_t *tsc_prog_name;
+extern str_t *tsc_version;
+extern str_t *tsc_in_fname;
+extern str_t *tsc_out_fname;
+extern FILE *tsc_in_fp;
+extern FILE *tsc_out_fp;
+extern tsc_mode_t tsc_mode;
+extern bool tsc_stats;
+extern unsigned int tsc_blocksz;
+
+#endif // TSC_TSC_H
 
