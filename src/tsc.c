@@ -65,23 +65,26 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 unsigned int tsc_blocksz = 0;
 
-static void print_version(void)
-{
-    printf("%s %s\n", tsc_prog_name->s, tsc_version->s);
-}
-
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015-2016\n");
+    printf("Copyright (c) 2015-%d\n", TSC_BUILD_YEAR);
     printf("Leibniz Universitaet Hannover, Institut fuer "
            "Informationsverarbeitung (TNT)\n");
     printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
 }
 
+static void print_version(void)
+{
+    printf("%s %d.%d.%d\n", tsc_prog_name->s, TSC_VERSION_MAJOR, TSC_VERSION_MINOR, TSC_VERSION_PATCH);
+    printf("Build time: %s\n", TSC_UTCTIMESTAMP);
+    printf("Git revision: %s\n", TSC_GITREVISION_LONG);
+    printf("\n");
+    print_copyright();
+}
+
 static void print_help(void)
 {
     print_version();
-    print_copyright();
     printf("\n");
     printf("Usage:\n");
     printf("  Compress  : tsc [-o FILE] [-b BSIZE] [-fs] file.sam\n");
@@ -152,7 +155,6 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'v':
             print_version();
-            print_copyright();
             exit(EXIT_SUCCESS);
             break;
         default:
