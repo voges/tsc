@@ -1,16 +1,9 @@
-# Generic
 *~
 *.o
 *.a
 *.so
 ~$i* # temporary MS office files
-.directory # created by dolphin file manager
+.directory # created by Dolphin file manager
 
-# Doxygen documentation
-src/doxygen
-
-# Executables
-build/
-
-# Tsc files
-*.tsc*
+build
+*.kdev4
