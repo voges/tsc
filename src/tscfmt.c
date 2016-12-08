@@ -115,7 +115,7 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
     ret += tsc_fwrite_buf(fp, tscfh->magic, sizeof(tscfh->magic));
     ret += tsc_fwrite_byte(fp, tscfh->flags);
     ret += tsc_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
-    DEBUG("%d %s\n", sizeof(tscfh->ver), tscfh->ver);
+    DEBUG("%zu %s\n", sizeof(tscfh->ver), tscfh->ver);
     ret += tsc_fwrite_uint64(fp, tscfh->rec_n);
     ret += tsc_fwrite_uint64(fp, tscfh->blk_n);
     ret += tsc_fwrite_uint64(fp, tscfh->sblk_n);
