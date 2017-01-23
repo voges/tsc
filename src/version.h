@@ -1,4 +1,5 @@
-/* The copyright in this software is being made available under the BSD
+/*
+ * The copyright in this software is being made available under the TNT
  * License, included below. This software may be subject to other third party
  * and contributor rights, including patent rights, and no such rights are
  * granted under this license.
@@ -8,17 +9,15 @@
  * Contact: <voges@tnt.uni-hannover.de>
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * * Redistribution in source or binary form is not permitted.
  *
- *  * Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  * Neither the name of the TNT nor the names of its contributors may be used
- *    to endorse or promote products derived from this software without
- *    specific prior written permission.
+ * * Use in source or binary form is only permitted in the context of scientific
+ *   research.
+ *
+ * * Commercial use without specific prior written permission is prohibited.
+ *   Neither the name of the TNT nor the names of its contributors may be used
+ *   to endorse or promote products derived from this software without specific
+ *   prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -39,8 +38,8 @@
 #define VERSION_MAJMAJ 0
 #define VERSION_MAJMIN 1
 #define VERSION_MINMAJ 0
-#define VERSION_MINMIN 1
-#define VERSION "01.01" // Must be consistent
+#define VERSION_MINMIN 2
+#define VERSION "01.02" // Must be consistent
 
 #endif //TSC_VERSION_H
 
