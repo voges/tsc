@@ -1,40 +1,43 @@
 /*
- * The copyright in this software is being made available under the TNT
- * License, included below. This software may be subject to other third party
- * and contributor rights, including patent rights, and no such rights are
- * granted under this license.
+ * The copyright in this software is being made available under the BSD
+ * License, included below. This software may be subject to other third
+ * party and contributor rights, including patent rights, and no such
+ * rights are granted under this license.
  *
- * Copyright (c) 2015, Leibniz Universitaet Hannover, Institut fuer
+ * Copyright (c) 2015-2016, Leibniz Universitaet Hannover, Institut fuer
  * Informationsverarbeitung (TNT)
  * Contact: <voges@tnt.uni-hannover.de>
  * All rights reserved.
+
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * * Redistribution in source or binary form is not permitted.
- *
- * * Use in source or binary form is only permitted in the context of scientific
- *   research.
- *
- * * Commercial use without specific prior written permission is prohibited.
- *   Neither the name of the TNT nor the names of its contributors may be used
- *   to endorse or promote products derived from this software without specific
- *   prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * Neither the name of the TNT nor the names of its contributors
+ * may be used to endorse or promote products derived from this software
+ * without specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "tsc.h"
+#include "tsclib/fio.h"
+#include "tsclib/log.h"
 #include "samcodec.h"
-#include "osro.h"
-#include "tsclib.h"
+#include "support/common.h"
 #include "version.h"
 #include <getopt.h>
 #include <signal.h>
@@ -62,38 +65,41 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 unsigned int tsc_blocksz = 0;
 
-static void print_version(void)
-{
-    printf("%s %s\n", tsc_prog_name->s, tsc_version->s);
-}
-
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015\n");
+    printf("Copyright (c) 2015-%d\n", TSC_BUILD_YEAR);
     printf("Leibniz Universitaet Hannover, Institut fuer "
            "Informationsverarbeitung (TNT)\n");
     printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
 }
 
+static void print_version(void)
+{
+    printf("%s %d.%d.%d\n", tsc_prog_name->s, TSC_VERSION_MAJOR, TSC_VERSION_MINOR, TSC_VERSION_PATCH);
+    printf("Build time: %s\n", TSC_UTCTIMESTAMP);
+    printf("Git revision: %s\n", TSC_GITREVISION_LONG);
+    printf("\n");
+    print_copyright();
+}
+
 static void print_help(void)
 {
     print_version();
-    print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o FILE] [-b SIZE] [-fs] file.sam\n");
+    printf("  Compress  : tsc [-o FILE] [-b BSIZE] [-fs] file.sam\n");
     printf("  Decompress: tsc -d [-o FILE] [-fs] file.tsc\n");
     printf("  Info      : tsc -i file.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b  --blocksz=SIZE Specify block SIZE\n");
-    printf("  -d  --decompress   Decompress\n");
-    printf("  -f, --force        Force overwriting of output file(s)\n");
-    printf("  -h, --help         Print this help\n");
-    printf("  -i, --info         Print information about tsc file\n");
-    printf("  -o, --output=FILE  Specify output FILE\n");
-    printf("  -s, --stats        Print (de-)compression statistics\n");
-    printf("  -v, --version      Display program version\n");
+    printf("  -b  --blocksz=BSIZE  Specify Block SIZE\n");
+    printf("  -d  --decompress     Decompress\n");
+    printf("  -f, --force          Force overwriting of output file(s)\n");
+    printf("  -h, --help           Print this help\n");
+    printf("  -i, --info           Print information about tsc file\n");
+    printf("  -o, --output=FILE    Specify output FILE\n");
+    printf("  -s, --stats          Print (de-)compression statistics\n");
+    printf("  -v, --version        Display program version\n");
     printf("\n");
 }
 
@@ -149,7 +155,6 @@ static void parse_options(int argc, char *argv[])
             break;
         case 'v':
             print_version();
-            print_copyright();
             exit(EXIT_SUCCESS);
             break;
         default:
@@ -177,8 +182,6 @@ static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); // Ignore the signal
     tsc_log("Catched signal: %d\n", sig);
-    tsc_log("Cleaning up ...\n");
-    tsc_cleanup();
     signal(sig, SIG_DFL); // Invoke default signal action
     raise(sig);
 }
@@ -255,20 +258,22 @@ int main(int argc, char *argv[])
 
         if (!access((const char *)tsc_out_fname->s, F_OK | W_OK)
                 && opt_flag_force == false) {
-            tsc_error("Output file already exists: %s\n", tsc_out_fname->s);
-            exit(EXIT_FAILURE);
+            tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
+            tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
+            if (yesno()) ; // proceed
+            else exit(EXIT_SUCCESS);
         }
 
         // Invoke compressor
-        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "r");
-        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "wb");
+        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
+        tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
         samcodec_encode(samcodec);
         samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
-        osro_fclose(tsc_in_fp);
-        osro_fclose(tsc_out_fp);
+        tsc_fclose(tsc_in_fp);
+        tsc_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
@@ -285,32 +290,34 @@ int main(int argc, char *argv[])
 
         if (!access((const char *)tsc_out_fname->s, F_OK | W_OK)
                 && opt_flag_force == false) {
-            tsc_error("Output file already exists: %s\n", tsc_out_fname->s);
-            exit(EXIT_FAILURE);
+            tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
+            tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
+            if (yesno()) ; // proceed
+            else exit(EXIT_SUCCESS);
         }
 
         // Invoke decompressor
-        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "w");
+        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "w");
         tsc_log("Decompressing: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, 0);
         samcodec_decode(samcodec);
         samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
-        osro_fclose(tsc_in_fp);
-        osro_fclose(tsc_out_fp);
+        tsc_fclose(tsc_in_fp);
+        tsc_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
             tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file
-        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_log("Reading information: %s\n", tsc_in_fname->s);
         samcodec_t *samcodec = samcodec_new(tsc_in_fp, NULL, 0);
         samcodec_info(samcodec);
         samcodec_free(samcodec);
-        osro_fclose(tsc_in_fp);
+        tsc_fclose(tsc_in_fp);
     }
 
     str_free(tsc_prog_name);

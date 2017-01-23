@@ -33,33 +33,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_QUALCODEC_H
-#define TSC_QUALCODEC_H
-
+#ifndef TSC_TSC_H
+#define TSC_TSC_H
 
 #include "tsclib/str.h"
+#include <stdbool.h>
 #include <stdio.h>
 
-typedef struct qualcodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} qualcodec_t;
+#define KB 1000LL
+#define MB (KB*1000LL)
+#define GB (MB*1000LL)
 
-qualcodec_t * qualcodec_new(void);
-void qualcodec_free(qualcodec_t *qualcodec);
+// Safe debug macro
+#if DBG
+    #define DEBUG(c,...)\
+        do {\
+            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
+                    __FUNCTION__, ##__VA_ARGS__);\
+        } while (false)
+#else
+    #define DEBUG(c,...) do { } while (false)
+#endif
 
-// Encoder methods
-// -----------------------------------------------------------------------------
+typedef enum {
+    TSC_MODE_COMPRESS,
+    TSC_MODE_DECOMPRESS,
+    TSC_MODE_INFO
+} tsc_mode_t;
 
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
+extern str_t *tsc_prog_name;
+extern str_t *tsc_version;
+extern str_t *tsc_in_fname;
+extern str_t *tsc_out_fname;
+extern FILE *tsc_in_fp;
+extern FILE *tsc_out_fp;
+extern tsc_mode_t tsc_mode;
+extern bool tsc_stats;
+extern unsigned int tsc_blocksz;
 
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
-
-#endif // TSC_QUALCODEC_H
+#endif // TSC_TSC_H
 

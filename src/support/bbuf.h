@@ -33,33 +33,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_QUALCODEC_H
-#define TSC_QUALCODEC_H
+#ifndef TSC_BBUF_H
+#define TSC_BBUF_H
 
+#include <stdint.h>
+#include <stdlib.h>
 
-#include "tsclib/str.h"
-#include <stdio.h>
+typedef struct bbuf_t_ {
+    unsigned char *bytes;
+    size_t        sz;
+} bbuf_t;
 
-typedef struct qualcodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} qualcodec_t;
+bbuf_t * bbuf_new(void);
+void bbuf_free(bbuf_t *bbuf);
+void bbuf_clear(bbuf_t *bbuf);
+void bbuf_reserve(bbuf_t *bbuf, const size_t sz);
+void bbuf_extend(bbuf_t *bbuf, const size_t ex);
+void bbuf_trunc(bbuf_t *bbuf, const size_t tr);
+void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app);
+void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte);
+void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x);
+void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n);
 
-qualcodec_t * qualcodec_new(void);
-void qualcodec_free(qualcodec_t *qualcodec);
-
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
-
-#endif // TSC_QUALCODEC_H
+#endif // TSC_BBUF_H
 

@@ -33,33 +33,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_QUALCODEC_H
-#define TSC_QUALCODEC_H
+#define _GNU_SOURCE
 
-
-#include "tsclib/str.h"
+#include "tsclib/log.h"
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-typedef struct qualcodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} qualcodec_t;
+void tsc_log(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "%s", msg);
+    free(msg);
+}
 
-qualcodec_t * qualcodec_new(void);
-void qualcodec_free(qualcodec_t *qualcodec);
-
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
-
-#endif // TSC_QUALCODEC_H
-
+void tsc_error(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "Error: %s", msg);
+    free(msg);
+    exit(EXIT_FAILURE);
+}

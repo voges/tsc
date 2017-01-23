@@ -1,42 +1,45 @@
 /*
- * The copyright in this software is being made available under the TNT
- * License, included below. This software may be subject to other third party
- * and contributor rights, including patent rights, and no such rights are
- * granted under this license.
+ * The copyright in this software is being made available under the BSD
+ * License, included below. This software may be subject to other third
+ * party and contributor rights, including patent rights, and no such
+ * rights are granted under this license.
  *
- * Copyright (c) 2015, Leibniz Universitaet Hannover, Institut fuer
+ * Copyright (c) 2015-2016, Leibniz Universitaet Hannover, Institut fuer
  * Informationsverarbeitung (TNT)
  * Contact: <voges@tnt.uni-hannover.de>
  * All rights reserved.
+
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * * Redistribution in source or binary form is not permitted.
- *
- * * Use in source or binary form is only permitted in the context of scientific
- *   research.
- *
- * * Commercial use without specific prior written permission is prohibited.
- *   Neither the name of the TNT nor the names of its contributors may be used
- *   to endorse or promote products derived from this software without specific
- *   prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * Neither the name of the TNT nor the names of its contributors
+ * may be used to endorse or promote products derived from this software
+ * without specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ * TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "samcodec.h"
-#include "common/common.h"
-#include "osro.h"
+#include "support/common.h"
+#include "tsc.h"
 #include "tscfmt.h"
-#include "tsclib.h"
+#include "tsclib/fio.h"
+#include "tsclib/log.h"
+#include "tsclib/mem.h"
 #include "version.h"
 #include <inttypes.h>
 #include <string.h>
@@ -95,7 +98,7 @@ static void samcodec_init(samcodec_t   *samcodec,
 
 samcodec_t * samcodec_new(FILE *ifp, FILE *ofp, unsigned int blk_sz)
 {
-    samcodec_t *samcodec = (samcodec_t *)osro_malloc(sizeof(samcodec_t));
+    samcodec_t *samcodec = (samcodec_t *)tsc_malloc(sizeof(samcodec_t));
     samcodec->samparser = samparser_new(ifp);
     samcodec->auxcodec = auxcodec_new();
     samcodec->idcodec = idcodec_new();
@@ -163,62 +166,61 @@ static void samcodec_print_stats(const size_t  *sam_sz,
                         + tsc_sz[TSC_QUAL];
 
     fprintf(stdout,
+            "\nsamcodec stats:\n"
+            "---------------\n"
+            "Number of records   : %12"PRIu64"\n"
+            "Number of blocks    : %12"PRIu64"\n"
             "\n"
-            "\tStatistics:\n"
-            "\t-----------\n"
-            "\tNumber of records   : %12"PRIu64"\n"
-            "\tNumber of blocks    : %12"PRIu64"\n"
+            "SAM file size       : %12zu (%6.2f%%)\n"
+            "  QNAME             : %12zu (%6.2f%%)\n"
+            "  FLAG              : %12zu (%6.2f%%)\n"
+            "  RNAME             : %12zu (%6.2f%%)\n"
+            "  POS               : %12zu (%6.2f%%)\n"
+            "  MAPQ              : %12zu (%6.2f%%)\n"
+            "  CIGAR             : %12zu (%6.2f%%)\n"
+            "  RNEXT             : %12zu (%6.2f%%)\n"
+            "  PNEXT             : %12zu (%6.2f%%)\n"
+            "  TLEN              : %12zu (%6.2f%%)\n"
+            "  SEQ               : %12zu (%6.2f%%)\n"
+            "  QUAL              : %12zu (%6.2f%%)\n"
+            "  OPT               : %12zu (%6.2f%%)\n"
+            "  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
+            "  HEAD (SAM header) : %12zu (%6.2f%%)\n"
             "\n"
-            "\tSAM file size       : %12zu (%6.2f%%)\n"
-            "\t  QNAME             : %12zu (%6.2f%%)\n"
-            "\t  FLAG              : %12zu (%6.2f%%)\n"
-            "\t  RNAME             : %12zu (%6.2f%%)\n"
-            "\t  POS               : %12zu (%6.2f%%)\n"
-            "\t  MAPQ              : %12zu (%6.2f%%)\n"
-            "\t  CIGAR             : %12zu (%6.2f%%)\n"
-            "\t  RNEXT             : %12zu (%6.2f%%)\n"
-            "\t  PNEXT             : %12zu (%6.2f%%)\n"
-            "\t  TLEN              : %12zu (%6.2f%%)\n"
-            "\t  SEQ               : %12zu (%6.2f%%)\n"
-            "\t  QUAL              : %12zu (%6.2f%%)\n"
-            "\t  OPT               : %12zu (%6.2f%%)\n"
-            "\t  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
-            "\t  HEAD (SAM header) : %12zu (%6.2f%%)\n"
+            "Tsc file size       : %12zu (%6.2f%%)\n"
+            "  File header       : %12zu (%6.2f%%)\n"
+            "  SAM header        : %12zu (%6.2f%%)\n"
+            "  Block header(s)   : %12zu (%6.2f%%)\n"
+            "  Aux               : %12zu (%6.2f%%)\n"
+            "  Id                : %12zu (%6.2f%%)\n"
+            "  Nuc               : %12zu (%6.2f%%)\n"
+            "  Pair              : %12zu (%6.2f%%)\n"
+            "  Qual              : %12zu (%6.2f%%)\n"
             "\n"
-            "\tTsc file size       : %12zu (%6.2f%%)\n"
-            "\t  File header       : %12zu (%6.2f%%)\n"
-            "\t  SAM header        : %12zu (%6.2f%%)\n"
-            "\t  Block header(s)   : %12zu (%6.2f%%)\n"
-            "\t  Aux               : %12zu (%6.2f%%)\n"
-            "\t  Id                : %12zu (%6.2f%%)\n"
-            "\t  Nuc               : %12zu (%6.2f%%)\n"
-            "\t  Pair              : %12zu (%6.2f%%)\n"
-            "\t  Qual              : %12zu (%6.2f%%)\n"
+            "Compression ratios             SAM /          tsc\n"
+            "  Total             : %12zu / %12zu (%6.2f%%)\n"
+            "  Aux               : %12zu / %12zu (%6.2f%%)\n"
+            "  Id                : %12zu / %12zu (%6.2f%%)\n"
+            "  Nuc               : %12zu / %12zu (%6.2f%%)\n"
+            "  Pair              : %12zu / %12zu (%6.2f%%)\n"
+            "  Qual              : %12zu / %12zu (%6.2f%%)\n"
             "\n"
-            "\tCompression ratios             SAM /          tsc\n"
-            "\t  Total             : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Aux               : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Id                : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Nuc               : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Pair              : %12zu / %12zu (%6.2f%%)\n"
-            "\t  Qual              : %12zu / %12zu (%6.2f%%)\n"
+            "Timing\n"
+            "  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+            "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
             "\n"
-            "\tTiming\n"
-            "\t  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\t  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\n"
-            "\tSpeed\n"
-            "\t  Total             : %12.2f MB/s\n"
-            "\t  Aux               : %12.2f MB/s\n"
-            "\t  Id                : %12.2f MB/s\n"
-            "\t  Nuc               : %12.2f MB/s\n"
-            "\t  Pair              : %12.2f MB/s\n"
-            "\t  Qual              : %12.2f MB/s\n"
+            "Speed (with respect to SAM sizes)\n"
+            "  Total             : %12.2f MB/s\n"
+            "  Aux               : %12.2f MB/s\n"
+            "  Id                : %12.2f MB/s\n"
+            "  Nuc               : %12.2f MB/s\n"
+            "  Pair              : %12.2f MB/s\n"
+            "  Qual              : %12.2f MB/s\n"
             "\n",
             tscfh->rec_n,
             tscfh->blk_n,
@@ -337,7 +339,7 @@ void samcodec_encode(samcodec_t *samcodec)
 
     // Set up tsc file header, then seek past it for now
     tscfh->flags = 0x1; // LSB signals SAM
-    tscfh->sblk_n = 3; // aux, nux, qual
+    tscfh->sblk_n = 5; // aux, id, nux, pair, qual
     fseek(samcodec->ofp, (long)tscfh_size(tscfh), SEEK_SET);
 
     // Copy SAM header to tsc file
@@ -349,6 +351,7 @@ void samcodec_encode(samcodec_t *samcodec)
 
     // Set up block header
     tscbh->rec_max = samcodec->blk_sz;
+    tsc_log("Block size: %d\n", samcodec->blk_sz);
 
     samrec_t *samrec = &(samcodec->samparser->curr);
     while (samparser_next(samcodec->samparser)) {
@@ -359,7 +362,7 @@ void samcodec_encode(samcodec_t *samcodec)
             if (tscbh->blk_cnt > 0) {
                 fseek(samcodec->ofp, fpos_prev, SEEK_SET);
                 fseek(samcodec->ofp, (long)sizeof(tscbh->fpos), SEEK_CUR);
-                osro_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
+                tsc_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
                 fseek(samcodec->ofp, fpos_curr, SEEK_SET);
             }
             fpos_prev = fpos_curr;
@@ -399,39 +402,27 @@ void samcodec_encode(samcodec_t *samcodec)
 
         // Add record to encoders
         gettimeofday(&tv0, NULL);
-        auxcodec_add_record(samcodec->auxcodec,
-                            samrec->flag,
-                            samrec->mapq,
-                            samrec->opt);
+        auxcodec_add_record(samcodec->auxcodec, samrec->flag, samrec->mapq, samrec->opt);
         gettimeofday(&tv1, NULL);
         et[ET_AUX] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        idcodec_add_record(samcodec->idcodec,
-                         samrec->qname);
+        idcodec_add_record(samcodec->idcodec,  samrec->qname);
         gettimeofday(&tv1, NULL);
         et[ET_ID] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        nuccodec_add_record(samcodec->nuccodec,
-                            samrec->rname,
-                            samrec->pos,
-                            samrec->cigar,
-                            samrec->seq);
+        nuccodec_add_record(samcodec->nuccodec, /*samrec->flag,*/ samrec->rname, samrec->pos, samrec->cigar, samrec->seq);
         gettimeofday(&tv1, NULL);
         et[ET_NUC] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        paircodec_add_record(samcodec->paircodec,
-                           samrec->rnext,
-                           samrec->pnext,
-                           samrec->tlen);
+        paircodec_add_record(samcodec->paircodec, samrec->rnext, samrec->pnext, samrec->tlen);
         gettimeofday(&tv1, NULL);
         et[ET_QUAL] += tvdiff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
-        qualcodec_add_record(samcodec->qualcodec,
-                             samrec->qual);
+        qualcodec_add_record(samcodec->qualcodec,  samrec->qual);
         gettimeofday(&tv1, NULL);
         et[ET_QUAL] += tvdiff(tv0, tv1);
 
@@ -460,7 +451,7 @@ void samcodec_encode(samcodec_t *samcodec)
     if (tscbh->blk_cnt > 0) {
         fseek(samcodec->ofp, fpos_prev, SEEK_SET);
         fseek(samcodec->ofp, (long)sizeof(tscbh->fpos), SEEK_CUR);
-        osro_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
+        tsc_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
         fseek(samcodec->ofp, fpos_curr, SEEK_SET);
     }
     fpos_prev = fpos_curr;
@@ -512,6 +503,7 @@ void samcodec_encode(samcodec_t *samcodec)
     tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
     tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
     tsc_log("Took %ld us ~= %.2f s\n", et[ET_TOT], (double)et[ET_TOT]/1000000);
+    tsc_log("Nuccodec CR: %.2f%%\n", 100*(double)tsc_sz[TSC_NUC]/(double)(sam_sz[SAM_RNAME]+sam_sz[SAM_POS]+sam_sz[SAM_CIGAR]+sam_sz[SAM_SEQ]));
 
     size_t sam_nuc_sz = sam_sz[SAM_POS]
                       + sam_sz[SAM_CIGAR]
@@ -543,25 +535,25 @@ void samcodec_decode(samcodec_t *samcodec)
 
     // Read SAM header from tsc file and write it to SAM file
     tsc_sz[TSC_SH] = tscsh_read(tscsh, samcodec->ifp);
-    sam_sz[SAM_HEAD] += osro_fwrite_buf(samcodec->ofp, tscsh->data, tscsh->data_sz);
+    sam_sz[SAM_HEAD] += tsc_fwrite_buf(samcodec->ofp, tscsh->data, tscsh->data_sz);
 
     size_t b = 0;
     for (b = 0; b < tscfh->blk_n; b++) {
         tsc_sz[TSC_BH] += tscbh_read(tscbh, samcodec->ifp);
 
         // Allocate memory to prepare decoding of the sub-blocks
-        str_t   **qname=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint16_t *flag =(uint16_t *)osro_malloc(sizeof(uint16_t)*tscbh->rec_cnt);
-        str_t   **rname=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint32_t *pos  =(uint32_t *)osro_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
-        uint8_t *mapq  =(uint8_t *)osro_malloc(sizeof(uint8_t)*tscbh->rec_cnt);
-        str_t   **cigar=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **rnext=(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        uint32_t *pnext=(uint32_t *)osro_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
-        int64_t *tlen  =(int64_t *)osro_malloc(sizeof(int64_t)*tscbh->rec_cnt);
-        str_t   **seq  =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **qual =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
-        str_t   **opt  =(str_t **)osro_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **qname=(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint16_t *flag =(uint16_t *)tsc_malloc(sizeof(uint16_t)*tscbh->rec_cnt);
+        str_t   **rname=(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint32_t *pos  =(uint32_t *)tsc_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
+        uint8_t *mapq  =(uint8_t *)tsc_malloc(sizeof(uint8_t)*tscbh->rec_cnt);
+        str_t   **cigar=(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **rnext=(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        uint32_t *pnext=(uint32_t *)tsc_malloc(sizeof(uint32_t)*tscbh->rec_cnt);
+        int64_t *tlen  =(int64_t *)tsc_malloc(sizeof(int64_t)*tscbh->rec_cnt);
+        str_t   **seq  =(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **qual =(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
+        str_t   **opt  =(str_t **)tsc_malloc(sizeof(str_t *)*tscbh->rec_cnt);
 
         size_t r = 0;
         for (r = 0; r < tscbh->rec_cnt; r++) {
@@ -671,11 +663,11 @@ void samcodec_decode(samcodec_t *samcodec)
             // Write data to file
             size_t f = 0;
             for (f = 0; f < 12; f++) {
-                sam_sz[f] += osro_fwrite_buf(samcodec->ofp, (unsigned char *)sam_fields[f], strlen(sam_fields[f]));
+                sam_sz[f] += tsc_fwrite_buf(samcodec->ofp, (unsigned char *)sam_fields[f], strlen(sam_fields[f]));
                 if (f != 11 && strlen(sam_fields[f + 1]))
-                    sam_sz[SAM_CTRL] += osro_fwrite_byte(samcodec->ofp, '\t');
+                    sam_sz[SAM_CTRL] += tsc_fwrite_byte(samcodec->ofp, '\t');
             }
-            sam_sz[SAM_CTRL] += osro_fwrite_byte(samcodec->ofp, '\n');
+            sam_sz[SAM_CTRL] += tsc_fwrite_byte(samcodec->ofp, '\n');
 
             // Free the memory used for the current line
             str_free(qname[r]);

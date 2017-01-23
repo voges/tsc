@@ -1,19 +1,9 @@
-# Generic
 *~
 *.o
 *.a
 *.so
 ~$i* # temporary MS office files
-.directory # created by dolphin file manager
+.directory # created by Dolphin file manager
 
-# Doxygen documentation
-src/doxygen
-
-# Executables
-src/tsc
-src/detsc
-bin/
-
-# Tsc files
-*.tsc*
-libosro-1.1_install
+build
+*.kdev4

@@ -33,33 +33,33 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_QUALCODEC_H
-#define TSC_QUALCODEC_H
+#ifndef TSC_STR_H
+#define TSC_STR_H
 
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdlib.h>
 
-#include "tsclib/str.h"
-#include <stdio.h>
+typedef struct str_t_ {
+    char   *s;  // Null-terminated string
+    size_t len; // Length of s
+    size_t sz;  // Bytes allocated for s
+} str_t;
 
-typedef struct qualcodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} qualcodec_t;
+str_t * str_new(void);
+void str_free(str_t *str);
+void str_clear(str_t *str);
+void str_reserve(str_t *str, const size_t sz);
+void str_extend(str_t *str, const size_t ex);
+void str_trunc(str_t *str, const size_t tr);
+void str_append_str(str_t *str, const str_t *app);
+void str_append_cstr(str_t *str , const char *cstr);
+void str_append_cstrn(str_t *str, const char *cstr, const size_t len);
+void str_append_char(str_t *str, const char c);
+void str_append_int(str_t *str, const int64_t num);
+void str_append_double2(str_t *str, const double dbl);
+void str_copy_str(str_t *dest, const str_t *src);
+void str_copy_cstr(str_t *dest, const char *src);
 
-qualcodec_t * qualcodec_new(void);
-void qualcodec_free(qualcodec_t *qualcodec);
-
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
-
-#endif // TSC_QUALCODEC_H
+#endif // TSC_STR_H
 

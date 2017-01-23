@@ -33,33 +33,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_QUALCODEC_H
-#define TSC_QUALCODEC_H
+#ifndef TSC_COMMON_H
+#define TSC_COMMON_H
 
+#include <stdbool.h>
+#include <stdlib.h>
 
-#include "tsclib/str.h"
-#include <stdio.h>
+bool yesno(void);
+long tvdiff(struct timeval tv0, struct timeval tv1);
+size_t ndigits(int64_t x);
 
-typedef struct qualcodec_t_ {
-    size_t        record_cnt; // No. of records processed in the current block
-    str_t         *uncompressed;
-    unsigned char *compressed;
-    size_t        compressed_sz;
-} qualcodec_t;
-
-qualcodec_t * qualcodec_new(void);
-void qualcodec_free(qualcodec_t *qualcodec);
-
-// Encoder methods
-// -----------------------------------------------------------------------------
-
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
-
-// Decoder methods
-// -----------------------------------------------------------------------------
-
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
-
-#endif // TSC_QUALCODEC_H
+#endif // TSC_COMMON_H
 
