@@ -34,15 +34,15 @@
  */
 
 //
-// Qual block format:
-//   unsigned char  blk_id[8]: "qual---" + '\0'
+// Id block format:
+//   unsigned char  blk_id[8]: "id-----" + '\0'
 //   uint64_t       rec_cnt  : No. of lines in block
 //   uint64_t       data_sz  : Data size
 //   uint64_t       data_crc : CRC64 of comptmpsed data
 //   unsigned char  *data    : Data
 //
 
-#include "qualcodec.h"
+#include "idcodec.h"
 #include "../range.h"
 #include "../tsclib.h"
 #include "../tvclib/crc64.h"
@@ -52,54 +52,54 @@
 // Encoder
 // -----------------------------------------------------------------------------
 
-static void qualenc_init(qualenc_t *qualenc)
+static void idenc_init(idenc_t *idenc)
 {
-    qualenc->in_sz = 0;
-    qualenc->rec_cnt = 0;
+    idenc->in_sz = 0;
+    idenc->rec_cnt = 0;
 }
 
-qualenc_t * qualenc_new(void)
+idenc_t * idenc_new(void)
 {
-    qualenc_t *qualenc = (qualenc_t *)tsc_malloc(sizeof(qualenc_t));
-    qualenc->tmp = str_new();
-    qualenc_init(qualenc);
-    return qualenc;
+    idenc_t *idenc = (idenc_t *)tsc_malloc(sizeof(idenc_t));
+    idenc->tmp = str_new();
+    idenc_init(idenc);
+    return idenc;
 }
 
-void qualenc_free(qualenc_t* qualenc)
+void idenc_free(idenc_t* idenc)
 {
-    if (qualenc != NULL) {
-        str_free(qualenc->tmp);
-        free(qualenc);
-        qualenc = NULL;
+    if (idenc != NULL) {
+        str_free(idenc->tmp);
+        free(idenc);
+        idenc = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void qualenc_reset(qualenc_t *qualenc)
+static void idenc_reset(idenc_t *idenc)
 {
-    str_clear(qualenc->tmp);
-    qualenc_init(qualenc);
+    str_clear(idenc->tmp);
+    idenc_init(idenc);
 }
 
-void qualenc_add_record(qualenc_t *qualenc, const char *qual)
+void idenc_add_record(idenc_t *idenc, const char *qname)
 {
-    qualenc->in_sz += strlen(qual);
+    idenc->in_sz += strlen(qname);
 
-    qualenc->rec_cnt++;
+    idenc->rec_cnt++;
 
-    str_append_cstr(qualenc->tmp, qual);
-    str_append_cstr(qualenc->tmp, "\n");
+    str_append_cstr(idenc->tmp, qname);
+    str_append_cstr(idenc->tmp, "\n");
 }
 
-size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
+size_t idenc_write_block(idenc_t *idenc, FILE * fp)
 {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *tmp = (unsigned char *)qualenc->tmp->s;
-    unsigned int tmp_sz = (unsigned int)qualenc->tmp->len;
+    unsigned char *tmp = (unsigned char *)idenc->tmp->s;
+    unsigned int tmp_sz = (unsigned int)idenc->tmp->len;
     unsigned int data_sz = 0;
     unsigned char *data = range_compress_o1(tmp, tmp_sz, &data_sz);
 
@@ -107,20 +107,20 @@ size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
     uint64_t data_crc = crc64(data, data_sz);
 
     // Write compressed block
-    unsigned char blk_id[8] = "qual---"; blk_id[7] = '\0';
+    unsigned char blk_id[8] = "id-----"; blk_id[7] = '\0';
     ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)qualenc->rec_cnt);
+    ret += fwrite_uint64(fp, (uint64_t)idenc->rec_cnt);
     ret += fwrite_uint64(fp, (uint64_t)data_sz);
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
     tsc_log(TSC_LOG_VERBOSE,
-            "Compressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-            qualenc->in_sz,
+            "Compressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            idenc->in_sz,
             data_sz,
-            (double)data_sz / (double)qualenc->in_sz * 100);
+            (double)data_sz / (double)idenc->in_sz * 100);
 
-    qualenc_reset(qualenc); // Reset encoder for next block
+    idenc_reset(idenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
 
     return ret;
@@ -129,37 +129,37 @@ size_t qualenc_write_block(qualenc_t *qualenc, FILE * fp)
 // Decoder
 // -----------------------------------------------------------------------------
 
-static void qualdec_init(qualdec_t *qualdec)
+static void iddec_init(iddec_t *iddec)
 {
-    qualdec->out_sz = 0;
+    iddec->out_sz = 0;
 }
 
-qualdec_t * qualdec_new(void)
+iddec_t * iddec_new(void)
 {
-    qualdec_t *qualdec = (qualdec_t *)tsc_malloc(sizeof(qualdec_t));
-    qualdec_init(qualdec);
-    return qualdec;
+    iddec_t *iddec = (iddec_t *)tsc_malloc(sizeof(iddec_t));
+    iddec_init(iddec);
+    return iddec;
 }
 
-void qualdec_free(qualdec_t *qualdec)
+void iddec_free(iddec_t *iddec)
 {
-    if (qualdec != NULL) {
-        free(qualdec);
-        qualdec = NULL;
+    if (iddec != NULL) {
+        free(iddec);
+        iddec = NULL;
     } else {
         tsc_error("Tried to free null\n");
     }
 }
 
-static void qualdec_reset(qualdec_t *qualdec)
+static void iddec_reset(iddec_t *iddec)
 {
-    qualdec_init(qualdec);
+    iddec_init(iddec);
 }
 
-static size_t qualdec_decode(qualdec_t     *qualdec,
-                             unsigned char *tmp,
-                             size_t        tmp_sz,
-                             str_t**       qual)
+static size_t iddec_decode(iddec_t       *iddec,
+                           unsigned char *tmp,
+                           size_t        tmp_sz,
+                           str_t**       qname)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -167,7 +167,7 @@ static size_t qualdec_decode(qualdec_t     *qualdec,
 
     for (i = 0; i < tmp_sz; i++) {
         if (tmp[i] != '\n') {
-            str_append_char(qual[rec], (const char)tmp[i]);
+            str_append_char(qname[rec], (const char)tmp[i]);
             ret++;
         } else {
             rec++;
@@ -177,7 +177,7 @@ static size_t qualdec_decode(qualdec_t     *qualdec,
     return ret;
 }
 
-size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
+size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname)
 {
     unsigned char blk_id[8];
     uint64_t      rec_cnt;
@@ -202,7 +202,7 @@ size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
 
     // Check CRC64
     if (crc64(data, data_sz) != data_crc)
-        tsc_error("CRC64 check failed for qual block\n");
+        tsc_error("CRC64 check failed for id block\n");
 
     // Decompress block
     unsigned int tmp_sz = 0;
@@ -210,16 +210,16 @@ size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual)
     free(data);
 
     // Decode block
-    qualdec->out_sz = qualdec_decode(qualdec, tmp, tmp_sz, qual);
+    iddec->out_sz = iddec_decode(iddec, tmp, tmp_sz, qname);
     free(tmp); // Free memory used for decoded bitstream
 
     tsc_log(TSC_LOG_VERBOSE,
-            "Decompressed qual block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            "Decompressed id block: %zu bytes -> %zu bytes (%6.2f%%)\n",
             data_sz,
-            qualdec->out_sz,
-            (double)qualdec->out_sz / (double)data_sz * 100);
+            iddec->out_sz,
+            (double)iddec->out_sz / (double)data_sz * 100);
 
-    qualdec_reset(qualdec);
+    iddec_reset(iddec);
 
     return ret;
 }

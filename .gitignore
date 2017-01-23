@@ -4,6 +4,7 @@
 *.a
 *.so
 *.tmp
+~$*
 
 # Created by Dolphin file manager
 .directory
@@ -12,12 +13,9 @@
 src/doxygen
 
 # Executables
-src/range/range
-src/detsc
-src/rice/rice
 src/tsc
-bin
+src/detsc
+bin/
 
 # Tsc files
-*.tsc
-*.tsc.sam
+*.tsc*

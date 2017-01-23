@@ -1,25 +1,37 @@
-//
-// Copyright (c) 2015
-// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
-// Contact: Jan Voges <voges@tnt.uni-hannover.de>
-//
-
-//
-// This file is part of tsc.
-//
-// Tsc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Tsc is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with tsc. If not, see <http://www.gnu.org/licenses/>
-//
+/* The copyright in this software is being made available under the BSD
+ * License, included below. This software may be subject to other third party
+ * and contributor rights, including patent rights, and no such rights are
+ * granted under this license.
+ *
+ * Copyright (c) 2015, Leibniz Universitaet Hannover, Institut fuer
+ * Informationsverarbeitung (TNT)
+ * Contact: <voges@tnt.uni-hannover.de>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of the TNT nor the names of its contributors may be used
+ *    to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include "tscfmt.h"
 #include "tsclib.h"
@@ -36,12 +48,12 @@ static void tscfh_init(tscfh_t *tscfh)
     tscfh->magic[2] = 'c';
     tscfh->magic[3] = '\0';
     tscfh->flags    = 0x0;
-    tscfh->ver[0]    = VERSION_MAJMAJ + 48; // ASCII offset
-    tscfh->ver[1]    = VERSION_MAJMIN + 48;
-    tscfh->ver[2]    = '.';
-    tscfh->ver[3]    = VERSION_MINMAJ + 48;
-    tscfh->ver[4]    = VERSION_MINMIN + 48;
-    tscfh->ver[5]    = '\0';
+    tscfh->ver[0]   = VERSION_MAJMAJ + 48; // ASCII offset
+    tscfh->ver[1]   = VERSION_MAJMIN + 48;
+    tscfh->ver[2]   = '.';
+    tscfh->ver[3]   = VERSION_MINMAJ + 48;
+    tscfh->ver[4]   = VERSION_MINMIN + 48;
+    tscfh->ver[5]   = '\0';
     tscfh->rec_n    = 0;
     tscfh->blk_n    = 0;
     tscfh->sblk_n   = 0;
@@ -89,7 +101,7 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
     if (!(tscfh->sblk_n))
         tsc_error("File does not contain sub-blocks\n");
 
-    tsc_vlog("Read tsc file header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Read tsc file header\n");
 
     return ret;
 }
@@ -105,7 +117,7 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
     ret += fwrite_uint64(fp, tscfh->blk_n);
     ret += fwrite_uint64(fp, tscfh->sblk_n);
 
-    tsc_vlog("Wrote tsc file header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Wrote tsc file header\n");
 
     return ret;
 }
@@ -156,7 +168,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
     tscsh->data = (unsigned char *)tsc_malloc((size_t)tscsh->data_sz);
     ret += fread_buf(fp, tscsh->data, tscsh->data_sz);
 
-    tsc_vlog("Read SAM header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Read SAM header\n");
 
     return ret;
 }
@@ -164,7 +176,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
 {
     if (tscsh->data_sz == 0 || tscsh->data == NULL) {
-        tsc_warning("Empty SAM header\n");
+        tsc_log(TSC_LOG_WARN, "Empty SAM header\n");
         return 0;
     }
 
@@ -173,7 +185,7 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
     ret += fwrite_uint64(fp, tscsh->data_sz);
     ret += fwrite_buf(fp, tscsh->data, tscsh->data_sz);
 
-    tsc_vlog("Wrote SAM header\n");
+    tsc_log(TSC_LOG_VERBOSE, "Wrote SAM header\n");
 
     return ret;
 }
@@ -227,7 +239,7 @@ size_t tscbh_read(tscbh_t *tscbh, FILE *fp)
     ret += fread_uint64(fp, &(tscbh->pos_min));
     ret += fread_uint64(fp, &(tscbh->pos_max));
 
-    tsc_vlog("Read block header %"PRIu64"\n", tscbh->blk_cnt);
+    tsc_log(TSC_LOG_VERBOSE, "Read block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }
@@ -245,7 +257,7 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
     ret += fwrite_uint64(fp, tscbh->pos_min);
     ret += fwrite_uint64(fp, tscbh->pos_max);
 
-    tsc_vlog("Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
+    tsc_log(TSC_LOG_VERBOSE, "Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }

@@ -34,16 +34,16 @@
  */
 
 //
-// Nuc o0 block format:
-//   unsigned char  blk_id[8] : "nuc----" + '\0'
+// Pair block format:
+//   unsigned char  blk_id[8]: "pair---" + '\0'
 //   uint64_t       rec_cnt  : No. of lines in block
 //   uint64_t       data_sz  : Data size
 //   uint64_t       data_crc : CRC64 of compressed data
 //   unsigned char  *data    : Data
 //
 
-#include "nuccodec_o0.h"
-#include "../range/range.h"
+#include "paircodec.h"
+#include "../range.h"
 #include "../tsclib.h"
 #include "../tvclib/crc64.h"
 #include "../tvclib/frw.h"
@@ -53,66 +53,69 @@
 // Encoder
 // -----------------------------------------------------------------------------
 
-static void nucenc_init(nucenc_t *nucenc)
+static void pairenc_init(pairenc_t *pairenc)
 {
-    nucenc->in_sz = 0;
-    nucenc->rec_cnt = 0;
+    pairenc->in_sz = 0;
+    pairenc->rec_cnt = 0;
 }
 
-nucenc_t * nucenc_new(void)
+pairenc_t * pairenc_new(void)
 {
-    nucenc_t *nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
-    nucenc->tmp = str_new();
-    nucenc_init(nucenc);
-    return nucenc;
+    pairenc_t *pairenc = (pairenc_t *)tsc_malloc(sizeof(pairenc_t));
+    pairenc->tmp = str_new();
+    pairenc_init(pairenc);
+    return pairenc;
 }
 
-void nucenc_free(nucenc_t *nucenc)
+void pairenc_free(pairenc_t *pairenc)
 {
-    if (nucenc != NULL) {
-        str_free(nucenc->tmp);
-        free(nucenc);
-        nucenc = NULL;
+    if (pairenc != NULL) {
+        str_free(pairenc->tmp);
+        free(pairenc);
+        pairenc = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void nucenc_reset(nucenc_t *nucenc)
+static void pairenc_reset(pairenc_t *pairenc)
 {
-    str_clear(nucenc->tmp);
-    nucenc_init(nucenc);
+    str_clear(pairenc->tmp);
+    pairenc_init(pairenc);
 }
 
-void nucenc_add_record(nucenc_t       *nucenc,
-                       const uint32_t pos,
-                       const char     *cigar,
-                       const char     *seq)
+void pairenc_add_record(pairenc_t      *pairenc,
+                        const char     *rnext,
+                        const uint32_t pnext,
+                        const int64_t  tlen)
 {
-    nucenc->in_sz += sizeof(pos);
-    nucenc->in_sz += strlen(cigar);
-    nucenc->in_sz += strlen(seq);
+    pairenc->in_sz += strlen(rnext);
+    pairenc->in_sz += sizeof(pnext);
+    pairenc->in_sz += sizeof(tlen);
 
-    nucenc->rec_cnt++;
+    pairenc->rec_cnt++;
 
-    char pos_cstr[101];
-    snprintf(pos_cstr, sizeof(pos_cstr), "%"PRIu32, pos);
+    char pnext_cstr[101];
+    char tlen_cstr[101];
 
-    str_append_cstr(nucenc->tmp, pos_cstr);
-    str_append_cstr(nucenc->tmp, "\t");
-    str_append_cstr(nucenc->tmp, cigar);
-    str_append_cstr(nucenc->tmp, "\t");
-    str_append_cstr(nucenc->tmp, seq);
-    str_append_cstr(nucenc->tmp, "\n");
+    snprintf(pnext_cstr, sizeof(pnext_cstr), "%"PRIu32, pnext);
+    snprintf(tlen_cstr, sizeof(tlen_cstr), "%"PRId64, tlen);
+
+    str_append_cstr(pairenc->tmp, rnext);
+    str_append_cstr(pairenc->tmp, "\t");
+    str_append_cstr(pairenc->tmp, pnext_cstr);
+    str_append_cstr(pairenc->tmp, "\t");
+    str_append_cstr(pairenc->tmp, tlen_cstr);
+    str_append_cstr(pairenc->tmp, "\n");
 }
 
-size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
+size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp)
 {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *tmp = (unsigned char *)nucenc->tmp->s;
-    unsigned int tmp_sz = (unsigned int)nucenc->tmp->len;
+    unsigned char *tmp = (unsigned char *)pairenc->tmp->s;
+    unsigned int tmp_sz = (unsigned int)pairenc->tmp->len;
     unsigned int data_sz = 0;
     unsigned char *data = range_compress_o0(tmp, tmp_sz, &data_sz);
 
@@ -120,19 +123,20 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
     uint64_t data_crc = crc64(data, data_sz);
 
     // Write compressed block
-    unsigned char blk_id[8] = "nuc----"; blk_id[7] = '\0';
+    unsigned char blk_id[8] = "pair---"; blk_id[7] = '\0';
     ret += fwrite_buf(fp, blk_id, sizeof(blk_id));
-    ret += fwrite_uint64(fp, (uint64_t)nucenc->rec_cnt);
+    ret += fwrite_uint64(fp, (uint64_t)pairenc->rec_cnt);
     ret += fwrite_uint64(fp, (uint64_t)data_sz);
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             nucenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)nucenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            pairenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)pairenc->in_sz * 100);
 
-    nucenc_reset(nucenc); // Reset encoder for next block
+    pairenc_reset(pairenc); // Reset encoder for next block
     free(data); // Free memory used for encoded bitstream
 
     return ret;
@@ -141,39 +145,39 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
 // Decoder
 // -----------------------------------------------------------------------------
 
-static void nucdec_init(nucdec_t *nucdec)
+static void pairdec_init(pairdec_t *pairdec)
 {
-    nucdec->out_sz = 0;
+    pairdec->out_sz = 0;
 }
 
-nucdec_t * nucdec_new(void)
+pairdec_t * pairdec_new(void)
 {
-    nucdec_t *nucdec = (nucdec_t *)tsc_malloc(sizeof(nucdec_t));
-    nucdec_init(nucdec);
-    return nucdec;
+    pairdec_t *pairdec = (pairdec_t *)tsc_malloc(sizeof(pairdec_t));
+    pairdec_init(pairdec);
+    return pairdec;
 }
 
-void nucdec_free(nucdec_t *nucdec)
+void pairdec_free(pairdec_t *pairdec)
 {
-    if (nucdec != NULL) {
-        free(nucdec);
-        nucdec = NULL;
+    if (pairdec != NULL) {
+        free(pairdec);
+        pairdec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
 }
 
-static void nucdec_reset(nucdec_t *nucdec)
+static void pairdec_reset(pairdec_t* pairdec)
 {
-    nucdec_init(nucdec);
+    pairdec_init(pairdec);
 }
 
-static size_t nucdec_decode_records(nucdec_t      *nucdec,
-                                    unsigned char *tmp,
-                                    size_t        tmp_sz,
-                                    uint32_t      *pos,
-                                    str_t         **cigar,
-                                    str_t         **seq)
+static size_t pairdec_decode(pairdec_t     *pairdec,
+                             unsigned char *tmp,
+                             size_t        tmp_sz,
+                             str_t         **rnext,
+                             uint32_t      *pnext,
+                             int64_t       *tlen)
 {
     size_t ret = 0;
     size_t i = 0;
@@ -184,8 +188,8 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
     for (i = 0; i < tmp_sz; i++) {
         if (tmp[i] == '\n') {
             tmp[i] = '\0';
-            str_append_cstr(seq[line], (const char *)cstr);
-            ret += strlen((const char *)cstr);
+            tlen[line] = strtoll((const char *)cstr, NULL, 10);
+            ret += sizeof(*tlen);
             cstr = &tmp[i+1];
             idx = 0;
             line++;
@@ -196,16 +200,15 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             tmp[i] = '\0';
             switch (idx++) {
             case 0:
-                pos[line] = strtoll((const char *)cstr, NULL, 10);
-                ret += sizeof(*pos);
-                break;
-            case 1:
-                str_append_cstr(cigar[line], (const char *)cstr);
+                str_append_cstr(rnext[line], (const char *)cstr);
                 ret += strlen((const char *)cstr);
                 break;
-            default:
-                tsc_error("Failed to decode nuc block\n");
+            case 1:
+                pnext[line] = strtoll((const char *)cstr, NULL, 10);
+                ret += sizeof(*pnext);
                 break;
+            default:
+                tsc_error("Wrong pair bit stream\n");
             }
             cstr = &tmp[i+1];
         }
@@ -214,17 +217,17 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
     return ret;
 }
 
-size_t nucdec_decode_block(nucdec_t *nucdec,
-                           FILE     *fp,
-                           uint32_t *pos,
-                           str_t    **cigar,
-                           str_t    **seq)
+size_t pairdec_decode_block(pairdec_t *pairdec,
+                            FILE      *fp,
+                            str_t     **rnext,
+                            uint32_t  *pnext,
+                            int64_t   *tlen)
 {
-    unsigned char  blk_id[8];
-    uint64_t       rec_cnt;
-    uint64_t       data_sz;
-    uint64_t       data_crc;
-    unsigned char  *data;
+    unsigned char blk_id[8];
+    uint64_t      rec_cnt;
+    uint64_t      data_sz;
+    uint64_t      data_crc;
+    unsigned char *data;
 
     // Read block
     fread_buf(fp, blk_id, sizeof(blk_id));
@@ -243,23 +246,24 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
 
     // Check CRC64
     if (crc64(data, data_sz) != data_crc)
-        tsc_error("CRC64 check failed for nuc block\n");
+        tsc_error("CRC64 check failed for pair block\n");
 
     // Decompress block
     unsigned int tmp_sz = 0;
-    unsigned char * tmp = range_decompress_o0(data, data_sz, &tmp_sz);
+    unsigned char *tmp = range_decompress_o0(data, data_sz, &tmp_sz);
     free(data);
 
     // Decode block
-    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, pos, cigar, seq);
+    pairdec->out_sz = pairdec_decode(pairdec, tmp, tmp_sz, rnext, pnext, tlen);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             nucdec->out_sz,
-             (double)nucdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed pair block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            pairdec->out_sz,
+            (double)pairdec->out_sz / (double)data_sz * 100);
 
-    nucdec_reset(nucdec);
+    pairdec_reset(pairdec);
 
     return ret;
 }

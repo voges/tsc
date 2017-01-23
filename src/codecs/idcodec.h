@@ -33,49 +33,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_SAMCODEC_H
-#define TSC_SAMCODEC_H
+#ifndef TSC_IDCODEC_H
+#define TSC_IDCODEC_H
 
-#include "samparser.h"
-#include "codecs/auxcodec.h"
-#include "codecs/idcodec.h"
-//#include "codecs/nuccodec_o0.h"
-#include "codecs/nuccodec_o1.h"
-#include "codecs/paircodec.h"
-#include "codecs/qualcodec.h"
-#include "tvclib/str.h"
+
+#include "../tvclib/str.h"
 #include <stdio.h>
 
-typedef struct samenc_t_ {
-    FILE         *ifp;
-    FILE         *ofp;
-    unsigned int blk_sz;
-    samparser_t  *samparser;
-    auxenc_t     *auxenc;
-    idenc_t      *idenc;
-    nucenc_t     *nucenc;
-    pairenc_t    *pairenc;
-    qualenc_t    *qualenc;
-} samenc_t;
+// Encoder
+// -----------------------------------------------------------------------------
 
-samenc_t * samenc_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
-void samenc_free(samenc_t *samenc);
-void samenc_encode(samenc_t *samenc);
+typedef struct idenc_t_ {
+    size_t in_sz;   // Accumulated input size
+    size_t rec_cnt; // No. of records processed in the current block
+    str_t  *tmp;    // Temporal storage for e.g. prediction residues
+} idenc_t;
 
-typedef struct samdec_t_ {
-    FILE      *ifp;
-    FILE      *ofp;
-    auxdec_t  *auxdec;
-    iddec_t   *iddec;
-    nucdec_t  *nucdec;
-    pairdec_t *pairdec;
-    qualdec_t *qualdec;
-} samdec_t;
+idenc_t * idenc_new(void);
+void idenc_free(idenc_t *idenc);
+void idenc_add_record(idenc_t *idenc, const char *qname);
+size_t idenc_write_block(idenc_t *idenc, FILE *fp);
 
-samdec_t * samdec_new(FILE *ifp, FILE *ofp);
-void samdec_free(samdec_t *samdec);
-void samdec_decode(samdec_t *samdec);
-void samdec_info(samdec_t *samdec);
+// Decoder
+// -----------------------------------------------------------------------------
 
-#endif // TSC_SAMCODEC_H
+typedef struct iddec_t_ {
+    size_t out_sz; // Accumulated output size
+} iddec_t;
+
+iddec_t * iddec_new(void);
+void iddec_free(iddec_t *iddec);
+size_t iddec_decode_block(iddec_t *iddec, FILE *fp, str_t **qname);
+
+#endif // TSC_IDCODEC_H
 

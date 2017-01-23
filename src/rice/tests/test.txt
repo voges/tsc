@@ -1,4 +1,0 @@
-hello, this a test ASCII text for a rice coder!
-
-TNT
-

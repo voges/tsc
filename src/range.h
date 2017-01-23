@@ -33,49 +33,23 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TSC_SAMCODEC_H
-#define TSC_SAMCODEC_H
+#ifndef RANGE_H
+#define RANGE_H
 
-#include "samparser.h"
-#include "codecs/auxcodec.h"
-#include "codecs/idcodec.h"
-//#include "codecs/nuccodec_o0.h"
-#include "codecs/nuccodec_o1.h"
-#include "codecs/paircodec.h"
-#include "codecs/qualcodec.h"
-#include "tvclib/str.h"
-#include <stdio.h>
+unsigned char * range_compress_o0(unsigned char *in,
+                                  unsigned int  in_sz,
+                                  unsigned int  *out_sz);
+unsigned char * range_decompress_o0(unsigned char *in,
+                                   unsigned int   in_sz,
+                                   unsigned int   *out_sz);
+unsigned char * range_compress_o1(unsigned char *in,
+                                  unsigned int  in_sz,
+                                  unsigned int  *out_sz);
+unsigned char * range_decompress_o1(unsigned char *in,
+                                    unsigned int  in_sz,
+                                    unsigned int  *out_sz);
 
-typedef struct samenc_t_ {
-    FILE         *ifp;
-    FILE         *ofp;
-    unsigned int blk_sz;
-    samparser_t  *samparser;
-    auxenc_t     *auxenc;
-    idenc_t      *idenc;
-    nucenc_t     *nucenc;
-    pairenc_t    *pairenc;
-    qualenc_t    *qualenc;
-} samenc_t;
+// TODO: possibly replace 'unsigned int' with 'size_t'
 
-samenc_t * samenc_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
-void samenc_free(samenc_t *samenc);
-void samenc_encode(samenc_t *samenc);
-
-typedef struct samdec_t_ {
-    FILE      *ifp;
-    FILE      *ofp;
-    auxdec_t  *auxdec;
-    iddec_t   *iddec;
-    nucdec_t  *nucdec;
-    pairdec_t *pairdec;
-    qualdec_t *qualdec;
-} samdec_t;
-
-samdec_t * samdec_new(FILE *ifp, FILE *ofp);
-void samdec_free(samdec_t *samdec);
-void samdec_decode(samdec_t *samdec);
-void samdec_info(samdec_t *samdec);
-
-#endif // TSC_SAMCODEC_H
+#endif // RANGE_H
 

@@ -1,38 +1,50 @@
-//
-// Copyright (c) 2015
-// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
-// Contact: Jan Voges <voges@tnt.uni-hannover.de>
-//
-
-//
-// This file is part of tsc.
-//
-// Tsc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Tsc is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with tsc. If not, see <http://www.gnu.org/licenses/>
-//
+/* The copyright in this software is being made available under the BSD
+ * License, included below. This software may be subject to other third party
+ * and contributor rights, including patent rights, and no such rights are
+ * granted under this license.
+ *
+ * Copyright (c) 2015, Leibniz Universitaet Hannover, Institut fuer
+ * Informationsverarbeitung (TNT)
+ * Contact: <voges@tnt.uni-hannover.de>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of the TNT nor the names of its contributors may be used
+ *    to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 //
 // Nuc o1 block format:
-//   unsigned char  blk_id[8]  : "nuc----" + '\0'
-//   uint64_t       rec_blk_cnt: No. of lines in block
-//   uint64_t       tmp_sz     : Size of uncompressed data
-//   uint64_t       data_sz    : Data size
-//   uint64_t       data_crc   : CRC64 of compressed data
-//   unsigned char  *data      : Data
+//   unsigned char blk_id[8]  : "nuc----" + '\0'
+//   uint64_t      rec_blk_cnt: No. of lines in block
+//   uint64_t      tmp_sz     : Size of uncompressed data
+//   uint64_t      data_sz    : Data size
+//   uint64_t      data_crc   : CRC64 of compressed data
+//   unsigned char *data      : Data
 //
 
 #include "nuccodec_o1.h"
-#include "../range/range.h"
+#include "../range.h"
 #include "../tvclib/crc64.h"
 #include "../tvclib/frw.h"
 #include "../tsclib.h"
@@ -64,6 +76,7 @@ static void nucenc_init(nucenc_t *nucenc)
     // Open statistics file and write header for it
     str_append_str(nucenc->stat_fname, tsc_out_fname);
     str_append_cstr(nucenc->stat_fname, ".nuc.log");
+    tsc_log(TSC_LOG_INFO, "Nuc statistics: %s\n", nucenc->stat_fname->s);
     nucenc->stat_fp = tsc_fopen((const char *)nucenc->stat_fname->s, "w");
     str_t *stat = str_new();
     str_append_cstr(stat, "m_blk_cnt,");
@@ -81,6 +94,7 @@ nucenc_t * nucenc_new(void)
     nucenc_t *nucenc = (nucenc_t *)tsc_malloc(sizeof(nucenc_t));
 
     nucenc->tmp = str_new();
+    nucenc->rname_prev = str_new();
     nucenc->stat_fname = str_new();
     nucenc->neo_cbuf = cbufint64_new(WINDOW_SZ);
     nucenc->pos_cbuf = cbufint64_new(WINDOW_SZ);
@@ -88,8 +102,8 @@ nucenc_t * nucenc_new(void)
 
     nucenc_init(nucenc);
 
-    tsc_vlog("Nuccodec WINDOW_SZ: %d\n", WINDOW_SZ);
-    tsc_vlog("Nuccodec ALPHA: %.1f\n", ALPHA);
+    tsc_log(TSC_LOG_INFO, "Nuc WINDOW_SZ: %d\n", WINDOW_SZ);
+    tsc_log(TSC_LOG_INFO, "Nuc ALPHA: %.1f\n", ALPHA);
 
     return nucenc;
 }
@@ -97,10 +111,10 @@ nucenc_t * nucenc_new(void)
 void nucenc_free(nucenc_t *nucenc)
 {
     tsc_fclose(nucenc->stat_fp);
-    tsc_vlog("Wrote nuccodec statistics to %s\n", nucenc->stat_fname->s);
 
     if (nucenc != NULL) {
         str_free(nucenc->tmp);
+        str_free(nucenc->rname_prev);
         str_free(nucenc->stat_fname);
         cbufint64_free(nucenc->neo_cbuf);
         cbufint64_free(nucenc->pos_cbuf);
@@ -116,6 +130,7 @@ void nucenc_free(nucenc_t *nucenc)
 static void nucenc_reset(nucenc_t *nucenc)
 {
     str_clear(nucenc->tmp);
+    str_clear(nucenc->rname_prev);
     cbufint64_clear(nucenc->neo_cbuf);
     cbufint64_clear(nucenc->pos_cbuf);
     cbufstr_clear(nucenc->exs_cbuf);
@@ -219,47 +234,50 @@ static void nucenc_diff(str_t          *mod,
 }
 
 void nucenc_add_record(nucenc_t       *nucenc,
+                       const char     *rname,
                        const uint32_t pos,
                        const char     *cigar,
                        const char     *seq)
 {
-    nucenc->in_sz += sizeof(pos) + strlen(cigar) + strlen(seq);
+    nucenc->in_sz += strlen(rname) + sizeof(pos) + strlen(cigar) + strlen(seq);
     nucenc->rec_blk_cnt++;
     nucenc->rec_tot_cnt++;
 
     //
     // Sanity check:
-    // - Write m[POS][:CIGAR][:SEQ]~ in case of corrupted record
+    // - Write mRNAME:POS:CIGAR:SEQ~ in case of corrupted record
     // - Do -not- push to circular buffer
     //
 
-    if (   (!pos)
+    if (   (!strlen(rname) || (rname[0] == '*' && rname[1] == '\0'))
+        || (!pos)
         || (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0'))
         || (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))) {
-        tsc_warning("Missing POS|CIGAR|SEQ in line %zu\n", nucenc->rec_tot_cnt);
+        tsc_log(TSC_LOG_WARN,
+                "Missing RNAME|POS|CIGAR|SEQ (line %zu)\n",
+                nucenc->rec_tot_cnt);
         nucenc->m_blk_cnt++;
 
         str_append_cstr(nucenc->tmp, "m");
-        if (pos) {
-            str_append_int(nucenc->tmp, pos);
-        }
-        if (strlen(cigar)) {
-            str_append_cstr(nucenc->tmp, ":");
-            str_append_cstr(nucenc->tmp, cigar);
-        }
-        if (strlen(seq)) {
-            str_append_cstr(nucenc->tmp, ":");
-            str_append_cstr(nucenc->tmp, seq);
-        }
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_int(nucenc->tmp, pos);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_cstr(nucenc->tmp, cigar);
+        str_append_cstr(nucenc->tmp, ":");
+        str_append_cstr(nucenc->tmp, seq);
         str_append_cstr(nucenc->tmp, "~");
 
         return;
     }
 
+    uint32_t neo = 0;
+
     //
     // First record in block:
+    // - Store RNAME
     // - Expand SEQ using CIGAR
-    // - Write fPOS:STOGY:EXS~
+    // - Write fRNAME:POS:STOGY:EXS~
     // - Push NEO, POS, EXS to circular buffer
     //
 
@@ -267,9 +285,14 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_t *stogy = str_new();
         str_t *exs = str_new();
 
+        str_copy_cstr(nucenc->rname_prev, rname);
+
         nucenc_expand(stogy, exs, cigar, seq);
+        neo = ceil(stogy->len);
 
         str_append_cstr(nucenc->tmp, "f");
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
         str_append_int(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
@@ -277,7 +300,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         str_append_str(nucenc->tmp, exs);
         str_append_cstr(nucenc->tmp, "~");
 
-        cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
+        cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
 
@@ -302,6 +325,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
     str_t *exs = str_new();
 
     nucenc_expand(stogy, exs, cigar, seq);
+    neo = ceil(stogy->len);
 
     // Get matching NEO, POS, EXS from circular buffer
     size_t cbuf_idx = 0;
@@ -311,8 +335,14 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     do {
         uint32_t neo_ref = (uint32_t)cbufint64_get(nucenc->neo_cbuf, cbuf_idx);
-        if (neo_ref < neo_best) {
-            neo_best = neo_ref;
+
+        //if (neo_ref < neo_best) {
+        //    neo_best = neo_ref;
+        //    cbuf_idx_best = cbuf_idx;
+        //}
+        uint32_t neo_off = abs(100*(1-ALPHA)*(neo-neo_ref) + 100*ALPHA*(cbuf_idx));
+        if (neo_off < neo_best) {
+            neo_best = neo_off;
             cbuf_idx_best = cbuf_idx;
         }
         cbuf_idx++;
@@ -323,19 +353,25 @@ void nucenc_add_record(nucenc_t       *nucenc,
 
     // Compute and check position offset
     int64_t pos_off = pos - pos_ref;
-    uint32_t neo = 0;
 
-    if (pos_off > exs_ref->len || pos_off < 0) {
+    if (   pos_off > exs_ref->len
+        || pos_off < 0
+        || strcmp(rname, nucenc->rname_prev->s)) {
         nucenc->i_blk_cnt++;
 
         //
-        // Position offset is negative or too large:
-        // - Write iPOS:STOGY:EXS
+        // Position offset is negative or too large, or RNAME has changed:
+        // - Store RNAME
+        // - Write iRNAME:POS:STOGY:EXS
         // - Clear circular buffer
         // - Push NEO, POS, EXS to circular buffer
         //
 
+        str_copy_cstr(nucenc->rname_prev, rname);
+
         str_append_cstr(nucenc->tmp, "i");
+        str_append_cstr(nucenc->tmp, rname);
+        str_append_cstr(nucenc->tmp, ":");
         str_append_int(nucenc->tmp, pos);
         str_append_cstr(nucenc->tmp, ":");
         str_append_str(nucenc->tmp, stogy);
@@ -347,7 +383,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         cbufint64_clear(nucenc->pos_cbuf);
         cbufstr_clear(nucenc->exs_cbuf);
 
-        cbufint64_push(nucenc->neo_cbuf, ceil(ALPHA*stogy->len));
+        cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
     } else {
@@ -360,6 +396,7 @@ void nucenc_add_record(nucenc_t       *nucenc,
         //
 
         nucenc_diff(mod, trail, pos_off, exs->s, exs_ref->s);
+        neo = ceil(stogy->len + mod->len);
 
         str_append_int(nucenc->tmp, pos_off);
         str_append_cstr(nucenc->tmp, ":");
@@ -374,7 +411,6 @@ void nucenc_add_record(nucenc_t       *nucenc,
         }
         str_append_cstr(nucenc->tmp, "~");
 
-        neo = ceil((1-ALPHA)*pos_off + ALPHA*(stogy->len + mod->len));
         cbufint64_push(nucenc->neo_cbuf, neo);
         cbufint64_push(nucenc->pos_cbuf, pos);
         cbufstr_push(nucenc->exs_cbuf, exs->s);
@@ -417,10 +453,11 @@ size_t nucenc_write_block(nucenc_t *nucenc, FILE *fp)
     ret += fwrite_uint64(fp, (uint64_t)data_crc);
     ret += fwrite_buf(fp, data, data_sz);
 
-    tsc_vlog("Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             nucenc->in_sz,
-             data_sz,
-             (double)data_sz / (double)nucenc->in_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Compressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            nucenc->in_sz,
+            data_sz,
+            (double)data_sz / (double)nucenc->in_sz * 100);
 
     nucenc->m_tot_cnt += nucenc->m_blk_cnt;
     nucenc->i_tot_cnt += nucenc->i_blk_cnt;
@@ -604,6 +641,7 @@ static void nucdec_alike(str_t          *exs,
 static size_t nucdec_decode_records(nucdec_t      *nucdec,
                                     unsigned char *tmp,
                                     size_t        tmp_sz,
+                                    str_t         **rname,
                                     uint32_t      *pos,
                                     str_t         **cigar,
                                     str_t         **seq)
@@ -612,6 +650,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
 
     str_t *rec = str_new();
     size_t rec_blk_cnt = 0;
+    str_t *rname_prev = str_new();
 
     while (*tmp != '\0') {
         // Get tsc record
@@ -621,34 +660,43 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
         str_append_char(rec, *tmp);
 
         // Make readable pointer aliases for current record
+        str_t *_rname_ = rname[rec_blk_cnt];
         uint32_t *_pos_ = &pos[rec_blk_cnt];
         str_t *_cigar_ = cigar[rec_blk_cnt];
         str_t *_seq_ = seq[rec_blk_cnt];
 
         //
-        // Check for skipped records of type m[POS][:CIGAR][:SEQ]~
+        // Check for skipped records of type mRNAME:POS:CIGAR:SEQ]~
         //
 
         if (rec->s[0] == 'm') {
             int itr = 1;
 
+            // Get RNAME
+            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+                str_append_char(_rname_, rec->s[itr]);
+                ++itr;
+            }
+            if (!_rname_->len) str_append_char(_rname_, '*');
+
             // Get POS
             *_pos_ = 0;
-            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+            itr++;
+            while (rec->s[itr] != ':') {
                 *_pos_ = *_pos_ * 10 + rec->s[itr] - '0';
                 ++itr;
             }
 
             // Get CIGAR
-            if (rec->s[itr] != '~') itr++;
-            while (rec->s[itr] != ':' && rec->s[itr] != '~') {
+            itr++;
+            while (rec->s[itr] != ':') {
                 str_append_char(_cigar_, rec->s[itr]);
                 ++itr;
             }
             if (!_cigar_->len) str_append_char(_cigar_, '*');
 
             // Get SEQ
-            if (rec->s[itr] != '~') itr++;
+            itr++;
             while (rec->s[itr] != '~') {
                 str_append_char(_seq_, rec->s[itr]);
                 ++itr;
@@ -657,8 +705,8 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
         }
 
         //
-        // Get first record of type fPOS:STOGY:EXS~ or inserted I-Record of
-        // type iPOS:STOGY:EXS~
+        // Get first record of type fRNAME:POS:STOGY:EXS~ or inserted I-Record
+        // of type iRNAME:POS:STOGY:EXS~
         //
 
         if (rec->s[0] == 'f' || rec->s[0] == 'i') {
@@ -666,8 +714,15 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_t *exs = str_new();
             int itr = 1;
 
+            // Get RNAME
+            while (rec->s[itr] != ':') {
+                str_append_char(_rname_, rec->s[itr]);
+                itr++;
+            }
+
             // Get POS
             *_pos_ = 0;
+            ++itr;
             while (rec->s[itr] != ':') {
                 *_pos_ = *_pos_ * 10 + rec->s[itr] - '0';
                 itr++;
@@ -693,12 +748,16 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             cbufstr_clear(nucdec->exs_cbuf);
 
             // Push NEO, POS, EXS to circular buffer
-            cbufint64_push(nucdec->neo_cbuf, (int64_t)ceil(ALPHA*stogy->len));
+            uint32_t neo = (uint32_t)ceil(stogy->len);
+            cbufint64_push(nucdec->neo_cbuf, (int64_t)neo);
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);
 
             // Contract
             nucdec_contract(_cigar_, _seq_, stogy->s, exs->s);
+
+            // Store RNAME
+            str_copy_str(rname_prev, _rname_);
 
             str_free(stogy);
             str_free(exs);
@@ -714,6 +773,9 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_t *exs = str_new();
             str_t *mod = str_new();
             str_t *trail = str_new();
+
+            // Get RNAME
+            str_copy_str(_rname_, rname_prev);
 
             int itr = 0;
 
@@ -748,7 +810,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             }
 
             // Compute NEO
-            uint32_t neo = (uint32_t)ceil((1-ALPHA)*pos_off + ALPHA*(stogy->len + mod->len));
+            uint32_t neo = ceil(stogy->len);
 
             // Get matching NEO, POS, EXS from circular buffer
             size_t cbuf_idx = 0;
@@ -758,8 +820,14 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
 
             do {
                 uint32_t neo_ref = (uint32_t)cbufint64_get(nucdec->neo_cbuf, cbuf_idx);
-                if (neo_ref < neo_best) {
-                    neo_best = neo_ref;
+
+                //if (neo_ref < neo_best) {
+                //    neo_best = neo_ref;
+                //    cbuf_idx_best = cbuf_idx;
+                //}
+                uint32_t neo_off = abs(100*(1-ALPHA)*(neo-neo_ref) + 100*ALPHA*(cbuf_idx));
+                if (neo_off < neo_best) {
+                    neo_best = neo_off;
                     cbuf_idx_best = cbuf_idx;
                 }
                 cbuf_idx++;
@@ -775,6 +843,7 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             nucdec_alike(exs, exs_ref->s, pos_off, stogy->s, mod->s, trail->s);
 
             // Push NEO, POS, EXS to circular buffer
+            neo = ceil(stogy->len + mod->len);
             cbufint64_push(nucdec->neo_cbuf, neo);
             cbufint64_push(nucdec->pos_cbuf, *_pos_);
             cbufstr_push(nucdec->exs_cbuf, exs->s);
@@ -788,19 +857,21 @@ static size_t nucdec_decode_records(nucdec_t      *nucdec,
             str_free(trail);
         }
 
-        ret += sizeof(*_pos_) + _cigar_->len + _seq_->len;
+        ret += _rname_->len + sizeof(*_pos_) + _cigar_->len + _seq_->len;
         str_clear(rec);
         rec_blk_cnt++;
         tmp++;
     }
 
     str_free(rec);
+    str_free(rname_prev);
 
     return ret;
 }
 
 size_t nucdec_decode_block(nucdec_t *nucdec,
                            FILE     *fp,
+                           str_t    **rname,
                            uint32_t *pos,
                            str_t    **cigar,
                            str_t    **seq)
@@ -842,13 +913,14 @@ size_t nucdec_decode_block(nucdec_t *nucdec,
     // Decode block
     tmp = tsc_realloc(tmp, ++tmp_sz);
     tmp[tmp_sz-1] = '\0'; // Terminate tmp
-    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, pos, cigar, seq);
+    nucdec->out_sz = nucdec_decode_records(nucdec, tmp, tmp_sz, rname, pos, cigar, seq);
     free(tmp); // Free memory used for decoded bitstream
 
-    tsc_vlog("Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
-             data_sz,
-             nucdec->out_sz,
-             (double)nucdec->out_sz / (double)data_sz * 100);
+    tsc_log(TSC_LOG_VERBOSE,
+            "Decompressed nuc block: %zu bytes -> %zu bytes (%6.2f%%)\n",
+            data_sz,
+            nucdec->out_sz,
+            (double)nucdec->out_sz / (double)data_sz * 100);
 
     nucdec_reset(nucdec);
 

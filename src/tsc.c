@@ -1,25 +1,37 @@
-//
-// Copyright (c) 2015
-// Leibniz Universitaet Hannover, Institut fuer Informationsverarbeitung (TNT)
-// Contact: Jan Voges <voges@tnt.uni-hannover.de>
-//
-
-//
-// This file is part of tsc.
-//
-// Tsc is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Tsc is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with tsc. If not, see <http://www.gnu.org/licenses/>
-//
+/* The copyright in this software is being made available under the BSD
+ * License, included below. This software may be subject to other third party
+ * and contributor rights, including patent rights, and no such rights are
+ * granted under this license.
+ *
+ * Copyright (c) 2015, Leibniz Universitaet Hannover, Institut fuer
+ * Informationsverarbeitung (TNT)
+ * Contact: <voges@tnt.uni-hannover.de>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *  * Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *  * Neither the name of the TNT nor the names of its contributors may be used
+ *    to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 #include "tsclib.h"
 #include "samcodec.h"
@@ -38,8 +50,6 @@ static const char *opt_output = NULL;
 static const char *opt_blocksz = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
-static bool opt_flag_verbose = false;
-static bool opt_flag_warn = false;
 
 // Initializing global vars from 'tsclib.h'
 str_t *tsc_prog_name = NULL;
@@ -49,9 +59,8 @@ str_t *tsc_out_fname = NULL;
 FILE *tsc_in_fp = NULL;
 FILE *tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
+tsc_loglvl_t tsc_loglvl = TSC_LOG_DEFAULT;
 bool tsc_stats = false;
-bool tsc_verbose = false;
-bool tsc_warn = false;
 unsigned int tsc_blocksz = 0;
 
 static void print_version(void)
@@ -73,9 +82,9 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o output] [-fsv] <file.sam>\n");
-    printf("  Decompress: tsc -d [-o output] [-fsv] <file.tsc>\n");
-    printf("  Info      : tsc -i [-v] <file.tsc>\n");
+    printf("  Compress  : tsc [-o output] [-l loglevel] [-bfs] <file.sam>\n");
+    printf("  Decompress: tsc -d [-o output]  [-l loglevel] [-fs] <file.tsc>\n");
+    printf("  Info      : tsc -i  [-l loglevel] <file.tsc>\n");
     printf("\n");
     printf("Options:\n");
     printf("  -b  --blocksz     Specify block size\n");
@@ -83,11 +92,10 @@ static void print_help(void)
     printf("  -f, --force       Force overwriting of output file(s)\n");
     printf("  -h, --help        Print this help\n");
     printf("  -i, --info        Print information about tsc file\n");
+    printf("  -l, --log         Log level (0-3, default: 0)\n");
     printf("  -o, --output      Specify output file\n");
     printf("  -s, --stats       Print (de-)compression statistics\n");
-    printf("  -v, --verbose     Verbose output\n");
-    printf("  -V, --version     Display program version\n");
-    printf("  -w, --warn        Print warnings\n");
+    printf("  -v, --version     Display program version\n");
     printf("\n");
 }
 
@@ -101,15 +109,14 @@ static void parse_options(int argc, char *argv[])
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
         { "info",       no_argument,       NULL, 'i'},
+        { "loglevel",   required_argument, NULL, 'l'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
-        { "verbose",    no_argument,       NULL, 'v'},
-        { "version",    no_argument,       NULL, 'V'},
-        { "warn",       no_argument,       NULL, 'w'},
+        { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhio:svVw";
+    const char *short_options = "b:dfhil:o:sv";
 
     do {
         int opt_idx = 0;
@@ -121,6 +128,8 @@ static void parse_options(int argc, char *argv[])
             opt_blocksz = optarg;
             break;
         case 'd':
+            if (tsc_mode == TSC_MODE_INFO)
+                tsc_error("Cannot decompress and get info at once\n");
             tsc_mode = TSC_MODE_DECOMPRESS;
             break;
         case 'f':
@@ -131,7 +140,16 @@ static void parse_options(int argc, char *argv[])
             exit(EXIT_SUCCESS);
             break;
         case 'i':
+            if (tsc_mode == TSC_MODE_DECOMPRESS)
+                tsc_error("Cannot decompress and get info at once\n");
             tsc_mode = TSC_MODE_INFO;
+            break;
+        case 'l':
+            if (atoi(optarg) >= 0 && atoi(optarg) <= 3) {
+                tsc_loglvl = atoi(optarg);
+            } else {
+                tsc_error("Log level must be 0-3\n");
+            }
             break;
         case 'o':
             opt_output = optarg;
@@ -140,14 +158,9 @@ static void parse_options(int argc, char *argv[])
             opt_flag_stats = true;
             break;
         case 'v':
-            opt_flag_verbose = true;
-            break;
-        case 'V':
             print_version();
+            print_copyright();
             exit(EXIT_SUCCESS);
-            break;
-        case 'w':
-            opt_flag_warn = true;
             break;
         default:
             exit(EXIT_FAILURE);
@@ -173,8 +186,8 @@ static const char *fext(const char* path)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); // Ignore the signal
-    tsc_log("Catched signal: %d\n", sig);
-    tsc_log("Cleaning up ...\n");
+    tsc_log(TSC_LOG_DEFAULT, "Catched signal: %d\n", sig);
+    tsc_log(TSC_LOG_DEFAULT, "Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); // Invoke default signal action
     raise(sig);
@@ -211,8 +224,6 @@ int main(int argc, char *argv[])
     parse_options(argc, argv);
     str_copy_cstr(tsc_in_fname, opt_input);
     if (opt_flag_stats) tsc_stats = true;
-    if (opt_flag_verbose) tsc_verbose = true;
-    if (opt_flag_warn) tsc_warn = true;
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // All possible options are legal in this mode
@@ -261,11 +272,11 @@ int main(int argc, char *argv[])
         // Invoke compressor
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
-        tsc_log("Compressing: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Compressing: %s\n", tsc_in_fname->s);
         samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
         samenc_encode(samenc);
         samenc_free(samenc);
-        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
         tsc_fclose(tsc_in_fp);
         tsc_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
@@ -291,11 +302,11 @@ int main(int argc, char *argv[])
         // Invoke decompressor
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "w");
-        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Decompressing: %s\n", tsc_in_fname->s);
         samdec_t * samdec = samdec_new(tsc_in_fp, tsc_out_fp);
         samdec_decode(samdec);
         samdec_free(samdec);
-        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
         tsc_fclose(tsc_in_fp);
         tsc_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
@@ -305,7 +316,7 @@ int main(int argc, char *argv[])
 
         // Read information from compressed tsc file
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_log("Reading information: %s\n", tsc_in_fname->s);
+        tsc_log(TSC_LOG_DEFAULT, "Reading information: %s\n", tsc_in_fname->s);
         samdec_t *samdec = samdec_new(tsc_in_fp, NULL);
         samdec_info(samdec);
         samdec_free(samdec);

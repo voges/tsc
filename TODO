@@ -1,0 +1,5 @@
+* zlib: block-based -> stream-based
+* rm tsc record ~
+* pthreads for sub-block codecs
+* which block size?
+* fix alpha / which alpha?
