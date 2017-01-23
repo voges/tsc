@@ -33,37 +33,91 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "support/cbufstr.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <zlib.h>
 
-unsigned char * zlib_compress(unsigned char *in,
-                              size_t        in_sz,
-                              size_t        *out_sz)
+static void cbufstr_init(cbufstr_t *cbufstr, const size_t sz)
 {
-    Byte *out;
-    compressBound(in_sz);
-    *out_sz = compressBound(in_sz) + 1;
-    out = (Byte *)calloc((uInt)*out_sz, 1);
-    int err = compress(out, out_sz, (const Bytef *)in, (uLong)in_sz);
-    if (err != Z_OK) {
-        fprintf(stderr, "Error: zlib failed to compress: %d\n", err);
-        exit(EXIT_FAILURE);
-    }
-    return out;
+    cbufstr->sz = sz;
+    cbufstr->nxt = 0;
+    cbufstr->n = 0;
 }
 
-unsigned char * zlib_decompress(unsigned char *in,
-                                size_t        in_sz,
-                                size_t        out_sz)
+cbufstr_t * cbufstr_new(const size_t sz)
 {
-    Bytef *out = (Bytef *)malloc(out_sz);
-    if (!out) abort();
-    int err = uncompress(out, (uLongf *)&out_sz, (const Bytef *)in, (uLong)in_sz);
-    if (err != Z_OK) {
-        fprintf(stderr, "Error: zlib failed to uncompress: %d\n", err);
+    cbufstr_t *cbufstr = (cbufstr_t *)malloc(sizeof(cbufstr_t));
+    if (!cbufstr) abort();
+    cbufstr->buf = (str_t **)malloc(sizeof(str_t*) * sz);
+    if (!cbufstr->buf) abort();
+    size_t i = 0;
+    for (i = 0; i < sz; i++)
+        cbufstr->buf[i] = str_new();
+    cbufstr_init(cbufstr, sz);
+    return cbufstr;
+}
+
+void cbufstr_free(cbufstr_t *cbufstr)
+{
+    if (cbufstr != NULL) {
+        size_t i = 0;
+        for (i = 0; i < cbufstr->sz; i++)
+            str_free(cbufstr->buf[i]);
+        free(cbufstr->buf);
+        free(cbufstr);
+        cbufstr = NULL;
+    } else {
+        fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);
     }
-    return out;
+}
+
+void cbufstr_clear(cbufstr_t *cbufstr)
+{
+    size_t i = 0;
+    for (i = 0; i < cbufstr->sz; i++)
+        str_clear(cbufstr->buf[i]);
+    cbufstr->nxt = 0;
+    cbufstr->n = 0;
+}
+
+void cbufstr_push(cbufstr_t *cbufstr, const char *s)
+{
+    str_copy_cstr(cbufstr->buf[cbufstr->nxt++], s);
+    if (cbufstr->nxt == cbufstr->sz)
+        cbufstr->nxt = 0;
+    if (cbufstr->n < cbufstr->sz)
+        cbufstr->n++;
+}
+
+str_t * cbufstr_top(cbufstr_t *cbufstr)
+{
+    if (cbufstr->n == 0) {
+        fprintf(stderr, "Error: Tried to access empty cbufstr\n");
+        exit(EXIT_FAILURE);
+    }
+
+    size_t nxt = cbufstr->nxt;
+    size_t last = 0;
+
+    if (nxt == 0)
+        last = cbufstr->sz - 1;
+    else
+        last = cbufstr->nxt - 1;
+
+    return cbufstr->buf[last];
+}
+
+str_t * cbufstr_get(const cbufstr_t *cbufstr, size_t pos)
+{
+    if (cbufstr->n == 0) {
+        fprintf(stderr, "Error: Tried to access empty cbufstr\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pos > (cbufstr->n - 1)) {
+        fprintf(stderr, "Error: Not enough elements in cbufstr\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return cbufstr->buf[pos];
 }
 

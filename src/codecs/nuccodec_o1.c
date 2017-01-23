@@ -59,11 +59,14 @@
 //   TRAIL (zlib block)
 //
 
-#include "nuccodec_o1.h"
-#include "osro.h"
-#include "range.h"
-#include "tsclib.h"
-#include "zlib_wrap.h"
+#include "codecs/nuccodec_o1.h"
+#include "codecs/range/range.h"
+#include "codecs/zlib_wrap.h"
+#include "support/crc64.h"
+#include "tsc.h"
+#include "tsclib/fio.h"
+#include "tsclib/log.h"
+#include "tsclib/mem.h"
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>
@@ -141,7 +144,7 @@ static void reset(nuccodec_t *nuccodec)
 
 nuccodec_t * nuccodec_new(void)
 {
-    nuccodec_t *nuccodec = (nuccodec_t *)osro_malloc(sizeof(nuccodec_t));
+    nuccodec_t *nuccodec = (nuccodec_t *)tsc_malloc(sizeof(nuccodec_t));
 
     nuccodec->rname_prev = str_new();
     nuccodec->ctrl = str_new();
@@ -248,7 +251,7 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
     size_t width = nuccodec->ref_pos_max - nuccodec->ref_pos_min + 1;
     size_t height = 6; // Possible symbols are: A, C, G, T, N, ?
     size_t w = 0, h = 0;
-    size_t *freq = (size_t *)osro_malloc(sizeof(size_t) * width * height);
+    size_t *freq = (size_t *)tsc_malloc(sizeof(size_t) * width * height);
     for (h = 0; h < height; h++) {
         for (w = 0; w < width; w++)
             freq[w + h*width] = 0;
@@ -527,11 +530,11 @@ static size_t write_zlib_block(FILE *fp, unsigned char *data, size_t data_sz)
     size_t ret = 0;
     size_t compressed_sz;
     unsigned char *compressed = zlib_compress(data, data_sz, &compressed_sz);
-    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
+    uint64_t compressed_crc = crc64(compressed, compressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)data_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
     free(compressed);
     return ret;
 }
@@ -541,10 +544,10 @@ static size_t write_rangeO1_block(FILE *fp, unsigned char *data, size_t data_sz)
     size_t ret = 0;
     size_t compressed_sz = 0;
     unsigned char *compressed = range_compress_o1(data, (unsigned int)data_sz, (unsigned int *)&compressed_sz);
-    uint64_t compressed_crc = osro_crc64(compressed, compressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_sz);
-    ret += osro_fwrite_uint64(fp, (uint64_t)compressed_crc);
-    ret += osro_fwrite_buf(fp, compressed, compressed_sz);
+    uint64_t compressed_crc = crc64(compressed, compressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
+    ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
     free(compressed);
     return ret;
 }
@@ -555,8 +558,8 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp)
 
     // Write block header
     unsigned char id[8] = "nuc----"; id[7] = '\0';
-    ret += osro_fwrite_buf(fp, id, sizeof(id));
-    ret += osro_fwrite_uint64(fp, (uint64_t)nuccodec->record_cnt);
+    ret += tsc_fwrite_buf(fp, id, sizeof(id));
+    ret += tsc_fwrite_uint64(fp, (uint64_t)nuccodec->record_cnt);
 
     // Compress and write sub-blocks
     size_t ctrl_sz = 0;
@@ -894,7 +897,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
             uint16_t modcnt_curr = (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx+1]);
             modcnt_idx += 2;
 
-            uint16_t *modpos_curr = (uint16_t *)osro_malloc(sizeof(uint16_t) * modcnt_curr);
+            uint16_t *modpos_curr = (uint16_t *)tsc_malloc(sizeof(uint16_t) * modcnt_curr);
             for (i = 0; i < modcnt_curr; i++) {
                 modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) + modpos[modpos_idx+1]);
                 modpos_idx += 2;
@@ -943,16 +946,16 @@ static unsigned char * read_zlib_block(FILE *fp, size_t *sz)
     uint64_t data_compressed_sz = 0;
     uint64_t data_compressed_crc = 0;
     unsigned char *data_compressed;
-    *sz += osro_fread_uint64(fp, &data_sz);
-    *sz += osro_fread_uint64(fp, &data_compressed_sz);
-    *sz += osro_fread_uint64(fp, &data_compressed_crc);
-    data_compressed = (unsigned char *)osro_malloc((size_t)data_compressed_sz);
-    *sz += osro_fread_buf(fp, data_compressed, data_compressed_sz);
-    if (osro_crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
+    *sz += tsc_fread_uint64(fp, &data_sz);
+    *sz += tsc_fread_uint64(fp, &data_compressed_sz);
+    *sz += tsc_fread_uint64(fp, &data_compressed_crc);
+    data_compressed = (unsigned char *)tsc_malloc((size_t)data_compressed_sz);
+    *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
+    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
         tsc_error("CRC64 check failed\n");
     unsigned char *data = zlib_decompress(data_compressed, data_compressed_sz, data_sz);
     free(data_compressed);
-    data = osro_realloc(data, ++data_sz); data[data_sz-1] = '\0';
+    data = tsc_realloc(data, ++data_sz); data[data_sz-1] = '\0';
     return data;
 }
 
@@ -962,15 +965,15 @@ static unsigned char * read_rangeO1_block(FILE *fp, size_t *sz)
     uint64_t data_compressed_sz = 0;
     uint64_t data_compressed_crc = 0;
     unsigned char *data_compressed;
-    *sz += osro_fread_uint64(fp, &data_compressed_sz);
-    *sz += osro_fread_uint64(fp, &data_compressed_crc);
-    data_compressed = (unsigned char *)osro_malloc((size_t)data_compressed_sz);
-    *sz += osro_fread_buf(fp, data_compressed, data_compressed_sz);
-    if (osro_crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
+    *sz += tsc_fread_uint64(fp, &data_compressed_sz);
+    *sz += tsc_fread_uint64(fp, &data_compressed_crc);
+    data_compressed = (unsigned char *)tsc_malloc((size_t)data_compressed_sz);
+    *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
+    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
         tsc_error("CRC64 check failed\n");
     unsigned char *data = range_decompress_o1(data_compressed, (unsigned int)data_compressed_sz, (unsigned int *)&data_sz);
     free(data_compressed);
-    data = osro_realloc(data, ++data_sz); data[data_sz-1] = '\0';
+    data = tsc_realloc(data, ++data_sz); data[data_sz-1] = '\0';
 
     return data;
 }
@@ -987,8 +990,8 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
     // Read block header
     unsigned char id[8];
     uint64_t record_cnt;
-    ret += osro_fread_buf(fp, id, sizeof(id));
-    ret += osro_fread_uint64(fp, &record_cnt);
+    ret += tsc_fread_buf(fp, id, sizeof(id));
+    ret += tsc_fread_uint64(fp, &record_cnt);
 
     // Read compressed sub-blocks
     size_t ctrl_sz = 0;

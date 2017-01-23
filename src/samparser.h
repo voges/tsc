@@ -37,7 +37,7 @@
 #define TSC_SAMPARSER_H
 
 #include "samrec.h"
-#include "common/str.h"
+#include "tsclib/str.h"
 #include <stdbool.h>
 #include <stdio.h>
 

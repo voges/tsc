@@ -36,14 +36,14 @@
 #ifndef TSC_SAMCODEC_H
 #define TSC_SAMCODEC_H
 
-#include "samparser.h"
 #include "codecs/auxcodec.h"
 #include "codecs/idcodec.h"
 //#include "codecs/nuccodec_o0.h"
 #include "codecs/nuccodec_o1.h"
 #include "codecs/paircodec.h"
 #include "codecs/qualcodec.h"
-#include "common/str.h"
+#include "samparser.h"
+#include "tsclib/str.h"
 #include <stdio.h>
 
 typedef struct samcodec_t_ {

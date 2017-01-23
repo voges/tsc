@@ -36,7 +36,7 @@
 #ifndef TSC_PAIRCODEC_H
 #define TSC_PAIRCODEC_H
 
-#include "common/str.h"
+#include "tsclib/str.h"
 #include <stdint.h>
 #include <stdio.h>
 

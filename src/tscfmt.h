@@ -67,7 +67,7 @@
 typedef struct tscfh_t_ {
     unsigned char magic[4];  // "tsc----" + '\0'
     uint8_t       flags;     // flags
-    unsigned char ver[6];    // MajMaj.MinMin (5 bytes) + '\0'
+    unsigned char ver[6];    // Maj.Min.Pat (5 bytes) + '\0'
     uint64_t      rec_n;     // number of records
     uint64_t      blk_n;     // number of blocks
     uint64_t      sblk_n;    // number of sub-blocks per block

@@ -33,8 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ZLIB_WRAP_H
-#define ZLIB_WRAP_H
+#ifndef TSC_ZLIB_WRAP_H
+#define TSC_ZLIB_WRAP_H
 
 unsigned char * zlib_compress(unsigned char *in,
                               size_t        in_sz,
@@ -43,5 +43,5 @@ unsigned char * zlib_decompress(unsigned char *in,
                                 size_t        in_sz,
                                 size_t        out_sz);
 
-#endif // ZLIB_WRAP_H
+#endif // TSC_ZLIB_WRAP_H
 

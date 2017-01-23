@@ -38,9 +38,9 @@
 
 #define TSC_NUCCODEC_O1_WINDOW_SIZE 10
 
-#include "common/cbufint64.h"
-#include "common/cbufstr.h"
-#include "common/str.h"
+#include "support/cbufint64.h"
+#include "support/cbufstr.h"
+#include "tsclib/str.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
