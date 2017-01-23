@@ -31,3 +31,34 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#define _GNU_SOURCE
+
+#include "osro_log.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+void osro_log(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stdout, "%s", msg);
+    free(msg);
+}
+
+void osro_error(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    char *msg;
+    vasprintf(&msg, fmt, args);
+    va_end(args);
+    fprintf(stderr, "Error: %s", msg);
+    free(msg);
+    exit(EXIT_FAILURE);
+}
+

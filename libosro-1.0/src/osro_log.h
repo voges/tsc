@@ -31,3 +31,25 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef OSRO_LOG_H
+#define OSRO_LOG_H
+
+// Safe debug macro
+/*
+#if OSRO_DEBUG
+    #define OSRO_DEBUG(c,...)\
+          do {\
+            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
+                    __FUNCTION__, ##__VA_ARGS__);\
+        } while (false)
+#else
+    #define OSRO_DEBUG(c,...) do { } while (false)
+#endif
+*/
+
+void osro_log(const char *fmt, ...);
+void osro_error(const char *fmt, ...);
+
+#endif // OSRO_LOG_H
+

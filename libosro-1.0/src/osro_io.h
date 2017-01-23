@@ -31,3 +31,33 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+//
+// Wrapper functions to safely read/write different data types from/to files (or
+// streams).
+// The 'osro_fwrite_uintXX' resp. 'osro_fread_uintXX' functions are compatible
+// with each other. They are independent from the endianness of the system this
+// code is built on.
+//
+
+#ifndef OSRO_IO_H
+#define OSRO_IO_H
+
+#include <stdint.h>
+#include <stdio.h>
+
+FILE * osro_fopen(const char *fname, const char *mode);
+void osro_fclose(FILE *fp);
+
+size_t osro_fwrite_byte(FILE *fp, const unsigned char byte);
+size_t osro_fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n);
+size_t osro_fwrite_uint32(FILE *fp, const uint32_t dword);
+size_t osro_fwrite_uint64(FILE *fp, const uint64_t qword);
+
+size_t osro_fread_byte(FILE *fp, unsigned char *byte);
+size_t osro_fread_buf(FILE *fp, unsigned char *buf, const size_t n);
+size_t osro_fread_uint32(FILE *fp, uint32_t *dword);
+size_t osro_fread_uint64(FILE *fp, uint64_t *qword);
+
+#endif // OSRO_IO_H
+

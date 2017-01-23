@@ -31,3 +31,15 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef OSRO_MALLOC_H
+#define OSRO_MALLOC_H
+
+#include <stdlib.h>
+
+void * osro_malloc(const size_t n);
+void * osro_realloc(void *ptr, const size_t n);
+void osro_free(void *ptr);
+
+#endif // OSRO_MALLOC_H
+

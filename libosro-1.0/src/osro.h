@@ -31,3 +31,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef OSRO_OSRO_H
+#define OSRO_OSRO_H
+
+#include "osro_constants.h"
+#include "osro_crc64.h"
+#include "osro_error.h"
+#include "osro_io.h"
+#include "osro_log.h"
+#include "osro_malloc.h"
+
+#endif // OSRO_OSRO_H
+

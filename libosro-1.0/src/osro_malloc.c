@@ -31,3 +31,38 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include "osro_malloc.h"
+#include <stdio.h>
+
+void * osro_malloc(const size_t n)
+{
+    void *p = malloc(n);
+    if (p == NULL) {
+        fprintf(stderr, "Cannot allocate %zu bytes\n", n);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}
+
+void * osro_realloc(void *ptr, const size_t n)
+{
+    void *p = realloc(ptr, n);
+    if (p == NULL) {
+        fprintf(stderr, "Cannot allocate %zu bytes\n", n);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}
+
+void osro_free(void *ptr)
+{
+    if (ptr != NULL) {
+        free(ptr);
+        ptr = NULL;
+    } else {
+        fprintf(stderr, "Tried to free null pointer\n");
+        exit(EXIT_FAILURE);
+    }
+}
+

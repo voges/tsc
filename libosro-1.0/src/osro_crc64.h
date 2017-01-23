@@ -31,3 +31,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef OSRO_CRC64_H
+#define OSRO_CRC64_H
+
+#include <stdint.h>
+#include <stdlib.h>
+
+uint64_t osro_crc64(const unsigned char *buf, size_t buf_sz);
+
+#endif // OSRO_CRC64_H
+
