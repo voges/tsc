@@ -99,7 +99,7 @@ void bbuf_append_bbuf(bbuf_t *bbuf, const bbuf_t *app)
     bbuf->sz += app->sz;
 }
 
-void bbuf_append_byte(bbuf_t *bbuf, const char byte)
+void bbuf_append_byte(bbuf_t *bbuf, const unsigned char byte)
 {
     bbuf_extend(bbuf, 1);
     bbuf->bytes[bbuf->sz++] = byte;
@@ -107,14 +107,14 @@ void bbuf_append_byte(bbuf_t *bbuf, const char byte)
 
 void bbuf_append_uint64(bbuf_t *bbuf, const uint64_t x)
 {
-    bbuf_append_byte(bbuf, (x >> 56) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 48) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 40) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 32) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 24) & 0xFF);
-    bbuf_append_byte(bbuf, (x >> 16) & 0xFF);
-    bbuf_append_byte(bbuf, (x >>  8) & 0xFF);
-    bbuf_append_byte(bbuf, (x      ) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 56) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 48) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 40) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 32) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 24) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >> 16) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x >>  8) & 0xFF);
+    bbuf_append_byte(bbuf, (unsigned char)(x      ) & 0xFF);
 }
 
 void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n)

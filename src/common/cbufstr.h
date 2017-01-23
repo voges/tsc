@@ -32,28 +32,25 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-//
-// Wrapper functions to safely read/write different data types from/to files (or
-// streams).
-// The 'fwrite_uintXX' resp. 'fread_uintXX' functions are compatible with
-// each other. They are independent from the endianness of the system this code
-// will be built on.
-//
+#ifndef CBUFSTR_H
+#define CBUFSTR_H
 
-#ifndef FRW_H
-#define FRW_H
+#include "str.h"
+#include <stdlib.h>
 
-#include <stdint.h>
-#include <stdio.h>
+typedef struct cbufstr_t_ {
+    size_t sz;    // size of circular buffer
+    str_t  **buf; // array holding the strings in the buffer
+    size_t nxt;   // next free position
+    size_t n;     // number of elements currently in buffer
+} cbufstr_t;
 
-size_t fwrite_byte(FILE *fp, const unsigned char byte);
-size_t fwrite_buf(FILE *fp, const unsigned char *buf, const size_t n);
-size_t fwrite_uint32(FILE *fp, const uint32_t dword);
-size_t fwrite_uint64(FILE *fp, const uint64_t qword);
-size_t fread_byte(FILE *fp, unsigned char *byte);
-size_t fread_buf(FILE *fp, unsigned char *buf, const size_t n);
-size_t fread_uint32(FILE *fp, uint32_t *dword);
-size_t fread_uint64(FILE *fp, uint64_t *qword);
+cbufstr_t *cbufstr_new(const size_t sz);
+void cbufstr_free(cbufstr_t *cbufstr);
+void cbufstr_clear(cbufstr_t *cbufstr);
+void cbufstr_push(cbufstr_t *cbufstr, const char *s);
+str_t * cbufstr_top(cbufstr_t *cbufstr);
+str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
 
-#endif // FRW_H
+#endif // CBUFSTR_H
 

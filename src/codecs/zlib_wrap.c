@@ -32,25 +32,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CBUFSTR_H
-#define CBUFSTR_H
-
-#include "../tvclib/str.h"
+#include "zlib.h"
+#include <stdio.h>
 #include <stdlib.h>
 
-typedef struct cbufstr_t_ {
-    size_t sz;    // size of circular buffer
-    str_t  **buf; // array holding the strings in the buffer
-    size_t nxt;   // next free position
-    size_t n;     // number of elements currently in buffer
-} cbufstr_t;
+unsigned char * zlib_compress(unsigned char *in,
+                              size_t        in_sz,
+                              size_t        *out_sz)
+{
+    Byte *out;
+    compressBound(in_sz);
+    *out_sz = compressBound(in_sz) + 1;
+    out = (Byte *)calloc((uInt)*out_sz, 1);
+    int err = compress(out, out_sz, (const Bytef *)in, (uLong)in_sz);
+    if (err != Z_OK) {
+        fprintf(stderr, "Error: zlib failed to compress: %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+    return out;
+}
 
-cbufstr_t *cbufstr_new(const size_t sz);
-void cbufstr_free(cbufstr_t *cbufstr);
-void cbufstr_clear(cbufstr_t *cbufstr);
-void cbufstr_push(cbufstr_t *cbufstr, const char *s);
-str_t * cbufstr_top(cbufstr_t *cbufstr);
-str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
-
-#endif // CBUFSTR_H
+unsigned char * zlib_decompress(unsigned char *in,
+                                size_t        in_sz,
+                                size_t        out_sz)
+{
+    Bytef *out = (Bytef *)malloc(out_sz);
+    if (!out) abort();
+    int err = uncompress(out, (uLongf *)&out_sz, (const Bytef *)in, (uLong)in_sz);
+    if (err != Z_OK) {
+        fprintf(stderr, "Error: zlib failed to uncompress: %d\n", err);
+        exit(EXIT_FAILURE);
+    }
+    return out;
+}
 

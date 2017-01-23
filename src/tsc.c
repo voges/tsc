@@ -32,8 +32,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "tsclib.h"
 #include "samcodec.h"
+#include "osro.h"
+#include "tsclib.h"
 #include "version.h"
 #include <getopt.h>
 #include <signal.h>
@@ -58,7 +59,6 @@ str_t *tsc_out_fname = NULL;
 FILE *tsc_in_fp = NULL;
 FILE *tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
-tsc_loglvl_t tsc_loglvl = TSC_LOG_DEFAULT;
 bool tsc_stats = false;
 unsigned int tsc_blocksz = 0;
 
@@ -81,9 +81,9 @@ static void print_help(void)
     print_copyright();
     printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o FILE] [-l LEVEL] [-b SIZE] [-fs] file.sam\n");
-    printf("  Decompress: tsc -d [-o FILE]  [-l LEVEL] [-fs] file.tsc\n");
-    printf("  Info      : tsc -i  [-l LEVEL] file.tsc\n");
+    printf("  Compress  : tsc [-o FILE] [-b SIZE] [-fs] file.sam\n");
+    printf("  Decompress: tsc -d [-o FILE] [-fs] file.tsc\n");
+    printf("  Info      : tsc -i file.tsc\n");
     printf("\n");
     printf("Options:\n");
     printf("  -b  --blocksz=SIZE Specify block SIZE\n");
@@ -91,7 +91,6 @@ static void print_help(void)
     printf("  -f, --force        Force overwriting of output file(s)\n");
     printf("  -h, --help         Print this help\n");
     printf("  -i, --info         Print information about tsc file\n");
-    printf("  -l, --log=LEVEL    Set log LEVEL (0-3, default: 0)\n");
     printf("  -o, --output=FILE  Specify output FILE\n");
     printf("  -s, --stats        Print (de-)compression statistics\n");
     printf("  -v, --version      Display program version\n");
@@ -108,14 +107,13 @@ static void parse_options(int argc, char *argv[])
         { "force",      no_argument,       NULL, 'f'},
         { "help",       no_argument,       NULL, 'h'},
         { "info",       no_argument,       NULL, 'i'},
-        { "loglevel",   required_argument, NULL, 'l'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
         { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhil:o:sv";
+    const char *short_options = "b:dfhio:sv";
 
     do {
         int opt_idx = 0;
@@ -143,13 +141,6 @@ static void parse_options(int argc, char *argv[])
                 tsc_error("Cannot decompress and get info at once\n");
             tsc_mode = TSC_MODE_INFO;
             break;
-        case 'l':
-            if (atoi(optarg) >= 0 && atoi(optarg) <= 3) {
-                tsc_loglvl = atoi(optarg);
-            } else {
-                tsc_error("Log level must be 0-3\n");
-            }
-            break;
         case 'o':
             opt_output = optarg;
             break;
@@ -175,7 +166,7 @@ static void parse_options(int argc, char *argv[])
         opt_input = argv[optind];
 }
 
-static const char *fext(const char* path)
+static const char * fext(const char *path)
 {
     const char *dot = strrchr(path, '.');
     if (!dot || dot == path) { return ""; }
@@ -185,8 +176,8 @@ static const char *fext(const char* path)
 static void handle_signal(int sig)
 {
     signal(sig, SIG_IGN); // Ignore the signal
-    tsc_log(TSC_LOG_DEFAULT, "Catched signal: %d\n", sig);
-    tsc_log(TSC_LOG_DEFAULT, "Cleaning up ...\n");
+    tsc_log("Catched signal: %d\n", sig);
+    tsc_log("Cleaning up ...\n");
     tsc_cleanup();
     signal(sig, SIG_DFL); // Invoke default signal action
     raise(sig);
@@ -196,7 +187,7 @@ int main(int argc, char *argv[])
 {
     tsc_prog_name = str_new();
     tsc_version = str_new();
-    str_append_cstr(tsc_version, VERSION);
+    str_append_cstr(tsc_version, TSC_VERSION);
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
@@ -269,15 +260,15 @@ int main(int argc, char *argv[])
         }
 
         // Invoke compressor
-        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
-        tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
-        tsc_log(TSC_LOG_DEFAULT, "Compressing: %s\n", tsc_in_fname->s);
-        samenc_t *samenc = samenc_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
-        samenc_encode(samenc);
-        samenc_free(samenc);
-        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
-        tsc_fclose(tsc_in_fp);
-        tsc_fclose(tsc_out_fp);
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "r");
+        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "wb");
+        tsc_log("Compressing: %s\n", tsc_in_fname->s);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
+        samcodec_encode(samcodec);
+        samcodec_free(samcodec);
+        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        osro_fclose(tsc_in_fp);
+        osro_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
@@ -299,27 +290,27 @@ int main(int argc, char *argv[])
         }
 
         // Invoke decompressor
-        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "w");
-        tsc_log(TSC_LOG_DEFAULT, "Decompressing: %s\n", tsc_in_fname->s);
-        samdec_t * samdec = samdec_new(tsc_in_fp, tsc_out_fp);
-        samdec_decode(samdec);
-        samdec_free(samdec);
-        tsc_log(TSC_LOG_DEFAULT, "Finished: %s\n", tsc_out_fname->s);
-        tsc_fclose(tsc_in_fp);
-        tsc_fclose(tsc_out_fp);
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_out_fp = osro_fopen((const char *)tsc_out_fname->s, "w");
+        tsc_log("Decompressing: %s\n", tsc_in_fname->s);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, 0);
+        samcodec_decode(samcodec);
+        samcodec_free(samcodec);
+        tsc_log("Finished: %s\n", tsc_out_fname->s);
+        osro_fclose(tsc_in_fp);
+        osro_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
         // Check I/O
         if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
             tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file
-        tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
-        tsc_log(TSC_LOG_DEFAULT, "Reading information: %s\n", tsc_in_fname->s);
-        samdec_t *samdec = samdec_new(tsc_in_fp, NULL);
-        samdec_info(samdec);
-        samdec_free(samdec);
-        tsc_fclose(tsc_in_fp);
+        tsc_in_fp = osro_fopen((const char *)tsc_in_fname->s, "rb");
+        tsc_log("Reading information: %s\n", tsc_in_fname->s);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, NULL, 0);
+        samcodec_info(samcodec);
+        samcodec_free(samcodec);
+        osro_fclose(tsc_in_fp);
     }
 
     str_free(tsc_prog_name);

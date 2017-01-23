@@ -35,11 +35,11 @@
 #ifndef TSC_VERSION_H
 #define TSC_VERSION_H
 
-#define VERSION_MAJMAJ 0
-#define VERSION_MAJMIN 1
-#define VERSION_MINMAJ 0
-#define VERSION_MINMIN 2
-#define VERSION "01.02" // Must be consistent
+#define TSC_VERSION_MAJMAJ 0
+#define TSC_VERSION_MAJMIN 1
+#define TSC_VERSION_MINMAJ 0
+#define TSC_VERSION_MINMIN 3
+#define TSC_VERSION "01.03"
 
-#endif //TSC_VERSION_H
+#endif // TSC_VERSION_H
 

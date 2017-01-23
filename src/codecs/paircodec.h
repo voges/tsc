@@ -35,41 +35,37 @@
 #ifndef TSC_PAIRCODEC_H
 #define TSC_PAIRCODEC_H
 
-#include "../tvclib/str.h"
+#include "common/str.h"
 #include <stdint.h>
 #include <stdio.h>
 
-// Encoder
+typedef struct paircodec_t_ {
+    size_t        record_cnt; // No. of records processed in the current block
+    str_t         *uncompressed;
+    unsigned char *compressed;
+    size_t        compressed_sz;
+} paircodec_t;
+
+paircodec_t * paircodec_new(void);
+void paircodec_free(paircodec_t *paircodec);
+
+// Encoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct pairenc_t_ {
-    size_t in_sz;   // Accumulated input size
-    size_t rec_cnt; // No. of records processed in the current block
-    str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} pairenc_t;
+void paircodec_add_record(paircodec_t   *paircodec,
+                         const char     *rnext,
+                         const uint32_t pnext,
+                         const int64_t  tlen);
+size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp);
 
-pairenc_t * pairenc_new(void);
-void pairenc_free(pairenc_t *pairenc);
-void pairenc_add_record(pairenc_t      *pairenc,
-                        const char     *rnext,
-                        const uint32_t pnext,
-                        const int64_t  tlen);
-size_t pairenc_write_block(pairenc_t *pairenc, FILE *fp);
-
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct pairdec_t_ {
-    size_t out_sz; // Accumulated output size
-} pairdec_t;
-
-pairdec_t * pairdec_new(void);
-void pairdec_free(pairdec_t *pairdec);
-size_t pairdec_decode_block(pairdec_t *pairdec,
-                            FILE      *fp,
-                            str_t     **rnext,
-                            uint32_t  *pnext,
-                            int64_t   *tlen);
+size_t paircodec_decode_block(paircodec_t *paircodec,
+                              FILE        *fp,
+                              str_t       **rnext,
+                              uint32_t    *pnext,
+                              int64_t     *tlen);
 
 #endif // TSC_PAIRCODEC_H
 

@@ -32,13 +32,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CRC64_H
-#define CRC64_H
+#ifndef COMMON_H
+#define COMMON_H
 
-#include <stdint.h>
 #include <stdlib.h>
 
-uint64_t crc64(const unsigned char *buf, size_t buf_sz);
+long tvdiff(struct timeval tv0, struct timeval tv1);
+size_t ndigits(int64_t x);
 
-#endif // CRC64_H
+#endif // COMMON_H
 

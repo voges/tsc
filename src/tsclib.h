@@ -35,10 +35,9 @@
 #ifndef TSC_TSCLIB_H
 #define TSC_TSCLIB_H
 
-#include "tvclib/str.h"
+#include "common/str.h"
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 // Safe debug macro
 #if DBG
@@ -51,23 +50,11 @@
     #define DEBUG(c,...) do { } while (false)
 #endif
 
-// Decimal prefixes
-#define KB 1000LL
-#define MB (KB*1000LL)
-#define GB (MB*1000LL)
-
 typedef enum {
     TSC_MODE_COMPRESS,
     TSC_MODE_DECOMPRESS,
     TSC_MODE_INFO
 } tsc_mode_t;
-
-typedef enum {
-    TSC_LOG_DEFAULT,
-    TSC_LOG_INFO,
-    TSC_LOG_VERBOSE,
-    TSC_LOG_WARN
-} tsc_loglvl_t;
 
 extern str_t *tsc_prog_name;
 extern str_t *tsc_version;
@@ -76,18 +63,13 @@ extern str_t *tsc_out_fname;
 extern FILE *tsc_in_fp;
 extern FILE *tsc_out_fp;
 extern tsc_mode_t tsc_mode;
-extern tsc_loglvl_t tsc_loglvl;
 extern bool tsc_stats;
 extern unsigned int tsc_blocksz;
 
 void tsc_cleanup(void);
 void tsc_abort(void);
+void tsc_log(const char *fmt, ...);
 void tsc_error(const char *fmt, ...);
-void tsc_log(tsc_loglvl_t loglvl, const char *fmt, ...);
-void * tsc_malloc(const size_t n);
-void * tsc_realloc(void *ptr, const size_t n);
-FILE * tsc_fopen(const char *fname, const char *mode);
-void tsc_fclose(FILE *fp);
 
 #endif // TSC_TSCLIB_H
 

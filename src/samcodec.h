@@ -42,39 +42,26 @@
 #include "codecs/nuccodec_o1.h"
 #include "codecs/paircodec.h"
 #include "codecs/qualcodec.h"
-#include "tvclib/str.h"
+#include "common/str.h"
 #include <stdio.h>
 
-typedef struct samenc_t_ {
+typedef struct samcodec_t_ {
     FILE         *ifp;
     FILE         *ofp;
     unsigned int blk_sz;
     samparser_t  *samparser;
-    auxenc_t     *auxenc;
-    idenc_t      *idenc;
-    nucenc_t     *nucenc;
-    pairenc_t    *pairenc;
-    qualenc_t    *qualenc;
-} samenc_t;
+    auxcodec_t   *auxcodec;
+    idcodec_t    *idcodec;
+    nuccodec_t   *nuccodec;
+    paircodec_t  *paircodec;
+    qualcodec_t  *qualcodec;
+} samcodec_t;
 
-samenc_t * samenc_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
-void samenc_free(samenc_t *samenc);
-void samenc_encode(samenc_t *samenc);
-
-typedef struct samdec_t_ {
-    FILE      *ifp;
-    FILE      *ofp;
-    auxdec_t  *auxdec;
-    iddec_t   *iddec;
-    nucdec_t  *nucdec;
-    pairdec_t *pairdec;
-    qualdec_t *qualdec;
-} samdec_t;
-
-samdec_t * samdec_new(FILE *ifp, FILE *ofp);
-void samdec_free(samdec_t *samdec);
-void samdec_decode(samdec_t *samdec);
-void samdec_info(samdec_t *samdec);
+samcodec_t * samcodec_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
+void samcodec_free(samcodec_t *samcodec);
+void samcodec_encode(samcodec_t *samcodec);
+void samcodec_decode(samcodec_t *samcodec);
+void samcodec_info(samcodec_t *samcodec);
 
 #endif // TSC_SAMCODEC_H
 

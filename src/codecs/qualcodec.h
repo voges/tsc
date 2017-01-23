@@ -36,33 +36,29 @@
 #define TSC_QUALCODEC_H
 
 
-#include "../tvclib/str.h"
+#include "common/str.h"
 #include <stdio.h>
 
-// Encoder
+typedef struct qualcodec_t_ {
+    size_t        record_cnt; // No. of records processed in the current block
+    str_t         *uncompressed;
+    unsigned char *compressed;
+    size_t        compressed_sz;
+} qualcodec_t;
+
+qualcodec_t * qualcodec_new(void);
+void qualcodec_free(qualcodec_t *qualcodec);
+
+// Encoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct qualenc_t_ {
-    size_t in_sz;   // Accumulated input size
-    size_t rec_cnt; // No. of records processed in the current block
-    str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} qualenc_t;
+void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual);
+size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp);
 
-qualenc_t * qualenc_new(void);
-void qualenc_free(qualenc_t *qualenc);
-void qualenc_add_record(qualenc_t *qualenc, const char *qual);
-size_t qualenc_write_block(qualenc_t *qualenc, FILE *fp);
-
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct qualdec_t_ {
-    size_t out_sz; // Accumulated output size
-} qualdec_t;
-
-qualdec_t * qualdec_new(void);
-void qualdec_free(qualdec_t *qualdec);
-size_t qualdec_decode_block(qualdec_t *qualdec, FILE *fp, str_t **qual);
+size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual);
 
 #endif // TSC_QUALCODEC_H
 

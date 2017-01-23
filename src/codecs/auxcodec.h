@@ -35,41 +35,37 @@
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
 
-#include "../tvclib/str.h"
+#include "common/str.h"
 #include <stdint.h>
 #include <stdio.h>
 
-// Encoder
+typedef struct auxcodec_t_ {
+    size_t        record_cnt; // No. of records processed in the current block
+    str_t         *uncompressed;
+    unsigned char *compressed;
+    size_t        compressed_sz;
+} auxcodec_t;
+
+auxcodec_t * auxcodec_new(void);
+void auxcodec_free(auxcodec_t *auxcodec);
+
+// Encoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct auxenc_t_ {
-    size_t in_sz;   // Accumulated input size
-    size_t rec_cnt; // No. of records processed in the current block
-    str_t  *tmp;    // Temporal storage for e.g. prediction residues
-} auxenc_t;
+void auxcodec_add_record(auxcodec_t     *auxcodec,
+                         const uint16_t flag,
+                         const uint8_t  mapq,
+                         const char     *opt);
+size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp);
 
-auxenc_t * auxenc_new(void);
-void auxenc_free(auxenc_t *auxenc);
-void auxenc_add_record(auxenc_t       *auxenc,
-                       const uint16_t flag,
-                       const uint8_t  mapq,
-                       const char     *opt);
-size_t auxenc_write_block(auxenc_t *auxenc, FILE *fp);
-
-// Decoder
+// Decoder methods
 // -----------------------------------------------------------------------------
 
-typedef struct auxdec_t_ {
-    size_t out_sz; // Accumulated output size
-} auxdec_t;
-
-auxdec_t * auxdec_new(void);
-void auxdec_free(auxdec_t *auxdec);
-size_t auxdec_decode_block(auxdec_t *auxdec,
-                           FILE     *fp,
-                           uint16_t *flag,
-                           uint8_t  *mapq,
-                           str_t    **opt);
+size_t auxcodec_decode_block(auxcodec_t *auxcodec,
+                             FILE       *fp,
+                             uint16_t   *flag,
+                             uint8_t    *mapq,
+                             str_t      **opt);
 
 #endif // TSC_AUXCODEC_H
 
