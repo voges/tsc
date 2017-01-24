@@ -2,8 +2,6 @@
 *.o
 *.a
 *.so
-~$i* # temporary MS office files
-.directory # created by Dolphin file manager
-
+.directory
 build
 *.kdev4
