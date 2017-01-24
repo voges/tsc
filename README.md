@@ -8,7 +8,7 @@ Compression of high-throughput sequencing data using separated alignment descrip
 
 We provide a CMakeLists.txt to build the program with CMake (https://cmake.org/).
 
-Clone the CALQ repository with either
+Clone the TSC repository with either
 
     git clone https://github.com/voges/tsc.git
 
