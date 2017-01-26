@@ -2,7 +2,7 @@
 
 ## What is this repository for? ##
 
-Compression of high-throughput sequencing data using separated alignment descriptors (TSC)
+Descriptors for the compression of high-throughput sequencing data (TSC)
 
 ## Build instructions
 
