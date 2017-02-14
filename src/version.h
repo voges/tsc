@@ -1,10 +1,10 @@
 #ifndef TSC_VERSION_H
 #define TSC_VERSION_H
 
-#define TSC_VERSION_MAJOR 1
-#define TSC_VERSION_MINOR 5
+#define TSC_VERSION_MAJOR 2
+#define TSC_VERSION_MINOR 0
 #define TSC_VERSION_PATCH 0
-#define TSC_VERSION "1.5.0"
+#define TSC_VERSION "2.0.0"
 
 #include "timestamp.h"
 #include "gitrevision.h"
