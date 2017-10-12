@@ -490,6 +490,14 @@ cleanup: ;
     return;
 }
 
+static size_t write_byte_block(FILE *fp, unsigned char *data, size_t data_sz)
+{
+    size_t ret = 0;
+    ret += tsc_fwrite_uint64(fp, (uint64_t)data_sz);
+    ret += tsc_fwrite_buf(fp, data, data_sz);
+    return ret;
+}
+
 static size_t write_zlib_block(FILE *fp, unsigned char *data, size_t data_sz)
 {
     size_t ret = 0;
@@ -515,6 +523,38 @@ static size_t write_rangeO1_block(FILE *fp, unsigned char *data, size_t data_sz)
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
     free(compressed);
     return ret;
+}
+
+void nuccodec_write_single_stream_block(nuccodec_t *nuccodec,
+                                        FILE       *ctrl_fp,
+                                        FILE       *rname_fp,
+                                        FILE       *pos_fp,
+                                        FILE       *seq_fp,
+                                        FILE       *seqlen_fp,
+                                        FILE       *exs_fp,
+                                        FILE       *posoff_fp,
+                                        FILE       *stogy_fp,
+                                        FILE       *inserts_fp,
+                                        FILE       *modcnt_fp,
+                                        FILE       *modpos_fp,
+                                        FILE       *modbases_fp,
+                                        FILE       *trail_fp)
+{
+    write_byte_block(ctrl_fp, (unsigned char *)nuccodec->ctrl->s, nuccodec->ctrl->len);
+    write_byte_block(rname_fp, (unsigned char *)nuccodec->rname->s, nuccodec->rname->len);
+    write_byte_block(pos_fp, (unsigned char *)nuccodec->pos->s, nuccodec->pos->len);
+    write_byte_block(seq_fp, (unsigned char *)nuccodec->seq->s, nuccodec->seq->len);
+    write_byte_block(seqlen_fp, (unsigned char *)nuccodec->seqlen->s, nuccodec->seqlen->len);
+    write_byte_block(exs_fp, (unsigned char *)nuccodec->exs->s, nuccodec->exs->len);
+    write_byte_block(posoff_fp, (unsigned char *)nuccodec->posoff->s, nuccodec->posoff->len);
+    write_byte_block(stogy_fp, (unsigned char *)nuccodec->stogy->s, nuccodec->stogy->len);
+    write_byte_block(inserts_fp, (unsigned char *)nuccodec->inserts->s, nuccodec->inserts->len);
+    write_byte_block(modcnt_fp, (unsigned char *)nuccodec->modcnt->s, nuccodec->modcnt->len);
+    write_byte_block(modpos_fp, (unsigned char *)nuccodec->modpos->s, nuccodec->modpos->len);
+    write_byte_block(modbases_fp, (unsigned char *)nuccodec->modbases->s, nuccodec->modbases->len);
+    write_byte_block(trail_fp, (unsigned char *)nuccodec->trail->s, nuccodec->trail->len);
+
+    reset(nuccodec);
 }
 
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp)
@@ -567,7 +607,8 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp)
     nuccodec->modbases_sz += modbases_sz;
     nuccodec->trail_sz += trail_sz;
 
-    reset(nuccodec);
+    // Moved to nuccodec_write_single_stream_block(), which is called after this function.
+    //reset(nuccodec);
 
     return ret;
 }
