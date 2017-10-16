@@ -428,7 +428,11 @@ add_mrecord: ;
 
     str_append_cstr(nuccodec->ctrl, "m");
     str_append_cstr(nuccodec->rname, rname); str_append_cstr(nuccodec->rname, ":");
-    str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
+    //str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
+    str_append_char(nuccodec->pos, (char)((pos >> 24) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >> 16) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >>  8) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >>  0) & 0xFF));
     str_append_cstr(nuccodec->stogy, cigar); str_append_cstr(nuccodec->stogy, ":");
     str_append_char(nuccodec->seqlen, (char)((strlen(seq) >> 8) & 0xFF));
     str_append_char(nuccodec->seqlen, (char)((strlen(seq) >> 0) & 0xFF));
@@ -441,7 +445,11 @@ add_irecord: ; // This is the first read in a block
 
     str_append_cstr(nuccodec->ctrl, "i");
     str_append_cstr(nuccodec->rname, rname); str_append_cstr(nuccodec->rname, ":");
-    str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
+    //str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
+    str_append_char(nuccodec->pos, (char)((pos >> 24) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >> 16) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >>  8) & 0xFF));
+    str_append_char(nuccodec->pos, (char)((pos >>  0) & 0xFF));
     str_append_str(nuccodec->exs, exs);
     str_append_str(nuccodec->stogy, stogy); str_append_cstr(nuccodec->stogy, ":");
     str_append_str(nuccodec->inserts, inserts);
