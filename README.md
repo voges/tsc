@@ -8,13 +8,9 @@ Descriptors for the compression of aligned high-throughput sequencing data (TSC)
 
 We provide a CMakeLists.txt to build the program with CMake (https://cmake.org/).
 
-Clone the TSC repository with either
+Clone the TSC repository with
 
     git clone https://github.com/voges/tsc.git
-
-or
-
-    git clone https://bitbucket.org/voges/tsc.git
 
 Build the executable with e.g. the following commands.
 
