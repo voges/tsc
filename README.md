@@ -26,7 +26,7 @@ Build the executable from the command line with the following commands; alternat
     cmake ..
     make
 
-This generates a QScomp executable named ``tsc`` in the ``build`` folder.
+This generates an executable named ``tsc`` in the ``build`` folder.
 
 ## Who do I talk to?
 
