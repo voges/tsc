@@ -32,7 +32,8 @@ if [ ! -f $cpplint_py ]; then
 fi
 
 files=()
-files+=("$source_dir/qscomp.cc")
+files+=("$source_dir/tsc.cc")
+# to be continued
 
 for file in "${files[@]}"; do
     printf "$script_name: running cpplint on: $file\n"

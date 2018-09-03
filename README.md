@@ -4,8 +4,6 @@
 
 ---
 
-This is the official repository for the development of the TSC software.
-
 TSC was tested on the following systems:
 
 | Operating system                                          | Compiler(s)                                                              |
@@ -20,7 +18,7 @@ Clone the TSC repository with
 
 Build the executable from the command line with the following commands; alternatively use the CMake GUI.
 
-    cd qscomp
+    cd tsc
     mkdir build
     cd build
     cmake ..
