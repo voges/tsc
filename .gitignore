@@ -1,7 +1,8 @@
-*~
-*.o
-*.a
-*.so
+# Linux Dolphin directory attributes files
 .directory
-build
-*.kdev4
+
+# macOS Finder directory attributes files
+.DS_Store
+
+# CMake build directory
+build/
