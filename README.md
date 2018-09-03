@@ -1,23 +1,32 @@
-# README #
+# TSC
 
-## What is this repository for? ##
+**T**NT **S**equence **C**ompressor
 
-Descriptors for the compression of aligned high-throughput sequencing data (TSC)
+---
 
-## Build instructions
+This is the official repository for the development of the TSC software.
 
-We provide a CMakeLists.txt to build the program with CMake (https://cmake.org/).
+TSC was tested on the following systems:
+
+| Operating system                                          | Compiler(s)                                                              |
+| --------------------------------------------------------- | ------------------------------------------------------------------------ |
+| openSUSE Leap 15.0                                        | gcc version 7.3.1 20180323 \[gcc-7-branch revision 258812\] (SUSE Linux) |
+
+## Quick start on Linux
 
 Clone the TSC repository with
 
     git clone https://github.com/voges/tsc.git
 
-Build the executable with e.g. the following commands.
+Build the executable from the command line with the following commands; alternatively use the CMake GUI.
 
-    cd calq
+    cd qscomp
     mkdir build
     cd build
     cmake ..
+    make
+
+This generates a QScomp executable named ``tsc`` in the ``build`` folder.
 
 ## Who do I talk to?
 
