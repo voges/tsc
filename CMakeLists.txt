@@ -6,14 +6,14 @@ project(${PROJ_NAME})
 set(PROJ_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 set(PROJ_BINARY_DIR ${CMAKE_BINARY_DIR})
 set(PROJ_INCLUDES ${PROJ_SOURCE_DIR}/src)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/src/codecs)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/src/codecs/range)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/src/support)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/src/tsclib)
+set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/codecs)
+set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/codecs/range)
+set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/support)
+set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/tsclib)
 
 # get all source and header files
-file(GLOB_RECURSE PROJ_SOURCES src/*.c)
-file(GLOB_RECURSE PROJ_HEADERS src/*.h)
+file(GLOB_RECURSE PROJ_SOURCES source/*.c)
+file(GLOB_RECURSE PROJ_HEADERS source/*.h)
 
 # compiler flags
 set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wall)
@@ -88,4 +88,3 @@ add_executable(${PROJ_NAME} ${PROJ_SOURCES})
 add_dependencies(${PROJ_NAME} timestamp)
 add_dependencies(${PROJ_NAME} gitrevision)
 target_link_libraries(${PROJ_NAME} z)
-
