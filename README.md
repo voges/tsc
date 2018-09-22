@@ -1,6 +1,6 @@
 # TSC
 
-**T**NT **S**equence **C**ompressor
+TNT Sequence Compressor
 
 ---
 
