@@ -948,7 +948,7 @@ static void nuccodec_decode_records(nuccodec_t    *nuccodec,
         } else {
             tsc_error("Invalid ctrl string\n");
         }
-        //DEBUG("%s %d %s %s\n", _rname_->s, *_pos_, _cigar_->s, _seq_->s);
+        // printf("%s %d %s %s\n", _rname_->s, *_pos_, _cigar_->s, _seq_->s);
         ctrl++;
         record_idx++;
     }

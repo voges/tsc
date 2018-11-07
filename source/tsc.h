@@ -9,17 +9,6 @@
 #define MB (KB*1000LL)
 #define GB (MB*1000LL)
 
-// Safe debug macro
-#if DBG
-    #define DEBUG(c,...)\
-        do {\
-            fprintf(stderr, "%s:%d: %s: "c, __FILE__, __LINE__, \
-                    __FUNCTION__, ##__VA_ARGS__);\
-        } while (false)
-#else
-    #define DEBUG(c,...) do { } while (false)
-#endif
-
 typedef enum {
     TSC_MODE_COMPRESS,
     TSC_MODE_DECOMPRESS,

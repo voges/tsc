@@ -67,7 +67,7 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
     if (!(tscfh->sblk_n))
         tsc_error("File does not contain sub-blocks\n");
 
-    DEBUG("Read tsc file header\n");
+    // printf("Read tsc file header\n");
 
     return ret;
 }
@@ -79,12 +79,12 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
     ret += tsc_fwrite_buf(fp, tscfh->magic, sizeof(tscfh->magic));
     ret += tsc_fwrite_byte(fp, tscfh->flags);
     // ret += tsc_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
-    // DEBUG("%zu %s\n", sizeof(tscfh->ver), tscfh->ver);
+    // printf("%zu %s\n", sizeof(tscfh->ver), tscfh->ver);
     ret += tsc_fwrite_uint64(fp, tscfh->rec_n);
     ret += tsc_fwrite_uint64(fp, tscfh->blk_n);
     ret += tsc_fwrite_uint64(fp, tscfh->sblk_n);
 
-    DEBUG("Wrote tsc file header\n");
+    // printf("Wrote tsc file header\n");
 
     return ret;
 }
@@ -135,7 +135,7 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp)
     tscsh->data = (unsigned char *)tsc_malloc((size_t)tscsh->data_sz);
     ret += tsc_fread_buf(fp, tscsh->data, tscsh->data_sz);
 
-    DEBUG("Read SAM header\n");
+    // printf("Read SAM header\n");
 
     return ret;
 }
@@ -152,7 +152,7 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
     ret += tsc_fwrite_uint64(fp, tscsh->data_sz);
     ret += tsc_fwrite_buf(fp, tscsh->data, tscsh->data_sz);
 
-    DEBUG("Wrote SAM header\n");
+    // printf("Wrote SAM header\n");
 
     return ret;
 }
@@ -206,7 +206,7 @@ size_t tscbh_read(tscbh_t *tscbh, FILE *fp)
     ret += tsc_fread_uint64(fp, &(tscbh->pos_min));
     ret += tsc_fread_uint64(fp, &(tscbh->pos_max));
 
-    DEBUG("Read block header %"PRIu64"\n", tscbh->blk_cnt);
+    // printf("Read block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }
@@ -224,7 +224,7 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
     ret += tsc_fwrite_uint64(fp, tscbh->pos_min);
     ret += tsc_fwrite_uint64(fp, tscbh->pos_max);
 
-    DEBUG("Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
+    // printf("Wrote block header %"PRIu64"\n", tscbh->blk_cnt);
 
     return ret;
 }
