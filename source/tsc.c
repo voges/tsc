@@ -168,14 +168,20 @@ int main(int argc, char *argv[])
     // If invoked as 'de...' switch to decompressor mode
     if (!strncmp(tsc_prog_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
 
-    // Invoke custom signal handler
-    signal(SIGHUP,  handle_signal);
-    signal(SIGQUIT, handle_signal);
+    // Install signal handler for the following signal types:
+    //   SIGTERM  termination request, sent to the program
+    //   SIGSEGV  invalid memory access (segmentation fault)
+    //   SIGINT   external interrupt, usually initiated by the user
+    //   SIGILL   invalid program image, such as invalid instruction
+    //   SIGABRT  abnormal termination condition, as is e.g. initiated by
+    //            std::abort()
+    //   SIGFPE   erroneous arithmetic operation such as divide by zero
     signal(SIGABRT, handle_signal);
-    signal(SIGPIPE, handle_signal);
+    signal(SIGFPE, handle_signal);
+    signal(SIGILL, handle_signal);
+    signal(SIGINT, handle_signal);
+    signal(SIGSEGV, handle_signal);
     signal(SIGTERM, handle_signal);
-    signal(SIGXCPU, handle_signal);
-    signal(SIGXFSZ, handle_signal);
 
     // Parse command line options and check them for sanity
     parse_options(argc, argv);
