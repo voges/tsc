@@ -14,7 +14,6 @@ Clone the TSC repository with
 
 Build the executable from the command line with the following commands; alternatively use the CMake GUI.
 
-    cd tsc
     mkdir build
     cd build
     cmake ..
