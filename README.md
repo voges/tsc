@@ -2,13 +2,9 @@
 
 TNT Sequence Compressor
 
+[![Build Status](https://travis-ci.com/voges/tsc.svg?branch=master)](https://travis-ci.com/voges/tsc)
+
 ---
-
-TSC was tested on the following systems:
-
-| Operating system                                          | Compiler(s)                                                              |
-| --------------------------------------------------------- | ------------------------------------------------------------------------ |
-| openSUSE Leap 15.0                                        | gcc version 7.3.1 20180323 \[gcc-7-branch revision 258812\] (SUSE Linux) |
 
 ## Quick start on Linux
 
