@@ -1,4 +1,4 @@
-#include "tsclib/mem.h"
+#include "mem.h"
 #include <stdio.h>
 
 void * tsc_malloc(const size_t size)
@@ -31,4 +31,3 @@ void tsc_free(void *ptr)
         exit(EXIT_FAILURE);
     }
 }
-

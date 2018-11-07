@@ -1,4 +1,4 @@
-#include "support/bbuf.h"
+#include "bbuf.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -89,4 +89,3 @@ void bbuf_append_buf(bbuf_t *bbuf, const unsigned char *buf, const size_t n)
     memcpy(bbuf->bytes + bbuf->sz, buf, n);
     bbuf->sz += n;
 }
-

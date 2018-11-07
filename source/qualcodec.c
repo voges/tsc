@@ -8,12 +8,12 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "codecs/qualcodec.h"
-#include "codecs/zlib_wrap.h"
-#include "support/crc64.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
+#include "qualcodec.h"
+#include "zlib_wrap.h"
+#include "crc64.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <string.h>
 
 static void qualcodec_init(qualcodec_t *qualcodec)
@@ -151,4 +151,3 @@ size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual)
 
     return ret;
 }
-

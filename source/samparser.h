@@ -2,7 +2,7 @@
 #define TSC_SAMPARSER_H
 
 #include "samrec.h"
-#include "tsclib/str.h"
+#include "str.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -18,4 +18,3 @@ void samparser_head(samparser_t *samparser);
 bool samparser_next(samparser_t *samparser);
 
 #endif // TSC_SAMPARSER_H
-

@@ -1,7 +1,7 @@
 #ifndef TSC_IDCODEC_H
 #define TSC_IDCODEC_H
 
-#include "tsclib/str.h"
+#include "str.h"
 #include <stdio.h>
 
 typedef struct idcodec_t_ {
@@ -26,4 +26,3 @@ size_t idcodec_write_block(idcodec_t *idcodec, FILE *fp);
 size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname);
 
 #endif // TSC_IDCODEC_H
-

@@ -1,4 +1,4 @@
-#include "support/common.h"
+#include "common.h"
 #include <stdio.h>
 
 bool yesno(void)
@@ -42,4 +42,3 @@ size_t ndigits(int64_t x)
     if (x < 1000000000000000000) return n+18;
     return n+19; /* INT64_MAX: 2^63 - 1 = 9223372036854775807 */
 }
-

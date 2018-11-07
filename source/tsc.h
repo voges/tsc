@@ -1,7 +1,7 @@
 #ifndef TSC_TSC_H
 #define TSC_TSC_H
 
-#include "tsclib/str.h"
+#include "str.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -37,4 +37,3 @@ extern bool tsc_stats;
 extern unsigned int tsc_blocksz;
 
 #endif // TSC_TSC_H
-

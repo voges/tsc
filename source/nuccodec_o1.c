@@ -24,14 +24,14 @@
 //   TRAIL (zlib block)
 //
 
-#include "codecs/nuccodec_o1.h"
-#include "codecs/range/range.h"
-#include "codecs/zlib_wrap.h"
-#include "support/crc64.h"
+#include "nuccodec_o1.h"
+#include "range.h"
+#include "zlib_wrap.h"
+#include "crc64.h"
 #include "tsc.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <ctype.h>
 #include <float.h>
 #include <inttypes.h>
@@ -1087,4 +1087,3 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
 
     return ret;
 }
-

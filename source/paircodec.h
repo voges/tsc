@@ -1,7 +1,7 @@
 #ifndef TSC_PAIRCODEC_H
 #define TSC_PAIRCODEC_H
 
-#include "tsclib/str.h"
+#include "str.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -34,4 +34,3 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
                               int64_t     *tlen);
 
 #endif // TSC_PAIRCODEC_H
-

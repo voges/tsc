@@ -1,4 +1,4 @@
-#include "tsclib/fio.h"
+#include "fio.h"
 #include <stdlib.h>
 
 FILE * tsc_fopen(const char *fname, const char *mode)
@@ -116,4 +116,3 @@ size_t tsc_fread_uint64(FILE *fp, uint64_t *qword)
     free(bytes);
     return ret;
 }
-

@@ -1,11 +1,10 @@
 #include "samcodec.h"
-#include "support/common.h"
+#include "common.h"
 #include "tsc.h"
 #include "tscfmt.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
-#include "version.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <inttypes.h>
 #include <string.h>
 #include <sys/time.h>
@@ -750,4 +749,3 @@ void samcodec_info(samcodec_t *samcodec)
     tscsh_free(tscsh);
     tscbh_free(tscbh);
 }
-

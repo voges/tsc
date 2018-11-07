@@ -1,9 +1,8 @@
 #include "tscfmt.h"
 #include "tsc.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
-#include "version.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -15,12 +14,12 @@ static void tscfh_init(tscfh_t *tscfh)
     tscfh->magic[2]  = 'c';
     tscfh->magic[3]  = '\0';
     tscfh->flags     = 0x0;
-    tscfh->ver[0]    = TSC_VERSION_MAJOR + 48; // ASCII offset
-    tscfh->ver[1]    = '.';
-    tscfh->ver[2]    = TSC_VERSION_MINOR + 48;
-    tscfh->ver[3]    = '.';
-    tscfh->ver[4]    = TSC_VERSION_PATCH + 48;
-    tscfh->ver[5]    = '\0';
+    // tscfh->ver[0]    = TSC_VERSION_MAJOR + 48; // ASCII offset
+    // tscfh->ver[1]    = '.';
+    // tscfh->ver[2]    = TSC_VERSION_MINOR + 48;
+    // tscfh->ver[3]    = '.';
+    // tscfh->ver[4]    = TSC_VERSION_PATCH + 48;
+    // tscfh->ver[5]    = '\0';
     tscfh->rec_n     = 0;
     tscfh->blk_n     = 0;
     tscfh->sblk_n    = 0;
@@ -49,7 +48,7 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
 
     ret += tsc_fread_buf(fp, tscfh->magic, sizeof(tscfh->magic));
     ret += tsc_fread_byte(fp, &(tscfh->flags));
-    ret += tsc_fread_buf(fp, tscfh->ver, sizeof(tscfh->ver));
+    // ret += tsc_fread_buf(fp, tscfh->ver, sizeof(tscfh->ver));
     ret += tsc_fread_uint64(fp, &(tscfh->rec_n));
     ret += tsc_fread_uint64(fp, &(tscfh->blk_n));
     ret += tsc_fread_uint64(fp, &(tscfh->sblk_n));
@@ -59,8 +58,8 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
         tsc_error("File magic does not match\n");
     if (!(tscfh->flags & 0x1))
         tsc_error("File seems not to contain data in SAM format\n");
-    if (strncmp(tsc_version->s, (const char *)tscfh->ver, tsc_version->len))
-        tsc_error("File was compressed with another version\n");
+    // if (strncmp(tsc_version->s, (const char *)tscfh->ver, tsc_version->len))
+    //     tsc_error("File was compressed with another version\n");
     if (!(tscfh->rec_n))
         tsc_error("File does not contain any records\n");
     if (!(tscfh->blk_n))
@@ -79,8 +78,8 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp)
 
     ret += tsc_fwrite_buf(fp, tscfh->magic, sizeof(tscfh->magic));
     ret += tsc_fwrite_byte(fp, tscfh->flags);
-    ret += tsc_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
-    DEBUG("%zu %s\n", sizeof(tscfh->ver), tscfh->ver);
+    // ret += tsc_fwrite_buf(fp, tscfh->ver, sizeof(tscfh->ver));
+    // DEBUG("%zu %s\n", sizeof(tscfh->ver), tscfh->ver);
     ret += tsc_fwrite_uint64(fp, tscfh->rec_n);
     ret += tsc_fwrite_uint64(fp, tscfh->blk_n);
     ret += tsc_fwrite_uint64(fp, tscfh->sblk_n);
@@ -94,7 +93,7 @@ size_t tscfh_size(tscfh_t *tscfh)
 {
     return   sizeof(tscfh->magic)
            + sizeof(tscfh->flags)
-           + sizeof(tscfh->ver)
+           // + sizeof(tscfh->ver)
            + sizeof(tscfh->rec_n)
            + sizeof(tscfh->blk_n)
            + sizeof(tscfh->sblk_n);
@@ -241,4 +240,3 @@ size_t tscbh_size(tscbh_t *tscbh)
            + sizeof(tscbh->pos_min)
            + sizeof(tscbh->pos_max);
 }
-

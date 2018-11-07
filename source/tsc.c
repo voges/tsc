@@ -1,9 +1,8 @@
 #include "tsc.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
+#include "fio.h"
+#include "log.h"
 #include "samcodec.h"
-#include "support/common.h"
-#include "version.h"
+#include "common.h"
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -32,7 +31,7 @@ unsigned int tsc_blocksz = 0;
 
 static void print_copyright(void)
 {
-    printf("Copyright (c) 2015-%d\n", TSC_BUILD_YEAR);
+    printf("Copyright (c) 2015-present\n");
     printf("Leibniz Universitaet Hannover, Institut fuer "
            "Informationsverarbeitung (TNT)\n");
     printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
@@ -40,10 +39,10 @@ static void print_copyright(void)
 
 static void print_version(void)
 {
-    printf("%s %d.%d.%d\n", tsc_prog_name->s, TSC_VERSION_MAJOR, TSC_VERSION_MINOR, TSC_VERSION_PATCH);
-    printf("Build time: %s\n", TSC_UTCTIMESTAMP);
-    printf("Git revision: %s\n", TSC_GITREVISION_LONG);
-    printf("\n");
+    // printf("%s %d.%d.%d\n", tsc_prog_name->s, TSC_VERSION_MAJOR, TSC_VERSION_MINOR, TSC_VERSION_PATCH);
+    // printf("Build time: %s\n", TSC_UTCTIMESTAMP);
+    // printf("Git revision: %s\n", TSC_GITREVISION_LONG);
+    // printf("\n");
     print_copyright();
 }
 
@@ -155,7 +154,7 @@ int main(int argc, char *argv[])
 {
     tsc_prog_name = str_new();
     tsc_version = str_new();
-    str_append_cstr(tsc_version, TSC_VERSION);
+    str_append_cstr(tsc_version, "");
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
@@ -292,4 +291,3 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
-

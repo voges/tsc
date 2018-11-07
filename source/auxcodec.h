@@ -1,7 +1,7 @@
 #ifndef TSC_AUXCODEC_H
 #define TSC_AUXCODEC_H
 
-#include "tsclib/str.h"
+#include "str.h"
 #include <stdint.h>
 #include <stdio.h>
 
@@ -34,4 +34,3 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec,
                              str_t      **opt);
 
 #endif // TSC_AUXCODEC_H
-

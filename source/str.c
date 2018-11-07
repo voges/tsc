@@ -1,5 +1,5 @@
-#include "tsclib/str.h"
-#include "tsclib/mem.h"
+#include "str.h"
+#include "mem.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -132,4 +132,3 @@ void str_copy_cstr(str_t *str, const char *cstr)
     str->len = len;
     str->s[str->len] = '\0';
 }
-

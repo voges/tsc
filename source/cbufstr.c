@@ -1,4 +1,4 @@
-#include "support/cbufstr.h"
+#include "cbufstr.h"
 #include <stdio.h>
 
 static void cbufstr_init(cbufstr_t *cbufstr, const size_t sz)
@@ -85,4 +85,3 @@ str_t * cbufstr_get(const cbufstr_t *cbufstr, size_t pos)
 
     return cbufstr->buf[pos];
 }
-

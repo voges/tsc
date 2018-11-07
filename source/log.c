@@ -1,6 +1,6 @@
 #define _GNU_SOURCE
 
-#include "tsclib/log.h"
+#include "log.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

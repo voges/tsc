@@ -8,12 +8,12 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "codecs/idcodec.h"
-#include "codecs/zlib_wrap.h"
-#include "support/crc64.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
+#include "idcodec.h"
+#include "zlib_wrap.h"
+#include "crc64.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <string.h>
 
 static void idcodec_init(idcodec_t *idcodec)
@@ -151,4 +151,3 @@ size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname)
 
     return ret;
 }
-

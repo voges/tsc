@@ -9,4 +9,3 @@ unsigned char * zlib_decompress(unsigned char *in,
                                 size_t        out_sz);
 
 #endif // TSC_ZLIB_WRAP_H
-

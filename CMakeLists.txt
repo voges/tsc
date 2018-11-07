@@ -1,90 +1,77 @@
-cmake_minimum_required(VERSION 2.6)
+#==============================================================================
+# Generic
+#==============================================================================
 
-# set up project-specific variables
-set(PROJ_NAME "tsc")
-project(${PROJ_NAME})
-set(PROJ_SOURCE_DIR ${CMAKE_SOURCE_DIR})
-set(PROJ_BINARY_DIR ${CMAKE_BINARY_DIR})
-set(PROJ_INCLUDES ${PROJ_SOURCE_DIR}/src)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/codecs)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/codecs/range)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/support)
-set(PROJ_INCLUDES ${PROJ_INCLUDES} ${PROJ_SOURCE_DIR}/source/tsclib)
+# We require at least CMake 3.1
+cmake_minimum_required(VERSION 3.1)
+message(STATUS "CMake generator: ${CMAKE_GENERATOR}")
 
-# get all source and header files
-file(GLOB_RECURSE PROJ_SOURCES source/*.c)
-file(GLOB_RECURSE PROJ_HEADERS source/*.h)
+# C and C++ code shall be compliant to C(++)11
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 
-# compiler flags
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wall)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wfloat-equal")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wshadow")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wpointer-arith")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-align")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wwrite-strings")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Waggregate-return")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wcast-qual")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wswitch-default")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wswitch-enum")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wunreachable-code")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wundef")
+# This is tsc
+project("tsc")
 
-# comment to disable debug output
-add_definitions("-DDBG")
 
-# write build time in UTC ISO 8601 to timestamp.h
-message(STATUS "Creating file ${PROJ_BINARY_DIR}/timestamp.h")
-file(WRITE ${PROJ_BINARY_DIR}/timestamp.cmake "STRING(TIMESTAMP UTCTIME UTC)\n")
-file(APPEND ${PROJ_BINARY_DIR}/timestamp.cmake "FILE(WRITE timestamp.h \"#ifndef CMAKE_TIMESTAMP_H\\n\")\n")
-file(APPEND ${PROJ_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#define CMAKE_TIMESTAMP_H\\n\\n\")\n")
-file(APPEND ${PROJ_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#define _CMAKE_UTCTIME_ \\\"\${UTCTIME}\\\"\\n\\n\")\n")
-file(APPEND ${PROJ_BINARY_DIR}/timestamp.cmake "FILE(APPEND timestamp.h \"#endif // CMAKE_TIMESTAMP_H\\n\\n\")\n")
-add_custom_target (
-    timestamp
-    COMMAND ${CMAKE_COMMAND} -P ${PROJ_BINARY_DIR}/timestamp.cmake
-    ADD_DEPENDENCIES ${PROJ_BINARY_DIR}/timestamp.cmake
-)
+#==============================================================================
+# Compiler
+#==============================================================================
 
-# generate gitrevision.h if Git is available and the .git directory is present
-find_program(GIT_SCM git DOC "Git version control")
-mark_as_advanced(GIT_SCM)
-find_file(GITDIR NAMES .git PATHS ${PROJ_SOURCE_DIR} NO_DEFAULT_PATH)
-if (GIT_SCM AND GITDIR)
-    # create gitrevision.h that depends on the Git HEAD log
-    message(STATUS "Git is available")
-    message(STATUS "Found directory .git/")
-    message(STATUS "Creating file ${PROJ_BINARY_DIR}/gitrevision.h")
+message(STATUS "CMAKE_CXX_COMPILER_ID=${CMAKE_CXX_COMPILER_ID})")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
+else ()
+    message(FATAL_ERROR "C++ compiler currently not supported by CMake build")
+endif ()
 
-    add_custom_command(
-        OUTPUT ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "#ifndef CMAKE_GITREVISION_H" > ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "#define CMAKE_GITREVISION_H" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo_append "#define _CMAKE_GITREVISION_LONG_ \"" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${GIT_SCM} log -1 "--pretty=format:%H" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "\"" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo_append "#define _CMAKE_GITREVISION_SHORT_ \"" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${GIT_SCM} log -1 "--pretty=format:%h" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "\"" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "#endif // CMAKE_GITREVISION_H" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        COMMAND ${CMAKE_COMMAND} -E echo "" >> ${PROJ_BINARY_DIR}/gitrevision.h
-        DEPENDS ${GITDIR}/logs/HEAD
-        VERBATIM
-    )
-else()
-    # no version control
-    message(STATUS "Will not remake ${PROJ_BINARY_DIR}/gitrevision.h")
-endif()
-add_custom_target(gitrevision DEPENDS ${PROJ_BINARY_DIR}/gitrevision.h)
 
-# includes, targets, and dependencies
-include_directories(${PROJ_BINARY_DIR})
-include_directories(${PROJ_INCLUDES})
-add_executable(${PROJ_NAME} ${PROJ_SOURCES})
-add_dependencies(${PROJ_NAME} timestamp)
-add_dependencies(${PROJ_NAME} gitrevision)
-target_link_libraries(${PROJ_NAME} z)
+#==============================================================================
+# Build type
+#==============================================================================
+
+# Set default build type
+if (NOT CMAKE_BUILD_TYPE)
+    message(WARNING "Unsupported build type (CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})")
+    set(CMAKE_BUILD_TYPE Debug)
+    message(WARNING "Using default build type '${CMAKE_BUILD_TYPE}'")
+endif ()
+
+# Log the compiler flags for each build type
+message(STATUS "C++ compiler flags: ${CMAKE_CXX_FLAGS}")
+message(STATUS "Additional C++ compiler flags for build type 'Debug': ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "Additional C++ compiler flags for build type 'Release': ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "Additional C++ compiler flags for build type 'RelWithDebInfo': ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+message(STATUS "Additional C++ compiler flags for build type 'MinSizeRel': ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+message(STATUS "Selected build type: ${CMAKE_BUILD_TYPE}")
+
+
+#==============================================================================
+# tsc
+#==============================================================================
+
+# Set the paths
+set(tsc "tsc")
+set(tsc_source_dir ${CMAKE_SOURCE_DIR}/source)
+set(tsc_header_dir ${CMAKE_SOURCE_DIR}/source)
+set(tsc_include_dir ${CMAKE_SOURCE_DIR}/source)
+
+# Get all source and header files
+file(GLOB_RECURSE tsc_source_files ${tsc_source_dir}/*.c)
+file(GLOB_RECURSE tsc_header_files ${tsc_header_dir}/*.h)
+
+# Group the source and header files
+source_group("Source Files" FILES ${tsc_source_files})
+source_group("Header Files" FILES ${tsc_source_files})
+
+# Set up the target
+add_executable(${tsc} ${tsc_source_files} ${tsc_header_files})
+target_include_directories(${tsc} PRIVATE ${tsc_include_dir})
+target_link_libraries(${tsc} z)

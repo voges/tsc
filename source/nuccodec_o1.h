@@ -3,9 +3,9 @@
 
 #define TSC_NUCCODEC_O1_WINDOW_SIZE 10
 
-#include "support/cbufint64.h"
-#include "support/cbufstr.h"
-#include "tsclib/str.h"
+#include "cbufint64.h"
+#include "cbufstr.h"
+#include "str.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -97,4 +97,3 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
                              str_t      **seq);
 
 #endif // TSC_NUCCODEC_O1_H
-

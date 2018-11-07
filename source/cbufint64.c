@@ -1,4 +1,4 @@
-#include "support/cbufint64.h"
+#include "cbufint64.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -79,4 +79,3 @@ int64_t cbufint64_get(const cbufint64_t *cbufint64, size_t pos)
 
     return cbufint64->buf[pos];
 }
-

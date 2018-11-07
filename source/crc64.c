@@ -10,7 +10,7 @@
  * Check ("123456789"): 0xe9c6d914c4b8d9ca
  */
 
-#include "support/crc64.h"
+#include "crc64.h"
 
 static const uint64_t crc64_tab[256] = {
     UINT64_C(0x0000000000000000), UINT64_C(0x7ad870c830358979),
@@ -150,4 +150,3 @@ uint64_t crc64(const unsigned char *buf, size_t buf_sz)
         crc = crc64_tab[(crc ^ *buf++) & 0xff] ^ (crc >> 8);
     return crc;
 }
-

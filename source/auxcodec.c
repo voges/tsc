@@ -8,12 +8,12 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "codecs/auxcodec.h"
-#include "codecs/zlib_wrap.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
-#include "support/crc64.h"
+#include "auxcodec.h"
+#include "zlib_wrap.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
+#include "crc64.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -197,4 +197,3 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec,
 
     return ret;
 }
-

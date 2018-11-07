@@ -1,6 +1,6 @@
 #include "samparser.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
+#include "log.h"
+#include "mem.h"
 #include <string.h>
 
 static void samparser_init(samparser_t *samparser, FILE *fp)
@@ -93,4 +93,3 @@ bool samparser_next(samparser_t *samparser)
     }
     return true;
 }
-

@@ -8,12 +8,12 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "codecs/paircodec.h"
-#include "codecs/zlib_wrap.h"
-#include "support/crc64.h"
-#include "tsclib/fio.h"
-#include "tsclib/log.h"
-#include "tsclib/mem.h"
+#include "paircodec.h"
+#include "zlib_wrap.h"
+#include "crc64.h"
+#include "fio.h"
+#include "log.h"
+#include "mem.h"
 #include <inttypes.h>
 #include <string.h>
 
@@ -193,4 +193,3 @@ size_t paircodec_decode_block(paircodec_t *paircodec,
 
     return ret;
 }
-
