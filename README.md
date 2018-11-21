@@ -2,7 +2,7 @@
 
 TNT Sequence Compressor
 
-[![Build Status](https://travis-ci.com/voges/tsc.svg?branch=master)](https://travis-ci.com/voges/tsc)
+[![Build Status](https://travis-ci.org/voges/tsc.svg?branch=master)](https://travis-ci.org/voges/tsc)
 
 ---
 
