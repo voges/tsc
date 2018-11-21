@@ -44,7 +44,7 @@ void auxcodec_free(auxcodec_t *auxcodec)
             auxcodec->compressed = NULL;
         }
         free(auxcodec);
-        auxcodec = NULL;
+        // auxcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

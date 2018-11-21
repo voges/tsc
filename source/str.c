@@ -29,7 +29,7 @@ void str_free(str_t *str)
             str->s = NULL;
         }
         free(str);
-        str = NULL;
+        // str = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);

@@ -46,7 +46,7 @@ void paircodec_free(paircodec_t *paircodec)
             paircodec->compressed = NULL;
         }
         free(paircodec);
-        paircodec = NULL;
+        // paircodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

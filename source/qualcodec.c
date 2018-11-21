@@ -45,7 +45,7 @@ void qualcodec_free(qualcodec_t *qualcodec)
             qualcodec->compressed = NULL;
         }
         free(qualcodec);
-        qualcodec = NULL;
+        // qualcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

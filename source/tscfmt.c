@@ -36,7 +36,7 @@ void tscfh_free(tscfh_t *tscfh)
 {
     if (tscfh != NULL) {
         free(tscfh);
-        tscfh = NULL;
+        // tscfh = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -121,7 +121,7 @@ void tscsh_free(tscsh_t *tscsh)
             tscsh->data = NULL;
         }
         free(tscsh);
-        tscsh = NULL;
+        // tscsh = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -187,7 +187,7 @@ void tscbh_free(tscbh_t *tscbh)
 {
     if (tscbh != NULL) {
         free(tscbh);
-        tscbh = NULL;
+        // tscbh = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

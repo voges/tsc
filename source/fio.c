@@ -5,7 +5,7 @@ FILE * tsc_fopen(const char *fname, const char *mode)
 {
     FILE *fp = fopen(fname, mode);
     if (fp == NULL) {
-        fclose(fp);
+        // fclose(fp);
         fprintf(stderr, "Failed to open file: %s\n", fname);
         exit(EXIT_FAILURE);
     }
@@ -16,7 +16,7 @@ void tsc_fclose(FILE *fp)
 {
     if (fp != NULL) {
         fclose(fp);
-        fp = NULL;
+        // fp = NULL;
     } else {
         fprintf(stderr, "Failed to close file\n");
         exit(EXIT_FAILURE);

@@ -29,7 +29,7 @@ void cbufstr_free(cbufstr_t *cbufstr)
             str_free(cbufstr->buf[i]);
         free(cbufstr->buf);
         free(cbufstr);
-        cbufstr = NULL;
+        // cbufstr = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);

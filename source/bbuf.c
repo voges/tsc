@@ -24,7 +24,7 @@ void bbuf_free(bbuf_t *bbuf)
             bbuf->bytes = NULL;
         }
         free(bbuf);
-        bbuf = NULL;
+        // bbuf = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);

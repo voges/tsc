@@ -21,7 +21,7 @@ void samparser_free(samparser_t *samparser)
     if (samparser != NULL) {
         str_free(samparser->head);
         free(samparser);
-        samparser = NULL;
+        // samparser = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

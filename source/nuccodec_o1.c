@@ -186,7 +186,7 @@ void nuccodec_free(nuccodec_t *nuccodec)
         str_free(nuccodec->ref);
 
         free(nuccodec);
-        nuccodec = NULL;
+        // nuccodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -781,11 +781,10 @@ static void alike(
     str_append_cstrn(exs, &ref[pos-ref_pos_min], match_len);
 
     // Replace MODs
-    size_t i =0;
-    size_t modpos_curr = 0;
+    size_t i = 0;
     size_t modpos_prev = 0;
     for (i = 0; i < modcnt; i++) {
-        modpos_curr = modpos_prev + modpos[i];
+        size_t modpos_curr = modpos_prev + modpos[i];
         modpos_prev = modpos_curr;
         exs->s[modpos_curr] = modbases[i];
     }

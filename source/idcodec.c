@@ -45,7 +45,7 @@ void idcodec_free(idcodec_t *idcodec)
             idcodec->compressed = NULL;
         }
         free(idcodec);
-        idcodec = NULL;
+        // idcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }

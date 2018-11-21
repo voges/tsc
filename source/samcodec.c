@@ -83,7 +83,7 @@ void samcodec_free(samcodec_t *samcodec)
         paircodec_free(samcodec->paircodec);
         qualcodec_free(samcodec->qualcodec);
         free(samcodec);
-        samcodec = NULL;
+        // samcodec = NULL;
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -434,7 +434,7 @@ void samcodec_encode(samcodec_t *samcodec)
         tsc_fwrite_uint64(samcodec->ofp, (uint64_t)fpos_curr);
         fseek(samcodec->ofp, fpos_curr, SEEK_SET);
     }
-    fpos_prev = fpos_curr;
+    // fpos_prev = fpos_curr;
 
     // Write -last- block header
     tscbh->fpos = (uint64_t)ftell(samcodec->ofp);

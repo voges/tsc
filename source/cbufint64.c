@@ -25,7 +25,7 @@ void cbufint64_free(cbufint64_t *cbufint64)
     if (cbufint64 != NULL) {
         free(cbufint64->buf);
         free(cbufint64);
-        cbufint64 = NULL;
+        // cbufint64 = NULL;
     } else {
         fprintf(stderr, "Error: Tried to free null pointer\n");
         exit(EXIT_FAILURE);

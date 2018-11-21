@@ -25,7 +25,7 @@ void tsc_free(void *ptr)
 {
     if (ptr != NULL) {
         free(ptr);
-        ptr = NULL;
+        // ptr = NULL;
     } else {
         fprintf(stderr, "Tried to free null pointer\n");
         exit(EXIT_FAILURE);
