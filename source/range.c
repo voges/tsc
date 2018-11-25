@@ -1160,17 +1160,6 @@ unsigned char* range_decompress_o1(unsigned char* in,
         // Direct lookup table
         c = D[last].R[freq];
 
-        /* Linear scan */
-        /*for (c = 0; c < 256; c++) {
-            if (C[last][R[last][c]] + F[last][R[last][c]]> freq) {
-          c = R[last][c];
-          break;
-            }
-        }*/
-
-        /* Binary search */
-        /* TODO */
-
         rangecoder_decode(&rc, D[last].fc[c].C, D[last].fc[c].F);
         out_buf[i] = c;
         last = c;

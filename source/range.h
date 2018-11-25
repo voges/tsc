@@ -19,7 +19,4 @@ unsigned char * range_decompress_o1(unsigned char *in,
                                     unsigned int  in_sz,
                                     unsigned int  *out_sz);
 
-// TODO: possibly replace 'unsigned int' with 'size_t'
-
 #endif // RANGE_H
-
