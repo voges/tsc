@@ -29,41 +29,21 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 unsigned int tsc_blocksz = 0;
 
-static void print_copyright(void)
-{
-    printf("Copyright (c) 2015-present\n");
-    printf("Leibniz Universitaet Hannover, Institut fuer "
-           "Informationsverarbeitung (TNT)\n");
-    printf("Contact: Jan Voges <voges@tnt.uni-hannover.de>\n");
-}
-
-static void print_version(void)
-{
-    // printf("%s %d.%d.%d\n", tsc_prog_name->s, TSC_VERSION_MAJOR, TSC_VERSION_MINOR, TSC_VERSION_PATCH);
-    // printf("Build time: %s\n", TSC_UTCTIMESTAMP);
-    // printf("Git revision: %s\n", TSC_GITREVISION_LONG);
-    // printf("\n");
-    print_copyright();
-}
-
 static void print_help(void)
 {
-    print_version();
-    printf("\n");
     printf("Usage:\n");
-    printf("  Compress  : tsc [-o FILE] [-b BSIZE] [-fs] file.sam\n");
+    printf("  Compress  : tsc [-o FILE] [-b SIZE] [-fs] file.sam\n");
     printf("  Decompress: tsc -d [-o FILE] [-fs] file.tsc\n");
     printf("  Info      : tsc -i file.tsc\n");
     printf("\n");
     printf("Options:\n");
-    printf("  -b  --blocksz=BSIZE  Specify Block SIZE\n");
+    printf("  -b  --blocksz=SIZE  Specify block SIZE\n");
     printf("  -d  --decompress     Decompress\n");
     printf("  -f, --force          Force overwriting of output file(s)\n");
     printf("  -h, --help           Print this help\n");
     printf("  -i, --info           Print information about tsc file\n");
     printf("  -o, --output=FILE    Specify output FILE\n");
     printf("  -s, --stats          Print (de-)compression statistics\n");
-    printf("  -v, --version        Display program version\n");
     printf("\n");
 }
 
@@ -79,11 +59,10 @@ static void parse_options(int argc, char *argv[])
         { "info",       no_argument,       NULL, 'i'},
         { "output",     required_argument, NULL, 'o'},
         { "stats",      no_argument,       NULL, 's'},
-        { "version",    no_argument,       NULL, 'v'},
         { NULL,         0,                 NULL,  0 }
     };
 
-    const char *short_options = "b:dfhio:sv";
+    const char *short_options = "b:dfhio:s";
 
     do {
         int opt_idx = 0;
@@ -116,10 +95,6 @@ static void parse_options(int argc, char *argv[])
             break;
         case 's':
             opt_flag_stats = true;
-            break;
-        case 'v':
-            print_version();
-            exit(EXIT_SUCCESS);
             break;
         default:
             exit(EXIT_FAILURE);
