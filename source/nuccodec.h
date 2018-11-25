@@ -1,7 +1,7 @@
-#ifndef TSC_NUCCODEC_O1_H
-#define TSC_NUCCODEC_O1_H
+#ifndef TSC_NUCCODEC_H
+#define TSC_NUCCODEC_H
 
-#define TSC_NUCCODEC_O1_WINDOW_SIZE 10
+#define TSC_NUCCODEC_WINDOW_SIZE 10
 
 #include "cbufint64.h"
 #include "cbufstr.h"
@@ -96,4 +96,4 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec,
                              str_t      **cigar,
                              str_t      **seq);
 
-#endif // TSC_NUCCODEC_O1_H
+#endif // TSC_NUCCODEC_H

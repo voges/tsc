@@ -3,8 +3,7 @@
 
 #include "auxcodec.h"
 #include "idcodec.h"
-//#include "nuccodec_o0.h"
-#include "nuccodec_o1.h"
+#include "nuccodec.h"
 #include "paircodec.h"
 #include "qualcodec.h"
 #include "samparser.h"

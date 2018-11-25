@@ -24,7 +24,7 @@
 //   TRAIL (zlib block)
 //
 
-#include "nuccodec_o1.h"
+#include "nuccodec.h"
 #include "range.h"
 #include "zlib_wrap.h"
 #include "crc64.h"
@@ -125,8 +125,8 @@ nuccodec_t * nuccodec_new(void)
     nuccodec->modpos = str_new();
     nuccodec->modbases = str_new();
     nuccodec->trail = str_new();
-    nuccodec->pos_cbuf = cbufint64_new(TSC_NUCCODEC_O1_WINDOW_SIZE);
-    nuccodec->exs_cbuf = cbufstr_new(TSC_NUCCODEC_O1_WINDOW_SIZE);
+    nuccodec->pos_cbuf = cbufint64_new(TSC_NUCCODEC_WINDOW_SIZE);
+    nuccodec->exs_cbuf = cbufstr_new(TSC_NUCCODEC_WINDOW_SIZE);
     nuccodec->ref = str_new();
 
     init(nuccodec);
