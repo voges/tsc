@@ -38,3 +38,4 @@ script:
   - make
   - make tests
   - ./tests
+  - shellcheck scripts/*.sh
