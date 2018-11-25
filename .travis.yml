@@ -25,10 +25,6 @@ matrix:
         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
     - os: osx
       compiler: clang
-      homebrew:
-        # update: true
-        packages:
-        - shellcheck
 
 before_install:
   - eval "${MATRIX_EVAL}"
@@ -42,4 +38,4 @@ script:
   - make
   - make tests
   - ./tests
-  - shellcheck ../scripts/*.sh
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then shellcheck ../scripts/*.sh; fi
