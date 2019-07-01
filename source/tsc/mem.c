@@ -21,13 +21,13 @@ void * tsc_realloc(void *ptr, const size_t size)
     return p;
 }
 
-void tsc_free(void *ptr)
-{
-    if (ptr != NULL) {
-        free(ptr);
-        // ptr = NULL;
-    } else {
-        fprintf(stderr, "Tried to free null pointer\n");
-        exit(EXIT_FAILURE);
-    }
-}
+// void tsc_free(void *ptr)
+// {
+//     if (ptr != NULL) {
+//         free(ptr);
+//         // ptr = NULL;
+//     } else {
+//         fprintf(stderr, "Tried to free null pointer\n");
+//         exit(EXIT_FAILURE);
+//     }
+// }

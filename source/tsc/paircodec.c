@@ -25,7 +25,6 @@ static void paircodec_init(paircodec_t *paircodec)
         free(paircodec->compressed);
         paircodec->compressed = NULL;
     }
-    paircodec->compressed_sz = 0;
 }
 
 paircodec_t * paircodec_new(void)

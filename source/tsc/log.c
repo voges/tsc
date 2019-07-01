@@ -1,4 +1,4 @@
-#define _GNU_SOURCE
+// #define _GNU_SOURCE
 
 #include "log.h"
 #include <stdarg.h>
@@ -10,7 +10,11 @@ void tsc_log(const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
     char *msg;
-    vasprintf(&msg, fmt, args);
+    int rc = vasprintf(&msg, fmt, args);
+    if (rc == -1) {
+        fprintf(stderr, "Error executing vasprintf\n");
+        exit(EXIT_FAILURE);
+    }
     va_end(args);
     fprintf(stdout, "%s", msg);
     free(msg);
@@ -21,7 +25,11 @@ void tsc_error(const char *fmt, ...)
     va_list args;
     va_start(args, fmt);
     char *msg;
-    vasprintf(&msg, fmt, args);
+    int rc = vasprintf(&msg, fmt, args);
+    if (rc == -1) {
+        fprintf(stderr, "Error executing vasprintf\n");
+        exit(EXIT_FAILURE);
+    }
     va_end(args);
     fprintf(stdout, "Error: %s", msg);
     free(msg);

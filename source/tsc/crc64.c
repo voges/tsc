@@ -147,6 +147,6 @@ uint64_t crc64(const unsigned char *buf, size_t buf_sz)
 {
     uint64_t crc = 0;
     while (buf_sz--)
-        crc = crc64_tab[(crc ^ *buf++) & 0xff] ^ (crc >> 8);
+        crc = crc64_tab[(crc ^ *buf++) & (uint8_t)0xff] ^ (crc >> (uint64_t)8);
     return crc;
 }

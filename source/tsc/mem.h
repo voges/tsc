@@ -3,9 +3,8 @@
 
 #include <stdlib.h>
 
-void * tsc_malloc(const size_t size);
-void * tsc_realloc(void *ptr, const size_t size);
-void tsc_free(void *ptr);
+void * tsc_malloc(size_t size);
+void * tsc_realloc(void *ptr, size_t size);
+// void tsc_free(void *ptr);
 
 #endif // TSC_MEM_H
-

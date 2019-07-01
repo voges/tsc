@@ -67,7 +67,7 @@ void nuccodec_free(nuccodec_t *nuccodec);
 void nuccodec_add_record(nuccodec_t     *nuccodec,
                          //const uint16_t flag,
                          const char     *rname,
-                         const uint32_t pos,
+                         uint32_t       pos,
                          const char     *cigar,
                          const char     *seq);
 void nuccodec_write_single_stream_block(nuccodec_t *nuccodec,

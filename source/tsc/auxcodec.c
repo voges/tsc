@@ -23,7 +23,6 @@ static void auxcodec_init(auxcodec_t *auxcodec)
     str_clear(auxcodec->uncompressed);
     if (auxcodec->compressed != NULL) free(auxcodec->compressed);
     auxcodec->compressed = NULL;
-    auxcodec->compressed_sz = 0;
 }
 
 auxcodec_t * auxcodec_new(void)

@@ -11,11 +11,11 @@ typedef struct cbufstr_t_ {
     size_t n;     // number of elements currently in buffer
 } cbufstr_t;
 
-cbufstr_t *cbufstr_new(const size_t sz);
+cbufstr_t *cbufstr_new(size_t sz);
 void cbufstr_free(cbufstr_t *cbufstr);
 void cbufstr_clear(cbufstr_t *cbufstr);
 void cbufstr_push(cbufstr_t *cbufstr, const char *s);
-str_t * cbufstr_top(cbufstr_t *cbufstr);
-str_t * cbufstr_get(const cbufstr_t *cbufstr, const size_t pos);
+// str_t * cbufstr_top(cbufstr_t *cbufstr);
+str_t * cbufstr_get(const cbufstr_t *cbufstr, size_t pos);
 
 #endif // TSC_CBUFSTR_H

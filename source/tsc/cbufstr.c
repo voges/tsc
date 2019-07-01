@@ -54,23 +54,23 @@ void cbufstr_push(cbufstr_t *cbufstr, const char *s)
         cbufstr->n++;
 }
 
-str_t * cbufstr_top(cbufstr_t *cbufstr)
-{
-    if (cbufstr->n == 0) {
-        fprintf(stderr, "Error: Tried to access empty cbufstr\n");
-        exit(EXIT_FAILURE);
-    }
-
-    size_t nxt = cbufstr->nxt;
-    size_t last = 0;
-
-    if (nxt == 0)
-        last = cbufstr->sz - 1;
-    else
-        last = cbufstr->nxt - 1;
-
-    return cbufstr->buf[last];
-}
+// str_t * cbufstr_top(cbufstr_t *cbufstr)
+// {
+//     if (cbufstr->n == 0) {
+//         fprintf(stderr, "Error: Tried to access empty cbufstr\n");
+//         exit(EXIT_FAILURE);
+//     }
+//
+//     size_t nxt = cbufstr->nxt;
+//     size_t last = 0;
+//
+//     if (nxt == 0)
+//         last = cbufstr->sz - 1;
+//     else
+//         last = cbufstr->nxt - 1;
+//
+//     return cbufstr->buf[last];
+// }
 
 str_t * cbufstr_get(const cbufstr_t *cbufstr, size_t pos)
 {

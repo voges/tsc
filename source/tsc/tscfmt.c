@@ -54,9 +54,9 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp)
     ret += tsc_fread_uint64(fp, &(tscfh->sblk_n));
 
     // Sanity check
-    if (strncmp((const char *)tscfh->magic, "tsc", 3))
+    if (strncmp((const char *)tscfh->magic, "tsc", 3) != 0)
         tsc_error("File magic does not match\n");
-    if (!(tscfh->flags & 0x1))
+    if (!(tscfh->flags & (uint8_t)0x1))
         tsc_error("File seems not to contain data in SAM format\n");
     // if (strncmp(tsc_version->s, (const char *)tscfh->ver, tsc_version->len))
     //     tsc_error("File was compressed with another version\n");
@@ -157,10 +157,10 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp)
     return ret;
 }
 
-size_t tscsh_size(tscsh_t *tscsh)
-{
-    return sizeof(tscsh->data_sz) + sizeof(tscsh->data);
-}
+// size_t tscsh_size(tscsh_t *tscsh)
+// {
+//     return sizeof(tscsh->data_sz) + sizeof(tscsh->data);
+// }
 
 // Block header
 static void tscbh_init(tscbh_t *tscbh)
@@ -229,14 +229,14 @@ size_t tscbh_write(tscbh_t *tscbh, FILE *fp)
     return ret;
 }
 
-size_t tscbh_size(tscbh_t *tscbh)
-{
-    return   sizeof(tscbh->fpos)
-           + sizeof(tscbh->fpos_nxt)
-           + sizeof(tscbh->blk_cnt)
-           + sizeof(tscbh->rec_cnt)
-           + sizeof(tscbh->rec_max)
-           + sizeof(tscbh->rname)
-           + sizeof(tscbh->pos_min)
-           + sizeof(tscbh->pos_max);
-}
+// size_t tscbh_size(tscbh_t *tscbh)
+// {
+//     return   sizeof(tscbh->fpos)
+//            + sizeof(tscbh->fpos_nxt)
+//            + sizeof(tscbh->blk_cnt)
+//            + sizeof(tscbh->rec_cnt)
+//            + sizeof(tscbh->rec_max)
+//            + sizeof(tscbh->rname)
+//            + sizeof(tscbh->pos_min)
+//            + sizeof(tscbh->pos_max);
+// }

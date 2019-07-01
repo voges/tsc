@@ -84,7 +84,6 @@ static void parse_options(int argc, char *argv[])
         case 'h':
             print_help();
             exit(EXIT_SUCCESS);
-            break;
         case 'i':
             if (tsc_mode == TSC_MODE_DECOMPRESS)
                 tsc_error("Cannot decompress and get info at once\n");
@@ -168,10 +167,10 @@ int main(int argc, char *argv[])
         if (!opt_blocksz) {
             tsc_blocksz = 10000; // Default value
         } else {
-            if (atoi(opt_blocksz) <= 0) {
+            if (strtol(opt_blocksz, NULL, 10) <= 0) {
                 tsc_error("Block size must be positive\n");
             } else {
-                tsc_blocksz = (unsigned int)atoi(opt_blocksz);
+                tsc_blocksz = (unsigned int)strtol(opt_blocksz, NULL, 10);
             }
         }
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
@@ -191,7 +190,7 @@ int main(int argc, char *argv[])
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "sam"))
+        if (strcmp(fext((const char *)tsc_in_fname->s), "sam") != 0)
             tsc_error("Input file extension must be 'sam'\n");
 
         if (opt_output == NULL) {
@@ -221,13 +220,13 @@ int main(int argc, char *argv[])
         tsc_fclose(tsc_out_fp);
     } else  if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
+        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0)
             tsc_error("Input file extension must be 'tsc'\n");
 
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4); // strip '.tsc'
-            if (strcmp(fext((const char *)tsc_out_fname->s), "sam"))
+            if (strcmp(fext((const char *)tsc_out_fname->s), "sam") != 0)
                 str_append_cstr(tsc_out_fname, ".sam");
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
@@ -253,7 +252,7 @@ int main(int argc, char *argv[])
         tsc_fclose(tsc_out_fp);
     } else { // TSC_MODE_INFO
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc"))
+        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0)
             tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file

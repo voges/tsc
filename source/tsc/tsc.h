@@ -7,7 +7,7 @@
 
 #define KB 1000LL
 #define MB (KB*1000LL)
-#define GB (MB*1000LL)
+// #define GB (MB*1000LL)
 
 typedef enum {
     TSC_MODE_COMPRESS,

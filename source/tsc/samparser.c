@@ -58,14 +58,14 @@ static void samparser_parse(samparser_t *samparser)
 
     while (*c) {
         if (*c == '\t') {
-            if (f ==  1) samparser->curr.flag  = (uint16_t)atoi(c + 1);
+            if (f ==  1) samparser->curr.flag  = (uint16_t)strtol(c + 1, NULL, 10);
             if (f ==  2) samparser->curr.rname = c + 1;
-            if (f ==  3) samparser->curr.pos   = (uint32_t)atoi(c + 1);
-            if (f ==  4) samparser->curr.mapq  = (uint8_t)atoi(c + 1);
+            if (f ==  3) samparser->curr.pos   = (uint32_t)strtol(c + 1, NULL, 10);
+            if (f ==  4) samparser->curr.mapq  = (uint8_t)strtol(c + 1, NULL, 10);
             if (f ==  5) samparser->curr.cigar = c + 1;
             if (f ==  6) samparser->curr.rnext = c + 1;
-            if (f ==  7) samparser->curr.pnext = (uint32_t)atoi(c + 1);
-            if (f ==  8) samparser->curr.tlen  = (int64_t)atoi(c + 1);
+            if (f ==  7) samparser->curr.pnext = (uint32_t)strtol(c + 1, NULL, 10);
+            if (f ==  8) samparser->curr.tlen  = (int64_t)strtol(c + 1, NULL, 10);
             if (f ==  9) samparser->curr.seq   = c + 1;
             if (f == 10) samparser->curr.qual  = c + 1;
             if (f == 11) samparser->curr.opt   = c + 1;

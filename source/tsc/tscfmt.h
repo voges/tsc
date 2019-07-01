@@ -32,7 +32,7 @@
 typedef struct tscfh_t_ {
     unsigned char magic[4];  // "tsc----" + '\0'
     uint8_t       flags;     // flags
-    unsigned char ver[6];    // Maj.Min.Pat (5 bytes) + '\0'
+    // unsigned char ver[6];    // Maj.Min.Pat (5 bytes) + '\0'
     uint64_t      rec_n;     // number of records
     uint64_t      blk_n;     // number of blocks
     uint64_t      sblk_n;    // number of sub-blocks per block
@@ -54,7 +54,7 @@ tscsh_t * tscsh_new(void);
 void tscsh_free(tscsh_t *tscsh);
 size_t tscsh_read(tscsh_t *tscsh, FILE *fp);
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp);
-size_t tscsh_size(tscsh_t * tscsh);
+// size_t tscsh_size(tscsh_t * tscsh);
 
 // Block header
 typedef struct tscbh_t_ {
@@ -73,7 +73,6 @@ tscbh_t * tscbh_new(void);
 void tscbh_free(tscbh_t *tscbh);
 size_t tscbh_read(tscbh_t *tscbh, FILE *fp);
 size_t tscbh_write(tscbh_t *tscbh, FILE *fp);
-size_t tscbh_size(tscbh_t * tscbh);
+// size_t tscbh_size(tscbh_t * tscbh);
 
 #endif // TSC_TSCFMT_H
-

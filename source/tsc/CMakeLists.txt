@@ -1,6 +1,5 @@
 set(source_files
         auxcodec.c
-        bbuf.c
         cbufint64.c
         cbufstr.c
         common.c

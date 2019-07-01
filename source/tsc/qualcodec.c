@@ -24,7 +24,6 @@ static void qualcodec_init(qualcodec_t *qualcodec)
         free(qualcodec->compressed);
         qualcodec->compressed = NULL;
     }
-    qualcodec->compressed_sz = 0;
 }
 
 qualcodec_t * qualcodec_new(void)

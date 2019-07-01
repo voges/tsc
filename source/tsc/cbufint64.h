@@ -11,12 +11,11 @@ typedef struct cbufint64_t_ {
     size_t   n;   // number of elements currently in buffer
 } cbufint64_t;
 
-cbufint64_t * cbufint64_new(const size_t sz);
+cbufint64_t * cbufint64_new(size_t sz);
 void cbufint64_free(cbufint64_t *cbufint64);
 void cbufint64_clear(cbufint64_t *cbufint64);
-void cbufint64_push(cbufint64_t *cbufint64, const int64_t x);
-int64_t cbufint64_top(cbufint64_t *cbufint64);
-int64_t cbufint64_get(const cbufint64_t *cbufint64, const size_t pos);
+void cbufint64_push(cbufint64_t *cbufint64, int64_t x);
+// int64_t cbufint64_top(cbufint64_t *cbufint64);
+int64_t cbufint64_get(const cbufint64_t *cbufint64, size_t pos);
 
 #endif // TSC_CBUFINT64_H
-

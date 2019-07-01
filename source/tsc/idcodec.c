@@ -24,7 +24,6 @@ static void idcodec_init(idcodec_t *idcodec)
         free(idcodec->compressed);
         idcodec->compressed = NULL;
     }
-    idcodec->compressed_sz = 0;
 }
 
 idcodec_t * idcodec_new(void)

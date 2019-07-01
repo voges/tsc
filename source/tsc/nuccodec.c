@@ -362,8 +362,8 @@ static bool diff(nuccodec_t     *nuccodec,
             idx_prev = idx_exs;
 
             (*modcnt)++;
-            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF));
-            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF));
+            str_append_char(modpos, (char)((idx_store >> (size_t)8) & (uint8_t)0xFF));
+            str_append_char(modpos, (char)((idx_store >> (size_t)0) & (uint8_t)0xFF));
             str_append_char(modbases, exs[idx_exs]);
         }
         idx_exs++;
@@ -494,8 +494,6 @@ cleanup: ;
     str_free(modpos);
     str_free(modbases);
     str_free(trail);
-
-    return;
 }
 
 static size_t write_byte_block(FILE *fp, unsigned char *data, size_t data_sz)

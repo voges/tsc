@@ -8,7 +8,6 @@ typedef struct qualcodec_t_ {
     size_t        record_cnt; // No. of records processed in the current block
     str_t         *uncompressed;
     unsigned char *compressed;
-    size_t        compressed_sz;
 } qualcodec_t;
 
 qualcodec_t * qualcodec_new(void);
