@@ -57,5 +57,4 @@ message(STATUS "Selected build type: ${CMAKE_BUILD_TYPE}")
 # Subdirectories
 #==============================================================================
 
-add_subdirectory(source/lae ${CMAKE_CURRENT_BINARY_DIR}/lae)
 add_subdirectory(source/tsc ${CMAKE_CURRENT_BINARY_DIR}/tsc)
