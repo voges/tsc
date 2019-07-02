@@ -9,7 +9,7 @@
 //
 
 #include "qualcodec.h"
-#include "zlib_wrap.h"
+#include "zlib-wrap.h"
 #include "crc64.h"
 #include "fio.h"
 #include "log.h"

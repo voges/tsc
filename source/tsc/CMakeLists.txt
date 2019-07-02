@@ -17,7 +17,8 @@ set(source_files
         str.c
         tsc.c
         tscfmt.c
-        zlib_wrap.c)
+        zlib-wrap.c
+)
 
 add_executable(tsc ${source_files})
 target_include_directories(tsc PRIVATE ${CMAKE_SOURCE_DIR}/source)

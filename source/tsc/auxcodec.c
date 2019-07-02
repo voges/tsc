@@ -9,7 +9,7 @@
 //
 
 #include "auxcodec.h"
-#include "zlib_wrap.h"
+#include "zlib-wrap.h"
 #include "fio.h"
 #include "log.h"
 #include "mem.h"

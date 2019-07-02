@@ -26,7 +26,7 @@
 
 #include "nuccodec.h"
 #include "range.h"
-#include "zlib_wrap.h"
+#include "zlib-wrap.h"
 #include "crc64.h"
 #include "tsc.h"
 #include "fio.h"
