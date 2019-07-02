@@ -25,7 +25,7 @@ Commits to this repository are continuously tested on **Travis CI** (https://tra
 
 ## Build system
 
-We use **CMake** (https://cmake.org/) as build system and we provide a ``CMakeLists.txt`` to build TSC.
+We use **CMake** (https://cmake.org) as build system and we provide a ``CMakeLists.txt`` to build TSC.
 
 ## Version control system
 
@@ -48,10 +48,10 @@ We use the Semantic Versioning 2.0.0 (https://semver.org).
 That means:
 
 * The **release** version number format is: MAJOR.MINOR.PATCH
-* Increment the
-  * MAJOR version when you make incompatible API changes,
-  * MINOR version when you add functionality in a backwards-compatible manner, and
-  * PATCH version when you make backwards-compatible bug fixes.
+* We increment the
+  * MAJOR version when making incompatible API changes,
+  * MINOR version when adding functionality in a backwards-compatible manner, and
+  * PATCH version when making backwards-compatible bug fixes.
 * **Pre-release** versions are denoted by appending a hyphen and a series of dot separated identifiers immediately following the patch version.
   * Example 1: 1.0.0-alpha.1 ("alpha version 1 of the planned major release 1")
   * Example 2: 1.0.0-beta.1 ("beta version 1 of the planned major release 1")
