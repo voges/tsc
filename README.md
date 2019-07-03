@@ -21,11 +21,11 @@ Build the TSC executable from the command line:
 
 ## Continuous integration
 
-Commits to this repository are continuously tested on **Travis CI** (https://travis-ci.org/voges/tsc). Take a look at ``.travis.yml`` to see what is being done on Travis' (virtual) machines.
+Commits to this repository are continuously tested on **Travis CI** (https://travis-ci.org/voges/tsc). Take a look at the file ``.travis.yml`` to see what is being done on Travis' (virtual) machines.
 
 ## Build system
 
-We use **CMake** (https://cmake.org) as build system and we provide a ``CMakeLists.txt`` to build TSC.
+We use **CMake** (https://cmake.org) as build system.
 
 ## Version control system
 
