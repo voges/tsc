@@ -10,13 +10,13 @@ unsigned char * range_compress_o0(unsigned char *in,
                                   unsigned int  in_sz,
                                   unsigned int  *out_sz);
 unsigned char * range_decompress_o0(unsigned char *in,
-                                   unsigned int   in_sz,
+                                   // unsigned int   in_sz,
                                    unsigned int   *out_sz);
 unsigned char * range_compress_o1(unsigned char *in,
                                   unsigned int  in_sz,
                                   unsigned int  *out_sz);
 unsigned char * range_decompress_o1(unsigned char *in,
-                                    unsigned int  in_sz,
+                                    // unsigned int  in_sz,
                                     unsigned int  *out_sz);
 
 #endif // RANGE_H

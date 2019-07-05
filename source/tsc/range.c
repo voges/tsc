@@ -157,7 +157,7 @@ static inline void rangecoder_finish_encode(rangecoder_t* rc)
     }
 }
 
-static inline void rangecoder_finish_decode(rangecoder_t* rc) {}
+static inline void rangecoder_finish_decode(/*rangecoder_t* rc*/) {}
 
 static inline void rangecoder_encode(rangecoder_t* rc,
                                      uint32_t      cumFreq,
@@ -257,7 +257,7 @@ unsigned char * range_compress_o0(unsigned char *in,
     /* Compute statistics. */
     memset(F, 0, 256*sizeof(int));
     memset(C, 0, 256*sizeof(int));
-    for (i = 0; i < in_sz; i++) {
+    for (i = 0; i < (int)in_sz; i++) {
         F[c = in[i]]++;
         T++;
     }
@@ -314,7 +314,7 @@ unsigned char * range_compress_o0(unsigned char *in,
     }
 
     /* Tidy up any remainder that isn't a multiple of 4. */
-    for (; i < in_sz; i++) {
+    for (; i < (int)in_sz; i++) {
         unsigned char c;
         c = in[i];
         rangecoder_encode(&rc[0], C[c], F[c]);
@@ -381,7 +381,7 @@ typedef struct {
 } range_decoder_t;
 
 unsigned char * range_decompress_o0(unsigned char *in,
-                                    unsigned int  in_sz,
+                                    // unsigned int  in_sz,
                                     unsigned int  *out_sz)
 {
     /* Load in the static tables. */
@@ -469,10 +469,10 @@ unsigned char * range_decompress_o0(unsigned char *in,
         out_buf[i] = c;
     }
 
-    rangecoder_finish_decode(&rc[0]);
-    rangecoder_finish_decode(&rc[1]);
-    rangecoder_finish_decode(&rc[2]);
-    rangecoder_finish_decode(&rc[3]);
+    rangecoder_finish_decode(/*&rc[0]*/);
+    rangecoder_finish_decode(/*&rc[1]*/);
+    rangecoder_finish_decode(/*&rc[2]*/);
+    rangecoder_finish_decode(/*&rc[3]*/);
 
     *out_sz = out_size;
 
@@ -716,7 +716,7 @@ unsigned char * range_compress_o1(unsigned char *in,
 }
 
 unsigned char * range_decompress_o1(unsigned char *in,
-                                    unsigned int  in_sz,
+                                    // unsigned int  in_sz,
                                     unsigned int  *out_sz)
 {
     /* Load in the static tables. */
@@ -871,14 +871,14 @@ unsigned char * range_decompress_o1(unsigned char *in,
     }
 
     /* Tidyup */
-    rangecoder_finish_decode(&rc[0]);
-    rangecoder_finish_decode(&rc[1]);
-    rangecoder_finish_decode(&rc[2]);
-    rangecoder_finish_decode(&rc[3]);
-    rangecoder_finish_decode(&rc[4]);
-    rangecoder_finish_decode(&rc[5]);
-    rangecoder_finish_decode(&rc[6]);
-    rangecoder_finish_decode(&rc[7]);
+    rangecoder_finish_decode(/*&rc[0]*/);
+    rangecoder_finish_decode(/*&rc[1]*/);
+    rangecoder_finish_decode(/*&rc[2]*/);
+    rangecoder_finish_decode(/*&rc[3]*/);
+    rangecoder_finish_decode(/*&rc[4]*/);
+    rangecoder_finish_decode(/*&rc[5]*/);
+    rangecoder_finish_decode(/*&rc[6]*/);
+    rangecoder_finish_decode(/*&rc[7]*/);
 
     *out_sz = out_size;
 
@@ -1013,7 +1013,7 @@ unsigned char* range_decompress_o0(unsigned char* in,
         rangecoder_decode(&rc, D.fc[c].C, D.fc[c].F);
         out_buf[i] = c;
     }
-    rangecoder_finish_decode(&rc);
+    rangecoder_finish_decode(/*&rc*/);
 
     *out_size = out_sz;
 
@@ -1164,7 +1164,7 @@ unsigned char* range_decompress_o1(unsigned char* in,
         out_buf[i] = c;
         last = c;
     }
-    rangecoder_finish_decode(&rc);
+    rangecoder_finish_decode(/*&rc*/);
 
     *out_size = out_sz;
 

@@ -982,7 +982,8 @@ static unsigned char * read_rangeO1_block(FILE *fp, size_t *sz)
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
     if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
         tsc_error("CRC64 check failed\n");
-    unsigned char *data = range_decompress_o1(data_compressed, (unsigned int)data_compressed_sz, (unsigned int *)&data_sz);
+    // unsigned char *data = range_decompress_o1(data_compressed, (unsigned int)data_compressed_sz, (unsigned int *)&data_sz);
+    unsigned char *data = range_decompress_o1(data_compressed, (unsigned int *)&data_sz);
     free(data_compressed);
     data = tsc_realloc(data, ++data_sz); data[data_sz-1] = '\0';
 
