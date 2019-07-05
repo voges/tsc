@@ -21,5 +21,5 @@ set(source_files
 )
 
 add_executable(tsc ${source_files})
-target_include_directories(tsc PRIVATE ${CMAKE_SOURCE_DIR}/source)
+
 target_link_libraries(tsc z)
