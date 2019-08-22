@@ -4,4 +4,4 @@
 void tsc_log(const char *fmt, ...);
 void tsc_error(const char *fmt, ...);
 
-#endif // TSC_LOG_H
+#endif  // TSC_LOG_H

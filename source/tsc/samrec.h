@@ -1,8 +1,8 @@
 #ifndef TSC_SAMREC_H
 #define TSC_SAMREC_H
 
-#include "tsc.h"
 #include <stdint.h>
+#include "tsc.h"
 
 //
 // Structure of a SAM alignment line: The 11 mandatory fields are
@@ -11,21 +11,20 @@
 //
 
 typedef struct samrec_t_ {
-    char     line[8*MB];
+    char line[8 * MB];
 
-    char     *qname; // Query template NAME
+    char *qname;     // Query template NAME
     uint16_t flag;   // bitwise FLAG (uint16_t)
-    char     *rname; // Reference sequence NAME
+    char *rname;     // Reference sequence NAME
     uint32_t pos;    // 1-based leftmost mapping POSition (uint32_t)
-    uint8_t  mapq;   // MAPping Quality (uint8_t)
-    char     *cigar; // CIGAR string
-    char     *rnext; // Ref. name of the mate/NEXT read
+    uint8_t mapq;    // MAPping Quality (uint8_t)
+    char *cigar;     // CIGAR string
+    char *rnext;     // Ref. name of the mate/NEXT read
     uint32_t pnext;  // Position of the mate/NEXT read (uint32_t)
-    int64_t  tlen;   // observed Template LENgth (int64_t)
-    char     *seq;   // segment SEQuence
-    char     *qual;  // QUALity scores
-    char     *opt;   // OPTional information
+    int64_t tlen;    // observed Template LENgth (int64_t)
+    char *seq;       // segment SEQuence
+    char *qual;      // QUALity scores
+    char *opt;       // OPTional information
 } samrec_t;
 
-#endif // TSC_SAMREC_H
-
+#endif  // TSC_SAMREC_H

@@ -3,24 +3,24 @@
 
 #define TSC_NUCCODEC_WINDOW_SIZE 10
 
-#include "cbufint64.h"
-#include "cbufstr.h"
-#include "str.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "cbufint64.h"
+#include "cbufstr.h"
+#include "str.h"
 
 typedef struct nuccodec_t_ {
     // Only used in encoder
-    size_t  record_cnt;  // No. of records processed in the current block
-    bool    first;       // 'true', if first line has not been processed yet
-    str_t   *rname_prev; // Previous RNAME
-    uint32_t pos_prev;   // Previous POSition
+    size_t record_cnt;  // No. of records processed in the current block
+    bool first;         // 'true', if first line has not been processed yet
+    str_t *rname_prev;  // Previous RNAME
+    uint32_t pos_prev;  // Previous POSition
 
     // Statistics
-    size_t mrecord_cnt; // Total no. of M-Records processed
-    size_t irecord_cnt; // Total no. of I-Records processed
-    size_t precord_cnt; // Total no. of P-Records processed
+    size_t mrecord_cnt;  // Total no. of M-Records processed
+    size_t irecord_cnt;  // Total no. of I-Records processed
+    size_t precord_cnt;  // Total no. of P-Records processed
     size_t ctrl_sz;
     size_t rname_sz;
     size_t pos_sz;
@@ -52,48 +52,35 @@ typedef struct nuccodec_t_ {
 
     // Sliding window
     cbufint64_t *pos_cbuf;
-    cbufstr_t   *exs_cbuf;
-    str_t       *ref;
-    uint32_t    ref_pos_min;
-    uint32_t    ref_pos_max;
+    cbufstr_t *exs_cbuf;
+    str_t *ref;
+    uint32_t ref_pos_min;
+    uint32_t ref_pos_max;
 } nuccodec_t;
 
-nuccodec_t * nuccodec_new(void);
+nuccodec_t *nuccodec_new(void);
 void nuccodec_free(nuccodec_t *nuccodec);
 
 // Encoder
 // -----------------------------------------------------------------------------
 
-void nuccodec_add_record(nuccodec_t     *nuccodec,
-                         //const uint16_t flag,
-                         const char     *rname,
-                         uint32_t       pos,
-                         const char     *cigar,
-                         const char     *seq);
-void nuccodec_write_single_stream_block(nuccodec_t *nuccodec,
-                                        FILE       *ctrl_fp,
-                                        FILE       *rname_fp,
-                                        FILE       *pos_fp,
-                                        FILE       *seq_fp,
-                                        FILE       *seqlen_fp,
-                                        FILE       *exs_fp,
-                                        FILE       *posoff_fp,
-                                        FILE       *stogy_fp,
-                                        FILE       *inserts_fp,
-                                        FILE       *modcnt_fp,
-                                        FILE       *modpos_fp,
-                                        FILE       *modbases_fp,
-                                        FILE       *trail_fp);
+void nuccodec_add_record(nuccodec_t *nuccodec,
+                         // const uint16_t flag,
+                         const char *rname, uint32_t pos, const char *cigar,
+                         const char *seq);
+void nuccodec_write_single_stream_block(nuccodec_t *nuccodec, FILE *ctrl_fp,
+                                        FILE *rname_fp, FILE *pos_fp,
+                                        FILE *seq_fp, FILE *seqlen_fp,
+                                        FILE *exs_fp, FILE *posoff_fp,
+                                        FILE *stogy_fp, FILE *inserts_fp,
+                                        FILE *modcnt_fp, FILE *modpos_fp,
+                                        FILE *modbases_fp, FILE *trail_fp);
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp);
 
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-size_t nuccodec_decode_block(nuccodec_t *nuccodec,
-                             FILE       *fp,
-                             str_t      **rname,
-                             uint32_t   *pos,
-                             str_t      **cigar,
-                             str_t      **seq);
+size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp, str_t **rname,
+                             uint32_t *pos, str_t **cigar, str_t **seq);
 
-#endif // TSC_NUCCODEC_H
+#endif  // TSC_NUCCODEC_H

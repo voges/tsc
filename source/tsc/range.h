@@ -6,17 +6,15 @@
 #ifndef RANGE_H
 #define RANGE_H
 
-unsigned char * range_compress_o0(unsigned char *in,
-                                  unsigned int  in_sz,
-                                  unsigned int  *out_sz);
-unsigned char * range_decompress_o0(unsigned char *in,
+unsigned char *range_compress_o0(unsigned char *in, unsigned int in_sz,
+                                 unsigned int *out_sz);
+unsigned char *range_decompress_o0(unsigned char *in,
                                    // unsigned int   in_sz,
-                                   unsigned int   *out_sz);
-unsigned char * range_compress_o1(unsigned char *in,
-                                  unsigned int  in_sz,
-                                  unsigned int  *out_sz);
-unsigned char * range_decompress_o1(unsigned char *in,
-                                    // unsigned int  in_sz,
-                                    unsigned int  *out_sz);
+                                   unsigned int *out_sz);
+unsigned char *range_compress_o1(unsigned char *in, unsigned int in_sz,
+                                 unsigned int *out_sz);
+unsigned char *range_decompress_o1(unsigned char *in,
+                                   // unsigned int  in_sz,
+                                   unsigned int *out_sz);
 
-#endif // RANGE_H
+#endif  // RANGE_H
