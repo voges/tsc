@@ -394,10 +394,8 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos,
             idx_prev = idx_exs;
 
             (*modcnt)++;
-            str_append_char(modpos,
-                            (char)((idx_store >> (size_t)8) & (uint8_t)0xFF));
-            str_append_char(modpos,
-                            (char)((idx_store >> (size_t)0) & (uint8_t)0xFF));
+            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF));
+            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF));
             str_append_char(modbases, exs[idx_exs]);
         }
         idx_exs++;
@@ -459,15 +457,12 @@ add_mrecord:;
     str_append_cstr(nuccodec->ctrl, "m");
     str_append_cstr(nuccodec->rname, rname);
     str_append_cstr(nuccodec->rname, ":");
-    // str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
-    str_append_char(nuccodec->pos, (char)((pos >> 24) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 16) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 8) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 0) & 0xFF));
+    str_append_int(nuccodec->pos, pos);
+    str_append_cstr(nuccodec->pos, ":");
     str_append_cstr(nuccodec->stogy, cigar);
     str_append_cstr(nuccodec->stogy, ":");
-    str_append_char(nuccodec->seqlen, (char)((strlen(seq) >> 8) & 0xFF));
-    str_append_char(nuccodec->seqlen, (char)((strlen(seq) >> 0) & 0xFF));
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 8 & 0xFF));
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 0 & 0xFF));
     str_append_cstr(nuccodec->seq, seq);
 
     goto cleanup;
@@ -478,11 +473,8 @@ add_irecord:;  // This is the first read in a block
     str_append_cstr(nuccodec->ctrl, "i");
     str_append_cstr(nuccodec->rname, rname);
     str_append_cstr(nuccodec->rname, ":");
-    // str_append_int(nuccodec->pos, pos); str_append_cstr(nuccodec->pos, ":");
-    str_append_char(nuccodec->pos, (char)((pos >> 24) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 16) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 8) & 0xFF));
-    str_append_char(nuccodec->pos, (char)((pos >> 0) & 0xFF));
+    str_append_int(nuccodec->pos, pos);
+    str_append_cstr(nuccodec->pos, ":");
     str_append_str(nuccodec->exs, exs);
     str_append_str(nuccodec->stogy, stogy);
     str_append_cstr(nuccodec->stogy, ":");
@@ -532,13 +524,6 @@ cleanup:;
     str_free(trail);
 }
 
-static size_t write_byte_block(FILE *fp, unsigned char *data, size_t data_sz) {
-    size_t ret = 0;
-    ret += tsc_fwrite_uint64(fp, (uint64_t)data_sz);
-    ret += tsc_fwrite_buf(fp, data, data_sz);
-    return ret;
-}
-
 static size_t write_zlib_block(FILE *fp, unsigned char *data, size_t data_sz) {
     size_t ret = 0;
     size_t compressed_sz;
@@ -564,43 +549,6 @@ static size_t write_rangeO1_block(FILE *fp, unsigned char *data,
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
     free(compressed);
     return ret;
-}
-
-void nuccodec_write_single_stream_block(nuccodec_t *nuccodec, FILE *ctrl_fp,
-                                        FILE *rname_fp, FILE *pos_fp,
-                                        FILE *seq_fp, FILE *seqlen_fp,
-                                        FILE *exs_fp, FILE *posoff_fp,
-                                        FILE *stogy_fp, FILE *inserts_fp,
-                                        FILE *modcnt_fp, FILE *modpos_fp,
-                                        FILE *modbases_fp, FILE *trail_fp) {
-    write_byte_block(ctrl_fp, (unsigned char *)nuccodec->ctrl->s,
-                     nuccodec->ctrl->len);
-    write_byte_block(rname_fp, (unsigned char *)nuccodec->rname->s,
-                     nuccodec->rname->len);
-    write_byte_block(pos_fp, (unsigned char *)nuccodec->pos->s,
-                     nuccodec->pos->len);
-    write_byte_block(seq_fp, (unsigned char *)nuccodec->seq->s,
-                     nuccodec->seq->len);
-    write_byte_block(seqlen_fp, (unsigned char *)nuccodec->seqlen->s,
-                     nuccodec->seqlen->len);
-    write_byte_block(exs_fp, (unsigned char *)nuccodec->exs->s,
-                     nuccodec->exs->len);
-    write_byte_block(posoff_fp, (unsigned char *)nuccodec->posoff->s,
-                     nuccodec->posoff->len);
-    write_byte_block(stogy_fp, (unsigned char *)nuccodec->stogy->s,
-                     nuccodec->stogy->len);
-    write_byte_block(inserts_fp, (unsigned char *)nuccodec->inserts->s,
-                     nuccodec->inserts->len);
-    write_byte_block(modcnt_fp, (unsigned char *)nuccodec->modcnt->s,
-                     nuccodec->modcnt->len);
-    write_byte_block(modpos_fp, (unsigned char *)nuccodec->modpos->s,
-                     nuccodec->modpos->len);
-    write_byte_block(modbases_fp, (unsigned char *)nuccodec->modbases->s,
-                     nuccodec->modbases->len);
-    write_byte_block(trail_fp, (unsigned char *)nuccodec->trail->s,
-                     nuccodec->trail->len);
-
-    reset(nuccodec);
 }
 
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp) {
@@ -666,9 +614,7 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp) {
     nuccodec->modbases_sz += modbases_sz;
     nuccodec->trail_sz += trail_sz;
 
-    // Moved to nuccodec_write_single_stream_block(), which is called after this
-    // function.
-    // reset(nuccodec);
+    reset(nuccodec);
 
     return ret;
 }
@@ -825,9 +771,10 @@ static void alike(str_t *exs, const size_t exs_len, const char *ref,
 
     // Replace MODs
     size_t i = 0;
+    size_t modpos_curr = 0;
     size_t modpos_prev = 0;
     for (i = 0; i < modcnt; i++) {
-        size_t modpos_curr = modpos_prev + modpos[i];
+        modpos_curr = modpos_prev + modpos[i];
         modpos_prev = modpos_curr;
         exs->s[modpos_curr] = modbases[i];
     }
@@ -840,9 +787,10 @@ static void nuccodec_decode_records(
     nuccodec_t *nuccodec, unsigned char *ctrl, unsigned char *rname,
     const unsigned char *pos, unsigned char *seq, const unsigned char *seqlen,
     unsigned char *exs, const unsigned char *posoff, unsigned char *stogy,
-    unsigned char *inserts, const unsigned char *modcnt, const unsigned char *modpos,
-    unsigned char *modbases, unsigned char *trail, str_t **rname_decoded,
-    uint32_t *pos_decoded, str_t **cigar_decoded, str_t **seq_decoded) {
+    unsigned char *inserts, const unsigned char *modcnt,
+    const unsigned char *modpos, unsigned char *modbases, unsigned char *trail,
+    str_t **rname_decoded, uint32_t *pos_decoded, str_t **cigar_decoded,
+    str_t **seq_decoded) {
     size_t record_idx = 0;
     size_t i = 0;
 
@@ -1000,7 +948,7 @@ static void nuccodec_decode_records(
         } else {
             tsc_error("Invalid ctrl string\n");
         }
-        // printf("%s %d %s %s\n", _rname_->s, *_pos_, _cigar_->s, _seq_->s);
+
         ctrl++;
         record_idx++;
     }
@@ -1037,8 +985,6 @@ static unsigned char *read_rangeO1_block(FILE *fp, size_t *sz) {
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
     if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
         tsc_error("CRC64 check failed\n");
-    // unsigned char *data = range_decompress_o1(data_compressed, (unsigned
-    // int)data_compressed_sz, (unsigned int *)&data_sz);
     unsigned char *data =
         range_decompress_o1(data_compressed, (unsigned int *)&data_sz);
     free(data_compressed);
