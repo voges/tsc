@@ -251,19 +251,19 @@ void samcodec_encode(samcodec_t *samcodec) {
     tscbh_t *tscbh = tscbh_new();
 
     // Set up single-stream files
-    FILE *ctrl_fp = tsc_fopen("ctrl.stream", "w");
-    FILE *rname_fp = tsc_fopen("rname.stream", "w");
-    FILE *pos_fp = tsc_fopen("pos.stream", "w");
-    FILE *seq_fp = tsc_fopen("seq.stream", "w");
-    FILE *seqlen_fp = tsc_fopen("seqlen.stream", "w");
-    FILE *exs_fp = tsc_fopen("exs.stream", "w");
-    FILE *posoff_fp = tsc_fopen("posoff.stream", "w");
-    FILE *stogy_fp = tsc_fopen("stogy.stream", "w");
-    FILE *inserts_fp = tsc_fopen("inserts.stream", "w");
-    FILE *modcnt_fp = tsc_fopen("modcnt.stream", "w");
-    FILE *modpos_fp = tsc_fopen("modpos.stream", "w");
-    FILE *modbases_fp = tsc_fopen("modbases.stream", "w");
-    FILE *trail_fp = tsc_fopen("trail.stream", "w");
+//    FILE *ctrl_fp = tsc_fopen("ctrl.stream", "w");
+//    FILE *rname_fp = tsc_fopen("rname.stream", "w");
+//    FILE *pos_fp = tsc_fopen("pos.stream", "w");
+//    FILE *seq_fp = tsc_fopen("seq.stream", "w");
+//    FILE *seqlen_fp = tsc_fopen("seqlen.stream", "w");
+//    FILE *exs_fp = tsc_fopen("exs.stream", "w");
+//    FILE *posoff_fp = tsc_fopen("posoff.stream", "w");
+//    FILE *stogy_fp = tsc_fopen("stogy.stream", "w");
+//    FILE *inserts_fp = tsc_fopen("inserts.stream", "w");
+//    FILE *modcnt_fp = tsc_fopen("modcnt.stream", "w");
+//    FILE *modpos_fp = tsc_fopen("modpos.stream", "w");
+//    FILE *modbases_fp = tsc_fopen("modbases.stream", "w");
+//    FILE *trail_fp = tsc_fopen("trail.stream", "w");
 
     // Set up tsc file header, then seek past it for now
     tscfh->flags = 0x1;  // LSB signals SAM
@@ -318,10 +318,10 @@ void samcodec_encode(samcodec_t *samcodec) {
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_NUC] +=
                 nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
-            nuccodec_write_single_stream_block(
-                samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp,
-                seqlen_fp, exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp,
-                modpos_fp, modbases_fp, trail_fp);
+//            nuccodec_write_single_stream_block(
+//                samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp,
+//                seqlen_fp, exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp,
+//                modpos_fp, modbases_fp, trail_fp);
             gettimeofday(&tv1, NULL);
             et[ET_NUC] += tvdiff(tv0, tv1);
 
@@ -417,10 +417,10 @@ void samcodec_encode(samcodec_t *samcodec) {
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_NUC] += nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
-    nuccodec_write_single_stream_block(
-        samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp, seqlen_fp,
-        exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp, modpos_fp,
-        modbases_fp, trail_fp);
+//    nuccodec_write_single_stream_block(
+//        samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp, seqlen_fp,
+//        exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp, modpos_fp,
+//        modbases_fp, trail_fp);
     gettimeofday(&tv1, NULL);
     et[ET_NUC] += tvdiff(tv0, tv1);
 
@@ -464,19 +464,19 @@ void samcodec_encode(samcodec_t *samcodec) {
     if (tsc_stats) samcodec_print_stats(sam_sz, tsc_sz, tscfh, et);
 
     // Close single-stream files
-    tsc_fclose(ctrl_fp);
-    tsc_fclose(rname_fp);
-    tsc_fclose(pos_fp);
-    tsc_fclose(seq_fp);
-    tsc_fclose(seqlen_fp);
-    tsc_fclose(exs_fp);
-    tsc_fclose(posoff_fp);
-    tsc_fclose(stogy_fp);
-    tsc_fclose(inserts_fp);
-    tsc_fclose(modcnt_fp);
-    tsc_fclose(modpos_fp);
-    tsc_fclose(modbases_fp);
-    tsc_fclose(trail_fp);
+//    tsc_fclose(ctrl_fp);
+//    tsc_fclose(rname_fp);
+//    tsc_fclose(pos_fp);
+//    tsc_fclose(seq_fp);
+//    tsc_fclose(seqlen_fp);
+//    tsc_fclose(exs_fp);
+//    tsc_fclose(posoff_fp);
+//    tsc_fclose(stogy_fp);
+//    tsc_fclose(inserts_fp);
+//    tsc_fclose(modcnt_fp);
+//    tsc_fclose(modpos_fp);
+//    tsc_fclose(modbases_fp);
+//    tsc_fclose(trail_fp);
 
     tscfh_free(tscfh);
     tscsh_free(tscsh);
