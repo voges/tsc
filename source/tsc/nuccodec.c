@@ -394,8 +394,8 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos,
             idx_prev = idx_exs;
 
             (*modcnt)++;
-            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF));
-            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF));
+            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
             str_append_char(modbases, exs[idx_exs]);
         }
         idx_exs++;
@@ -461,8 +461,8 @@ add_mrecord:;
     str_append_cstr(nuccodec->pos, ":");
     str_append_cstr(nuccodec->stogy, cigar);
     str_append_cstr(nuccodec->stogy, ":");
-    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 8 & 0xFF));
-    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 0 & 0xFF));
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 8 & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 0 & 0xFF)); // NOLINT(hicpp-signed-bitwise)
     str_append_cstr(nuccodec->seq, seq);
 
     goto cleanup;
@@ -497,13 +497,13 @@ add_precord:;  // This read passed all checks and can be coded
     if (modcnt > UINT16_MAX) goto add_mrecord;
 
     str_append_cstr(nuccodec->ctrl, "p");
-    str_append_char(nuccodec->posoff, (char)((pos_off >> 8) & 0xFF));
-    str_append_char(nuccodec->posoff, (char)((pos_off >> 0) & 0xFF));
+    str_append_char(nuccodec->posoff, (char)((pos_off >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->posoff, (char)((pos_off >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
     str_append_str(nuccodec->stogy, stogy);
     str_append_cstr(nuccodec->stogy, ":");
     str_append_str(nuccodec->inserts, inserts);
-    str_append_char(nuccodec->modcnt, (char)((modcnt >> 8) & 0xFF));
-    str_append_char(nuccodec->modcnt, (char)((modcnt >> 0) & 0xFF));
+    str_append_char(nuccodec->modcnt, (char)((modcnt >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->modcnt, (char)((modcnt >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
     str_append_str(nuccodec->modpos, modpos);
     str_append_str(nuccodec->modbases, modbases);
     str_append_str(nuccodec->trail, trail);
@@ -840,7 +840,7 @@ static void nuccodec_decode_records(
             stogy_idx++;
 
             uint16_t seqlen_curr =
-                (uint16_t)((seqlen[seqlen_idx] << 8) + seqlen[seqlen_idx + 1]);
+                (uint16_t)((seqlen[seqlen_idx] << 8) + seqlen[seqlen_idx + 1]); // NOLINT(hicpp-signed-bitwise)
             seqlen_idx += 2;
 
             for (i = 0; i < seqlen_curr; i++)
@@ -887,7 +887,7 @@ static void nuccodec_decode_records(
             str_copy_str(_rname_, nuccodec->rname_prev);
 
             uint16_t posoff_curr =
-                (uint16_t)((posoff[posoff_idx] << 8) | posoff[posoff_idx + 1]);
+                (uint16_t)((posoff[posoff_idx] << 8) | posoff[posoff_idx + 1]); // NOLINT(hicpp-signed-bitwise)
             posoff_idx += 2;
 
             while (stogy[stogy_idx] != ':')
@@ -900,13 +900,13 @@ static void nuccodec_decode_records(
                 str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
 
             uint16_t modcnt_curr =
-                (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx + 1]);
+                (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx + 1]); // NOLINT(hicpp-signed-bitwise)
             modcnt_idx += 2;
 
             uint16_t *modpos_curr =
                 (uint16_t *)tsc_malloc(sizeof(uint16_t) * modcnt_curr);
             for (i = 0; i < modcnt_curr; i++) {
-                modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) +
+                modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) + // NOLINT(hicpp-signed-bitwise)
                                             modpos[modpos_idx + 1]);
                 modpos_idx += 2;
             }
