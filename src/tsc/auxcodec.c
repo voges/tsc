@@ -48,8 +48,7 @@ void auxcodec_free(auxcodec_t *auxcodec) {
 // Encoder methods
 // -----------------------------------------------------------------------------
 
-void auxcodec_add_record(auxcodec_t *auxcodec, const uint16_t flag,
-                         const uint8_t mapq, const char *opt) {
+void auxcodec_add_record(auxcodec_t *auxcodec, const uint16_t flag, const uint8_t mapq, const char *opt) {
     auxcodec->record_cnt++;
 
     char flag_cstr[101];
@@ -73,8 +72,7 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp) {
     unsigned char *uncompressed = (unsigned char *)auxcodec->uncompressed->s;
     size_t uncompressed_sz = auxcodec->uncompressed->len;
     size_t compressed_sz = 0;
-    unsigned char *compressed =
-        zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
+    unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
     uint64_t compressed_crc = crc64(compressed, compressed_sz);
@@ -100,8 +98,7 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp) {
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t auxcodec_decode(unsigned char *tmp, size_t tmp_sz, uint16_t *flag,
-                              uint8_t *mapq, str_t **opt) {
+static size_t auxcodec_decode(unsigned char *tmp, size_t tmp_sz, uint16_t *flag, uint8_t *mapq, str_t **opt) {
     size_t ret = 0;
     size_t i = 0;
     size_t line = 0;
@@ -123,8 +120,7 @@ static size_t auxcodec_decode(unsigned char *tmp, size_t tmp_sz, uint16_t *flag,
             tmp[i] = '\0';
             switch (idx++) {
                 case 0:
-                    flag[line] =
-                        (uint16_t)strtoul((const char *)cstr, NULL, 10);
+                    flag[line] = (uint16_t)strtoul((const char *)cstr, NULL, 10);
                     ret += sizeof(*flag);
                     break;
                 case 1:
@@ -147,8 +143,7 @@ static size_t auxcodec_decode(unsigned char *tmp, size_t tmp_sz, uint16_t *flag,
     return ret;
 }
 
-size_t auxcodec_decode_block(auxcodec_t *auxcodec, FILE *fp, uint16_t *flag,
-                             uint8_t *mapq, str_t **opt) {
+size_t auxcodec_decode_block(auxcodec_t *auxcodec, FILE *fp, uint16_t *flag, uint8_t *mapq, str_t **opt) {
     size_t ret = 0;
 
     unsigned char id[8];
@@ -168,12 +163,10 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec, FILE *fp, uint16_t *flag,
     ret += tsc_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(compressed, compressed_sz) != compressed_crc)
-        tsc_error("CRC64 check failed for aux block\n");
+    if (crc64(compressed, compressed_sz) != compressed_crc) tsc_error("CRC64 check failed for aux block\n");
 
     // Decompress block
-    unsigned char *uncompressed =
-        zlib_decompress(compressed, compressed_sz, uncompressed_sz);
+    unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
     free(compressed);
 
     // Decode block

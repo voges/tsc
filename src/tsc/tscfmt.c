@@ -48,10 +48,8 @@ size_t tscfh_read(tscfh_t *tscfh, FILE *fp) {
     ret += tsc_fread_uint64(fp, &(tscfh->sblk_n));
 
     // Sanity check
-    if (strncmp((const char *)tscfh->magic, "tsc", 3) != 0)
-        tsc_error("File magic does not match\n");
-    if (!(tscfh->flags & (uint8_t)0x1))
-        tsc_error("File seems not to contain data in SAM format\n");
+    if (strncmp((const char *)tscfh->magic, "tsc", 3) != 0) tsc_error("File magic does not match\n");
+    if (!(tscfh->flags & (uint8_t)0x1)) tsc_error("File seems not to contain data in SAM format\n");
     // if (strncmp(tsc_version->s, (const char *)tscfh->ver, tsc_version->len))
     //     tsc_error("File was compressed with another version\n");
     if (!(tscfh->rec_n)) tsc_error("File does not contain any records\n");
@@ -83,8 +81,7 @@ size_t tscfh_size(tscfh_t *tscfh) {
     return sizeof(tscfh->magic) +
            sizeof(tscfh->flags)
            // + sizeof(tscfh->ver)
-           + sizeof(tscfh->rec_n) + sizeof(tscfh->blk_n) +
-           sizeof(tscfh->sblk_n);
+           + sizeof(tscfh->rec_n) + sizeof(tscfh->blk_n) + sizeof(tscfh->sblk_n);
 }
 
 // SAM header

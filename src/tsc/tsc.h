@@ -9,11 +9,7 @@
 #define MB (KB * 1000LL)
 // #define GB (MB*1000LL)
 
-typedef enum {
-    TSC_MODE_COMPRESS,
-    TSC_MODE_DECOMPRESS,
-    TSC_MODE_INFO
-} tsc_mode_t;
+typedef enum { TSC_MODE_COMPRESS, TSC_MODE_DECOMPRESS, TSC_MODE_INFO } tsc_mode_t;
 
 extern str_t *tsc_prog_name;
 extern str_t *tsc_version;

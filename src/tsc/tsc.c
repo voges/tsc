@@ -47,14 +47,10 @@ static void parse_options(int argc, char *argv[]) {
     int opt;
 
     static struct option long_options[] = {
-        {"blocksz", required_argument, NULL, 'b'},
-        {"decompress", no_argument, NULL, 'd'},
-        {"force", no_argument, NULL, 'f'},
-        {"help", no_argument, NULL, 'h'},
-        {"info", no_argument, NULL, 'i'},
-        {"output", required_argument, NULL, 'o'},
-        {"stats", no_argument, NULL, 's'},
-        {NULL, 0, NULL, 0}};
+        {"blocksz", required_argument, NULL, 'b'}, {"decompress", no_argument, NULL, 'd'},
+        {"force", no_argument, NULL, 'f'},         {"help", no_argument, NULL, 'h'},
+        {"info", no_argument, NULL, 'i'},          {"output", required_argument, NULL, 'o'},
+        {"stats", no_argument, NULL, 's'},         {NULL, 0, NULL, 0}};
 
     const char *short_options = "b:dfhio:s";
 
@@ -68,8 +64,7 @@ static void parse_options(int argc, char *argv[]) {
                 opt_blocksz = optarg;
                 break;
             case 'd':
-                if (tsc_mode == TSC_MODE_INFO)
-                    tsc_error("Cannot decompress and get info at once\n");
+                if (tsc_mode == TSC_MODE_INFO) tsc_error("Cannot decompress and get info at once\n");
                 tsc_mode = TSC_MODE_DECOMPRESS;
                 break;
             case 'f':
@@ -79,8 +74,7 @@ static void parse_options(int argc, char *argv[]) {
                 print_help();
                 exit(EXIT_SUCCESS);
             case 'i':
-                if (tsc_mode == TSC_MODE_DECOMPRESS)
-                    tsc_error("Cannot decompress and get info at once\n");
+                if (tsc_mode == TSC_MODE_DECOMPRESS) tsc_error("Cannot decompress and get info at once\n");
                 tsc_mode = TSC_MODE_INFO;
                 break;
             case 'o':
@@ -182,8 +176,7 @@ int main(int argc, char *argv[]) {
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "sam") != 0)
-            tsc_error("Input file extension must be 'sam'\n");
+        if (strcmp(fext((const char *)tsc_in_fname->s), "sam") != 0) tsc_error("Input file extension must be 'sam'\n");
 
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
@@ -192,8 +185,7 @@ int main(int argc, char *argv[]) {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
-            opt_flag_force == false) {
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (yesno())
@@ -214,20 +206,17 @@ int main(int argc, char *argv[]) {
         tsc_fclose(tsc_out_fp);
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0)
-            tsc_error("Input file extension must be 'tsc'\n");
+        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0) tsc_error("Input file extension must be 'tsc'\n");
 
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4);  // strip '.tsc'
-            if (strcmp(fext((const char *)tsc_out_fname->s), "sam") != 0)
-                str_append_cstr(tsc_out_fname, ".sam");
+            if (strcmp(fext((const char *)tsc_out_fname->s), "sam") != 0) str_append_cstr(tsc_out_fname, ".sam");
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
-            opt_flag_force == false) {
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (yesno())
@@ -248,8 +237,7 @@ int main(int argc, char *argv[]) {
         tsc_fclose(tsc_out_fp);
     } else {  // TSC_MODE_INFO
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0)
-            tsc_error("Input file extension must be 'tsc'\n");
+        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0) tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");

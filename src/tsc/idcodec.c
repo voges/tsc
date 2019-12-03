@@ -1,6 +1,6 @@
 //
-// Qual block format:
-//   unsigned char id[8]          : "qual---" + '\0'
+// Id block format:
+//   unsigned char id[8]          : "id-----" + '\0'
 //   uint64_t      record_cnt     : No. of lines in block
 //   uint64_t      uncompressed_sz: Size of uncompressed data
 //   uint64_t      compressed_sz  : Compressed data size
@@ -8,7 +8,7 @@
 //   unsigned char *compressed    : Compressed data
 //
 
-#include "qualcodec.h"
+#include "idcodec.h"
 #include <string.h>
 #include "crc64.h"
 #include "fio.h"
@@ -16,31 +16,31 @@
 #include "mem.h"
 #include "zlib-wrap.h"
 
-static void qualcodec_init(qualcodec_t *qualcodec) {
-    qualcodec->record_cnt = 0;
-    str_clear(qualcodec->uncompressed);
-    if (qualcodec->compressed != NULL) {
-        free(qualcodec->compressed);
-        qualcodec->compressed = NULL;
+static void idcodec_init(idcodec_t *idcodec) {
+    idcodec->record_cnt = 0;
+    str_clear(idcodec->uncompressed);
+    if (idcodec->compressed != NULL) {
+        free(idcodec->compressed);
+        idcodec->compressed = NULL;
     }
 }
 
-qualcodec_t *qualcodec_new(void) {
-    qualcodec_t *qualcodec = (qualcodec_t *)tsc_malloc(sizeof(qualcodec_t));
-    qualcodec->uncompressed = str_new();
-    qualcodec->compressed = NULL;
-    qualcodec_init(qualcodec);
-    return qualcodec;
+idcodec_t *idcodec_new(void) {
+    idcodec_t *idcodec = (idcodec_t *)tsc_malloc(sizeof(idcodec_t));
+    idcodec->uncompressed = str_new();
+    idcodec->compressed = NULL;
+    idcodec_init(idcodec);
+    return idcodec;
 }
 
-void qualcodec_free(qualcodec_t *qualcodec) {
-    if (qualcodec != NULL) {
-        str_free(qualcodec->uncompressed);
-        if (qualcodec->compressed != NULL) {
-            free(qualcodec->compressed);
-            qualcodec->compressed = NULL;
+void idcodec_free(idcodec_t *idcodec) {
+    if (idcodec != NULL) {
+        str_free(idcodec->uncompressed);
+        if (idcodec->compressed != NULL) {
+            free(idcodec->compressed);
+            idcodec->compressed = NULL;
         }
-        free(qualcodec);
+        free(idcodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -49,31 +49,30 @@ void qualcodec_free(qualcodec_t *qualcodec) {
 // Encoder methods
 // -----------------------------------------------------------------------------
 
-void qualcodec_add_record(qualcodec_t *qualcodec, const char *qual) {
-    qualcodec->record_cnt++;
+void idcodec_add_record(idcodec_t *idcodec, const char *qname) {
+    idcodec->record_cnt++;
 
-    str_append_cstr(qualcodec->uncompressed, qual);
-    str_append_cstr(qualcodec->uncompressed, "\n");
+    str_append_cstr(idcodec->uncompressed, qname);
+    str_append_cstr(idcodec->uncompressed, "\n");
 }
 
-size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp) {
+size_t idcodec_write_block(idcodec_t *idcodec, FILE *fp) {
     size_t ret = 0;
 
     // Compress block
-    unsigned char *uncompressed = (unsigned char *)qualcodec->uncompressed->s;
-    size_t uncompressed_sz = qualcodec->uncompressed->len;
+    unsigned char *uncompressed = (unsigned char *)idcodec->uncompressed->s;
+    size_t uncompressed_sz = idcodec->uncompressed->len;
     size_t compressed_sz = 0;
-    unsigned char *compressed =
-        zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
+    unsigned char *compressed = zlib_compress(uncompressed, uncompressed_sz, &compressed_sz);
 
     // Compute CRC64
     uint64_t compressed_crc = crc64(compressed, compressed_sz);
 
     // Write compressed block
-    unsigned char id[8] = "qual---";
+    unsigned char id[8] = "id-----";
     id[7] = '\0';
     ret += tsc_fwrite_buf(fp, id, sizeof(id));
-    ret += tsc_fwrite_uint64(fp, (uint64_t)qualcodec->record_cnt);
+    ret += tsc_fwrite_uint64(fp, (uint64_t)idcodec->record_cnt);
     ret += tsc_fwrite_uint64(fp, (uint64_t)uncompressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
@@ -82,7 +81,7 @@ size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp) {
     // Free memory allocated by zlib_compress
     free(compressed);
 
-    qualcodec_init(qualcodec);
+    idcodec_init(idcodec);
 
     return ret;
 }
@@ -90,15 +89,14 @@ size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp) {
 // Decoder methods
 // -----------------------------------------------------------------------------
 
-static size_t qualcodec_decode(unsigned char *tmp, size_t tmp_sz,
-                               str_t **qual) {
+static size_t idcodec_decode(unsigned char *tmp, size_t tmp_sz, str_t **qname) {
     size_t ret = 0;
     size_t i = 0;
     size_t rec = 0;
 
     for (i = 0; i < tmp_sz; i++) {
         if (tmp[i] != '\n') {
-            str_append_char(qual[rec], (const char)tmp[i]);
+            str_append_char(qname[rec], (const char)tmp[i]);
             ret++;
         } else {
             rec++;
@@ -108,7 +106,7 @@ static size_t qualcodec_decode(unsigned char *tmp, size_t tmp_sz,
     return ret;
 }
 
-size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual) {
+size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname) {
     size_t ret = 0;
 
     unsigned char id[8];
@@ -128,19 +126,17 @@ size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual) {
     ret += tsc_fread_buf(fp, compressed, compressed_sz);
 
     // Check CRC64
-    if (crc64(compressed, compressed_sz) != compressed_crc)
-        tsc_error("CRC64 check failed for qual block\n");
+    if (crc64(compressed, compressed_sz) != compressed_crc) tsc_error("CRC64 check failed for id block\n");
 
     // Decompress block
-    unsigned char *uncompressed =
-        zlib_decompress(compressed, compressed_sz, uncompressed_sz);
+    unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
     free(compressed);
 
     // Decode block
-    qualcodec_decode(uncompressed, uncompressed_sz, qual);
+    idcodec_decode(uncompressed, uncompressed_sz, qname);
     free(uncompressed);  // Free memory used for decoded bitstream
 
-    qualcodec_init(qualcodec);
+    idcodec_init(idcodec);
 
     return ret;
 }

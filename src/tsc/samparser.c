@@ -3,9 +3,7 @@
 #include "log.h"
 #include "mem.h"
 
-static void samparser_init(samparser_t *samparser, FILE *fp) {
-    samparser->fp = fp;
-}
+static void samparser_init(samparser_t *samparser, FILE *fp) { samparser->fp = fp; }
 
 samparser_t *samparser_new(FILE *fp) {
     samparser_t *samparser = (samparser_t *)tsc_malloc(sizeof(samparser_t));
@@ -26,8 +24,7 @@ void samparser_free(samparser_t *samparser) {
 void samparser_head(samparser_t *samparser) {
     // Read the SAM header
     bool samheader = false;
-    while (fgets(samparser->curr.line, sizeof(samparser->curr.line),
-                 samparser->fp)) {
+    while (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
             str_append_cstr(samparser->head, samparser->curr.line);
             samheader = true;
@@ -43,24 +40,20 @@ void samparser_head(samparser_t *samparser) {
 static void samparser_parse(samparser_t *samparser) {
     size_t l = strlen(samparser->curr.line) - 1;
 
-    while (l &&
-           (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n'))
-        samparser->curr.line[l--] = '\0';
+    while (l && (samparser->curr.line[l] == '\r' || samparser->curr.line[l] == '\n')) samparser->curr.line[l--] = '\0';
 
     char *c = samparser->curr.qname = samparser->curr.line;
     int f = 1;
 
     while (*c) {
         if (*c == '\t') {
-            if (f == 1)
-                samparser->curr.flag = (uint16_t)strtol(c + 1, NULL, 10);
+            if (f == 1) samparser->curr.flag = (uint16_t)strtol(c + 1, NULL, 10);
             if (f == 2) samparser->curr.rname = c + 1;
             if (f == 3) samparser->curr.pos = (uint32_t)strtol(c + 1, NULL, 10);
             if (f == 4) samparser->curr.mapq = (uint8_t)strtol(c + 1, NULL, 10);
             if (f == 5) samparser->curr.cigar = c + 1;
             if (f == 6) samparser->curr.rnext = c + 1;
-            if (f == 7)
-                samparser->curr.pnext = (uint32_t)strtol(c + 1, NULL, 10);
+            if (f == 7) samparser->curr.pnext = (uint32_t)strtol(c + 1, NULL, 10);
             if (f == 8) samparser->curr.tlen = (int64_t)strtol(c + 1, NULL, 10);
             if (f == 9) samparser->curr.seq = c + 1;
             if (f == 10) samparser->curr.qual = c + 1;
@@ -77,8 +70,7 @@ static void samparser_parse(samparser_t *samparser) {
 
 bool samparser_next(samparser_t *samparser) {
     // Try to read and parse next line
-    if (fgets(samparser->curr.line, sizeof(samparser->curr.line),
-              samparser->fp)) {
+    if (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
         if (*(samparser->curr.line) == '@')
             tsc_error("Tried to read SAM record but found header line\n");
         else

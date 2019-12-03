@@ -56,13 +56,9 @@ size_t tsc_fwrite_uint64(FILE *fp, const uint64_t qword) {
     return sizeof(uint64_t);
 }
 
-size_t tsc_fread_byte(FILE *fp, unsigned char *byte) {
-    return fread(byte, 1, 1, fp);
-}
+size_t tsc_fread_byte(FILE *fp, unsigned char *byte) { return fread(byte, 1, 1, fp); }
 
-size_t tsc_fread_buf(FILE *fp, unsigned char *buf, const size_t n) {
-    return fread(buf, 1, n, fp);
-}
+size_t tsc_fread_buf(FILE *fp, unsigned char *buf, const size_t n) { return fread(buf, 1, n, fp); }
 
 // size_t tsc_fread_uint32(FILE *fp, uint32_t *dword)
 // {
@@ -94,12 +90,9 @@ size_t tsc_fread_uint64(FILE *fp, uint64_t *qword) {
         return ret;
     }
 
-    *qword = (uint64_t)bytes[0] << (uint64_t)56 |
-             (uint64_t)bytes[1] << (uint64_t)48 |
-             (uint64_t)bytes[2] << (uint64_t)40 |
-             (uint64_t)bytes[3] << (uint64_t)32 |
-             (uint64_t)bytes[4] << (uint64_t)24 |
-             (uint64_t)bytes[5] << (uint64_t)16 |
+    *qword = (uint64_t)bytes[0] << (uint64_t)56 | (uint64_t)bytes[1] << (uint64_t)48 |
+             (uint64_t)bytes[2] << (uint64_t)40 | (uint64_t)bytes[3] << (uint64_t)32 |
+             (uint64_t)bytes[4] << (uint64_t)24 | (uint64_t)bytes[5] << (uint64_t)16 |
              (uint64_t)bytes[6] << (uint64_t)8 | (uint64_t)bytes[7];
 
     free(bytes);

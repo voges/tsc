@@ -128,13 +128,10 @@ nuccodec_t *nuccodec_new(void) {
 }
 
 static void print_stats(nuccodec_t *nuccodec) {
-    size_t total_record_cnt =
-        nuccodec->mrecord_cnt + nuccodec->irecord_cnt + nuccodec->precord_cnt;
-    size_t total_sz =
-        nuccodec->ctrl_sz + nuccodec->rname_sz + nuccodec->pos_sz +
-        nuccodec->seq_sz + nuccodec->exs_sz + nuccodec->posoff_sz +
-        nuccodec->stogy_sz + nuccodec->inserts_sz + nuccodec->modcnt_sz +
-        nuccodec->modpos_sz + nuccodec->modbases_sz + nuccodec->trail_sz;
+    size_t total_record_cnt = nuccodec->mrecord_cnt + nuccodec->irecord_cnt + nuccodec->precord_cnt;
+    size_t total_sz = nuccodec->ctrl_sz + nuccodec->rname_sz + nuccodec->pos_sz + nuccodec->seq_sz + nuccodec->exs_sz +
+                      nuccodec->posoff_sz + nuccodec->stogy_sz + nuccodec->inserts_sz + nuccodec->modcnt_sz +
+                      nuccodec->modpos_sz + nuccodec->modbases_sz + nuccodec->trail_sz;
 
     tsc_log("\nnuccodec stats:\n");
     tsc_log("---------------\n");
@@ -145,22 +142,16 @@ static void print_stats(nuccodec_t *nuccodec) {
     tsc_log("precords:    %12ld (%6.2f%%)\n", nuccodec->precord_cnt,
             100 * (double)nuccodec->precord_cnt / (double)total_record_cnt);
     tsc_log("--\n");
-    tsc_log("ctrl_sz:     %12ld (%6.2f%%)\n", nuccodec->ctrl_sz,
-            100 * (double)nuccodec->ctrl_sz / (double)total_sz);
-    tsc_log("rname_sz:    %12ld (%6.2f%%)\n", nuccodec->rname_sz,
-            100 * (double)nuccodec->rname_sz / (double)total_sz);
-    tsc_log("pos_sz:      %12ld (%6.2f%%)\n", nuccodec->pos_sz,
-            100 * (double)nuccodec->pos_sz / (double)total_sz);
-    tsc_log("seq_sz:      %12ld (%6.2f%%)\n", nuccodec->seq_sz,
-            100 * (double)nuccodec->seq_sz / (double)total_sz);
+    tsc_log("ctrl_sz:     %12ld (%6.2f%%)\n", nuccodec->ctrl_sz, 100 * (double)nuccodec->ctrl_sz / (double)total_sz);
+    tsc_log("rname_sz:    %12ld (%6.2f%%)\n", nuccodec->rname_sz, 100 * (double)nuccodec->rname_sz / (double)total_sz);
+    tsc_log("pos_sz:      %12ld (%6.2f%%)\n", nuccodec->pos_sz, 100 * (double)nuccodec->pos_sz / (double)total_sz);
+    tsc_log("seq_sz:      %12ld (%6.2f%%)\n", nuccodec->seq_sz, 100 * (double)nuccodec->seq_sz / (double)total_sz);
     tsc_log("seqlen_sz:   %12ld (%6.2f%%)\n", nuccodec->seqlen_sz,
             100 * (double)nuccodec->seqlen_sz / (double)total_sz);
-    tsc_log("exs_sz:      %12ld (%6.2f%%)\n", nuccodec->exs_sz,
-            100 * (double)nuccodec->exs_sz / (double)total_sz);
+    tsc_log("exs_sz:      %12ld (%6.2f%%)\n", nuccodec->exs_sz, 100 * (double)nuccodec->exs_sz / (double)total_sz);
     tsc_log("posoff_sz:   %12ld (%6.2f%%)\n", nuccodec->posoff_sz,
             100 * (double)nuccodec->posoff_sz / (double)total_sz);
-    tsc_log("stogy_sz:    %12ld (%6.2f%%)\n", nuccodec->stogy_sz,
-            100 * (double)nuccodec->stogy_sz / (double)total_sz);
+    tsc_log("stogy_sz:    %12ld (%6.2f%%)\n", nuccodec->stogy_sz, 100 * (double)nuccodec->stogy_sz / (double)total_sz);
     tsc_log("inserts_sz:  %12ld (%6.2f%%)\n", nuccodec->inserts_sz,
             100 * (double)nuccodec->inserts_sz / (double)total_sz);
     tsc_log("modcnt_sz:   %12ld (%6.2f%%)\n", nuccodec->modcnt_sz,
@@ -200,8 +191,7 @@ void nuccodec_free(nuccodec_t *nuccodec) {
     }
 }
 
-static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos,
-                                  const char *exs) {
+static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char *exs) {
     // Push new POS and EXS to sliding window
     cbufint64_push(nuccodec->pos_cbuf, pos);
     cbufstr_push(nuccodec->exs_cbuf, exs);
@@ -212,14 +202,11 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos,
     nuccodec->ref_pos_min = UINT32_MAX;
     nuccodec->ref_pos_max = 0;
     do {
-        uint32_t pos_curr_min =
-            (uint32_t)cbufint64_get(nuccodec->pos_cbuf, cbuf_idx);
+        uint32_t pos_curr_min = (uint32_t)cbufint64_get(nuccodec->pos_cbuf, cbuf_idx);
         str_t *exs_curr = cbufstr_get(nuccodec->exs_cbuf, cbuf_idx);
         uint32_t pos_curr_max = pos_curr_min + (uint32_t)exs_curr->len - 1;
-        if (pos_curr_min < nuccodec->ref_pos_min)
-            nuccodec->ref_pos_min = pos_curr_min;
-        if (pos_curr_max > nuccodec->ref_pos_max)
-            nuccodec->ref_pos_max = pos_curr_max;
+        if (pos_curr_min < nuccodec->ref_pos_min) nuccodec->ref_pos_min = pos_curr_min;
+        if (pos_curr_max > nuccodec->ref_pos_max) nuccodec->ref_pos_max = pos_curr_max;
         cbuf_idx++;
     } while (cbuf_idx < cbuf_n);
 
@@ -235,8 +222,7 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos,
     // Fill frequency table
     cbuf_idx = 0;
     do {
-        uint32_t pos_curr =
-            (uint32_t)cbufint64_get(nuccodec->pos_cbuf, cbuf_idx);
+        uint32_t pos_curr = (uint32_t)cbufint64_get(nuccodec->pos_cbuf, cbuf_idx);
         uint32_t pos_off = pos_curr - nuccodec->ref_pos_min;
         str_t *exs_curr = cbufstr_get(nuccodec->exs_cbuf, cbuf_idx);
         for (w = 0; w < exs_curr->len; w++) {
@@ -311,8 +297,7 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos,
  *  Iterate trough the CIGAR string and expand SEQ; this yield EXS, STOGY, and
  *  INSERTS
  */
-static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar,
-                   const char *seq) {
+static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar, const char *seq) {
     size_t cigar_idx = 0;
     size_t cigar_len = strlen(cigar);
     size_t op_len = 0;  // Length of current CIGAR operation
@@ -372,8 +357,7 @@ static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar,
  *  MODBASES.
  *  The trailing sequence from EXS is stored in TRAIL.
  */
-static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos,
-                 str_t *modbases, str_t *trail, const uint32_t pos,
+static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos, str_t *modbases, str_t *trail, const uint32_t pos,
                  const char *exs) {
     // Reset things just if the caller hasn't done yet
     *modcnt = 0;
@@ -394,8 +378,8 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos,
             idx_prev = idx_exs;
 
             (*modcnt)++;
-            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
-            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+            str_append_char(modpos, (char)((idx_store >> 8) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
+            str_append_char(modpos, (char)((idx_store >> 0) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
             str_append_char(modbases, exs[idx_exs]);
         }
         idx_exs++;
@@ -413,8 +397,7 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos,
 
 void nuccodec_add_record(nuccodec_t *nuccodec,
                          // const uint16_t flag,
-                         const char *rname, const uint32_t pos,
-                         const char *cigar, const char *seq) {
+                         const char *rname, const uint32_t pos, const char *cigar, const char *seq) {
     nuccodec->record_cnt++;
 
     str_t *exs = str_new();
@@ -426,8 +409,7 @@ void nuccodec_add_record(nuccodec_t *nuccodec,
     str_t *trail = str_new();
 
     if ((!strlen(rname) || (rname[0] == '*' && rname[1] == '\0')) || (!pos) ||
-        (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) ||
-        (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))
+        (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) || (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))
         /*|| (flag & 0x4)*/) {  // Also try to code unmapped reads
         // tsc_log("Missing RNAME|POS|CIGAR|SEQ\n");
         goto add_mrecord;
@@ -461,8 +443,8 @@ add_mrecord:;
     str_append_cstr(nuccodec->pos, ":");
     str_append_cstr(nuccodec->stogy, cigar);
     str_append_cstr(nuccodec->stogy, ":");
-    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 8 & 0xFF)); // NOLINT(hicpp-signed-bitwise)
-    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 0 & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 8 & 0xFF));  // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->seqlen, (char)(strlen(seq) >> 0 & 0xFF));  // NOLINT(hicpp-signed-bitwise)
     str_append_cstr(nuccodec->seq, seq);
 
     goto cleanup;
@@ -491,19 +473,18 @@ add_irecord:;  // This is the first read in a block
 add_precord:;  // This read passed all checks and can be coded
     nuccodec->precord_cnt++;
 
-    bool success =
-        diff(nuccodec, &modcnt, modpos, modbases, trail, pos, exs->s);
+    bool success = diff(nuccodec, &modcnt, modpos, modbases, trail, pos, exs->s);
     if (!success) goto add_mrecord;
     if (modcnt > UINT16_MAX) goto add_mrecord;
 
     str_append_cstr(nuccodec->ctrl, "p");
-    str_append_char(nuccodec->posoff, (char)((pos_off >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
-    str_append_char(nuccodec->posoff, (char)((pos_off >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->posoff, (char)((pos_off >> 8) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->posoff, (char)((pos_off >> 0) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
     str_append_str(nuccodec->stogy, stogy);
     str_append_cstr(nuccodec->stogy, ":");
     str_append_str(nuccodec->inserts, inserts);
-    str_append_char(nuccodec->modcnt, (char)((modcnt >> 8) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
-    str_append_char(nuccodec->modcnt, (char)((modcnt >> 0) & 0xFF)); // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->modcnt, (char)((modcnt >> 8) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
+    str_append_char(nuccodec->modcnt, (char)((modcnt >> 0) & 0xFF));  // NOLINT(hicpp-signed-bitwise)
     str_append_str(nuccodec->modpos, modpos);
     str_append_str(nuccodec->modbases, modbases);
     str_append_str(nuccodec->trail, trail);
@@ -537,12 +518,10 @@ static size_t write_zlib_block(FILE *fp, unsigned char *data, size_t data_sz) {
     return ret;
 }
 
-static size_t write_rangeO1_block(FILE *fp, unsigned char *data,
-                                  size_t data_sz) {
+static size_t write_rangeO1_block(FILE *fp, unsigned char *data, size_t data_sz) {
     size_t ret = 0;
     size_t compressed_sz = 0;
-    unsigned char *compressed = range_compress_o1(
-        data, (unsigned int)data_sz, (unsigned int *)&compressed_sz);
+    unsigned char *compressed = range_compress_o1(data, (unsigned int)data_sz, (unsigned int *)&compressed_sz);
     uint64_t compressed_crc = crc64(compressed, compressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
@@ -574,32 +553,19 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp) {
     size_t modpos_sz = 0;
     size_t modbases_sz = 0;
     size_t trail_sz = 0;
-    ret += ctrl_sz = write_zlib_block(fp, (unsigned char *)nuccodec->ctrl->s,
-                                      nuccodec->ctrl->len);
-    ret += rname_sz = write_zlib_block(fp, (unsigned char *)nuccodec->rname->s,
-                                       nuccodec->rname->len);
-    ret += pos_sz = write_zlib_block(fp, (unsigned char *)nuccodec->pos->s,
-                                     nuccodec->pos->len);
-    ret += seq_sz = write_zlib_block(fp, (unsigned char *)nuccodec->seq->s,
-                                     nuccodec->seq->len);
-    ret += seqlen_sz = write_rangeO1_block(
-        fp, (unsigned char *)nuccodec->seqlen->s, nuccodec->seqlen->len);
-    ret += exs_sz = write_zlib_block(fp, (unsigned char *)nuccodec->exs->s,
-                                     nuccodec->exs->len);
-    ret += posoff_sz = write_rangeO1_block(
-        fp, (unsigned char *)nuccodec->posoff->s, nuccodec->posoff->len);
-    ret += stogy_sz = write_zlib_block(fp, (unsigned char *)nuccodec->stogy->s,
-                                       nuccodec->stogy->len);
-    ret += inserts_sz = write_zlib_block(
-        fp, (unsigned char *)nuccodec->inserts->s, nuccodec->inserts->len);
-    ret += modcnt_sz = write_rangeO1_block(
-        fp, (unsigned char *)nuccodec->modcnt->s, nuccodec->modcnt->len);
-    ret += modpos_sz = write_rangeO1_block(
-        fp, (unsigned char *)nuccodec->modpos->s, nuccodec->modpos->len);
-    ret += modbases_sz = write_zlib_block(
-        fp, (unsigned char *)nuccodec->modbases->s, nuccodec->modbases->len);
-    ret += trail_sz = write_zlib_block(fp, (unsigned char *)nuccodec->trail->s,
-                                       nuccodec->trail->len);
+    ret += ctrl_sz = write_zlib_block(fp, (unsigned char *)nuccodec->ctrl->s, nuccodec->ctrl->len);
+    ret += rname_sz = write_zlib_block(fp, (unsigned char *)nuccodec->rname->s, nuccodec->rname->len);
+    ret += pos_sz = write_zlib_block(fp, (unsigned char *)nuccodec->pos->s, nuccodec->pos->len);
+    ret += seq_sz = write_zlib_block(fp, (unsigned char *)nuccodec->seq->s, nuccodec->seq->len);
+    ret += seqlen_sz = write_rangeO1_block(fp, (unsigned char *)nuccodec->seqlen->s, nuccodec->seqlen->len);
+    ret += exs_sz = write_zlib_block(fp, (unsigned char *)nuccodec->exs->s, nuccodec->exs->len);
+    ret += posoff_sz = write_rangeO1_block(fp, (unsigned char *)nuccodec->posoff->s, nuccodec->posoff->len);
+    ret += stogy_sz = write_zlib_block(fp, (unsigned char *)nuccodec->stogy->s, nuccodec->stogy->len);
+    ret += inserts_sz = write_zlib_block(fp, (unsigned char *)nuccodec->inserts->s, nuccodec->inserts->len);
+    ret += modcnt_sz = write_rangeO1_block(fp, (unsigned char *)nuccodec->modcnt->s, nuccodec->modcnt->len);
+    ret += modpos_sz = write_rangeO1_block(fp, (unsigned char *)nuccodec->modpos->s, nuccodec->modpos->len);
+    ret += modbases_sz = write_zlib_block(fp, (unsigned char *)nuccodec->modbases->s, nuccodec->modbases->len);
+    ret += trail_sz = write_zlib_block(fp, (unsigned char *)nuccodec->trail->s, nuccodec->trail->len);
     nuccodec->ctrl_sz += ctrl_sz;
     nuccodec->rname_sz += rname_sz;
     nuccodec->pos_sz += pos_sz;
@@ -704,8 +670,7 @@ static size_t insertslen(const char *cigar) {
 /**
  *  Counterpart to expand()
  */
-static void contract(str_t *seq, const char *exs, const char *stogy,
-                     const char *inserts) {
+static void contract(str_t *seq, const char *exs, const char *stogy, const char *inserts) {
     size_t stogy_idx = 0;
     size_t inserts_idx = 0;
     size_t stogy_len = strlen(stogy);
@@ -755,10 +720,8 @@ static void contract(str_t *seq, const char *exs, const char *stogy,
 /**
  *  Counterpart to diff()
  */
-static void alike(str_t *exs, const size_t exs_len, const char *ref,
-                  const size_t ref_pos_min, const uint32_t pos,
-                  const uint16_t modcnt, const uint16_t *modpos,
-                  const char *modbases, const char *trail) {
+static void alike(str_t *exs, const size_t exs_len, const char *ref, const size_t ref_pos_min, const uint32_t pos,
+                  const uint16_t modcnt, const uint16_t *modpos, const char *modbases, const char *trail) {
     // Compute match length
     size_t match_len = 0;
     if (strlen(ref) - (pos - ref_pos_min) <= exs_len)
@@ -783,14 +746,12 @@ static void alike(str_t *exs, const size_t exs_len, const char *ref,
     str_append_cstr(exs, trail);
 }
 
-static void nuccodec_decode_records(
-    nuccodec_t *nuccodec, unsigned char *ctrl, unsigned char *rname,
-    const unsigned char *pos, unsigned char *seq, const unsigned char *seqlen,
-    unsigned char *exs, const unsigned char *posoff, unsigned char *stogy,
-    unsigned char *inserts, const unsigned char *modcnt,
-    const unsigned char *modpos, unsigned char *modbases, unsigned char *trail,
-    str_t **rname_decoded, uint32_t *pos_decoded, str_t **cigar_decoded,
-    str_t **seq_decoded) {
+static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, unsigned char *rname,
+                                    const unsigned char *pos, unsigned char *seq, const unsigned char *seqlen,
+                                    unsigned char *exs, const unsigned char *posoff, unsigned char *stogy,
+                                    unsigned char *inserts, const unsigned char *modcnt, const unsigned char *modpos,
+                                    unsigned char *modbases, unsigned char *trail, str_t **rname_decoded,
+                                    uint32_t *pos_decoded, str_t **cigar_decoded, str_t **seq_decoded) {
     size_t record_idx = 0;
     size_t i = 0;
 
@@ -825,51 +786,42 @@ static void nuccodec_decode_records(
         if (*ctrl == 'm') {
             nuccodec->mrecord_cnt++;
 
-            while (rname[rname_idx] != ':')
-                str_append_char(_rname_, (char)rname[rname_idx++]);
+            while (rname[rname_idx] != ':') str_append_char(_rname_, (char)rname[rname_idx++]);
             if (!_rname_->len) str_append_char(_rname_, '*');
             rname_idx++;
 
-            while (pos[pos_idx] != ':')
-                *_pos_ = *_pos_ * 10 + (uint32_t)(pos[pos_idx++] - '0');
+            while (pos[pos_idx] != ':') *_pos_ = *_pos_ * 10 + (uint32_t)(pos[pos_idx++] - '0');
             pos_idx++;
 
-            while (stogy[stogy_idx] != ':')
-                str_append_char(_cigar_, (char)stogy[stogy_idx++]);
+            while (stogy[stogy_idx] != ':') str_append_char(_cigar_, (char)stogy[stogy_idx++]);
             if (!_cigar_->len) str_append_char(_cigar_, '*');
             stogy_idx++;
 
             uint16_t seqlen_curr =
-                (uint16_t)((seqlen[seqlen_idx] << 8) + seqlen[seqlen_idx + 1]); // NOLINT(hicpp-signed-bitwise)
+                (uint16_t)((seqlen[seqlen_idx] << 8) + seqlen[seqlen_idx + 1]);  // NOLINT(hicpp-signed-bitwise)
             seqlen_idx += 2;
 
-            for (i = 0; i < seqlen_curr; i++)
-                str_append_char(_seq_, (char)seq[seq_idx++]);
+            for (i = 0; i < seqlen_curr; i++) str_append_char(_seq_, (char)seq[seq_idx++]);
             if (!_seq_->len) str_append_char(_seq_, '*');
         } else if (*ctrl == 'i') {
             nuccodec->irecord_cnt++;
 
-            while (rname[rname_idx] != ':')
-                str_append_char(_rname_, (char)rname[rname_idx++]);
+            while (rname[rname_idx] != ':') str_append_char(_rname_, (char)rname[rname_idx++]);
             rname_idx++;
 
-            while (pos[pos_idx] != ':')
-                *_pos_ = *_pos_ * 10 + (uint32_t)(pos[pos_idx++] - '0');
+            while (pos[pos_idx] != ':') *_pos_ = *_pos_ * 10 + (uint32_t)(pos[pos_idx++] - '0');
             pos_idx++;
 
-            while (stogy[stogy_idx] != ':')
-                str_append_char(_cigar_, (char)stogy[stogy_idx++]);
+            while (stogy[stogy_idx] != ':') str_append_char(_cigar_, (char)stogy[stogy_idx++]);
             stogy_idx++;
 
             size_t exs_len = exslen(_cigar_->s);
             str_t *exs_curr = str_new();
-            for (i = 0; i < exs_len; i++)
-                str_append_char(exs_curr, (char)exs[exs_idx++]);
+            for (i = 0; i < exs_len; i++) str_append_char(exs_curr, (char)exs[exs_idx++]);
 
             size_t inserts_len = insertslen(_cigar_->s);
             str_t *inserts_curr = str_new();
-            for (i = 0; i < inserts_len; i++)
-                str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
+            for (i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
 
             contract(_seq_, exs_curr->s, _cigar_->s, inserts_curr->s);
 
@@ -887,33 +839,29 @@ static void nuccodec_decode_records(
             str_copy_str(_rname_, nuccodec->rname_prev);
 
             uint16_t posoff_curr =
-                (uint16_t)((posoff[posoff_idx] << 8) | posoff[posoff_idx + 1]); // NOLINT(hicpp-signed-bitwise)
+                (uint16_t)((posoff[posoff_idx] << 8) | posoff[posoff_idx + 1]);  // NOLINT(hicpp-signed-bitwise)
             posoff_idx += 2;
 
-            while (stogy[stogy_idx] != ':')
-                str_append_char(_cigar_, (char)stogy[stogy_idx++]);
+            while (stogy[stogy_idx] != ':') str_append_char(_cigar_, (char)stogy[stogy_idx++]);
             stogy_idx++;
 
             size_t inserts_len = insertslen(_cigar_->s);
             str_t *inserts_curr = str_new();
-            for (i = 0; i < inserts_len; i++)
-                str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
+            for (i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
 
             uint16_t modcnt_curr =
-                (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx + 1]); // NOLINT(hicpp-signed-bitwise)
+                (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx + 1]);  // NOLINT(hicpp-signed-bitwise)
             modcnt_idx += 2;
 
-            uint16_t *modpos_curr =
-                (uint16_t *)tsc_malloc(sizeof(uint16_t) * modcnt_curr);
+            uint16_t *modpos_curr = (uint16_t *)tsc_malloc(sizeof(uint16_t) * modcnt_curr);
             for (i = 0; i < modcnt_curr; i++) {
-                modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) + // NOLINT(hicpp-signed-bitwise)
+                modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) +  // NOLINT(hicpp-signed-bitwise)
                                             modpos[modpos_idx + 1]);
                 modpos_idx += 2;
             }
 
             str_t *modbases_curr = str_new();
-            for (i = 0; i < modcnt_curr; i++)
-                str_append_char(modbases_curr, (char)modbases[modbases_idx++]);
+            for (i = 0; i < modcnt_curr; i++) str_append_char(modbases_curr, (char)modbases[modbases_idx++]);
 
             *_pos_ = nuccodec->pos_prev + posoff_curr;
             size_t exs_len = exslen(_cigar_->s);
@@ -925,13 +873,11 @@ static void nuccodec_decode_records(
                 trail_len = exs_pos_max - nuccodec->ref_pos_max;
 
             str_t *trail_curr = str_new();
-            for (i = 0; i < trail_len; i++)
-                str_append_char(trail_curr, (char)trail[trail_idx++]);
+            for (i = 0; i < trail_len; i++) str_append_char(trail_curr, (char)trail[trail_idx++]);
 
             str_t *exs_curr = str_new();
-            alike(exs_curr, exs_len, nuccodec->ref->s, nuccodec->ref_pos_min,
-                  *_pos_, modcnt_curr, modpos_curr, modbases_curr->s,
-                  trail_curr->s);
+            alike(exs_curr, exs_len, nuccodec->ref->s, nuccodec->ref_pos_min, *_pos_, modcnt_curr, modpos_curr,
+                  modbases_curr->s, trail_curr->s);
 
             contract(_seq_, exs_curr->s, _cigar_->s, inserts_curr->s);
 
@@ -964,10 +910,8 @@ static unsigned char *read_zlib_block(FILE *fp, size_t *sz) {
     *sz += tsc_fread_uint64(fp, &data_compressed_crc);
     data_compressed = (unsigned char *)tsc_malloc((size_t)data_compressed_sz);
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
-    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
-        tsc_error("CRC64 check failed\n");
-    unsigned char *data =
-        zlib_decompress(data_compressed, data_compressed_sz, data_sz);
+    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc) tsc_error("CRC64 check failed\n");
+    unsigned char *data = zlib_decompress(data_compressed, data_compressed_sz, data_sz);
     free(data_compressed);
     data = tsc_realloc(data, ++data_sz);
     data[data_sz - 1] = '\0';
@@ -983,10 +927,8 @@ static unsigned char *read_rangeO1_block(FILE *fp, size_t *sz) {
     *sz += tsc_fread_uint64(fp, &data_compressed_crc);
     data_compressed = (unsigned char *)tsc_malloc((size_t)data_compressed_sz);
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
-    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc)
-        tsc_error("CRC64 check failed\n");
-    unsigned char *data =
-        range_decompress_o1(data_compressed, (unsigned int *)&data_sz);
+    if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc) tsc_error("CRC64 check failed\n");
+    unsigned char *data = range_decompress_o1(data_compressed, (unsigned int *)&data_sz);
     free(data_compressed);
     data = tsc_realloc(data, ++data_sz);
     data[data_sz - 1] = '\0';
@@ -994,8 +936,7 @@ static unsigned char *read_rangeO1_block(FILE *fp, size_t *sz) {
     return data;
 }
 
-size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp,
-                             str_t **rname_decoded, uint32_t *pos_decoded,
+size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp, str_t **rname_decoded, uint32_t *pos_decoded,
                              str_t **cigar_decoded, str_t **seq_decoded) {
     size_t ret = 0;
 
@@ -1060,10 +1001,8 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp,
     ret += trail_sz;
 
     // Decode block
-    nuccodec_decode_records(nuccodec, ctrl, rname, pos, seq, seqlen, exs,
-                            posoff, stogy, inserts, modcnt, modpos, modbases,
-                            trail, rname_decoded, pos_decoded, cigar_decoded,
-                            seq_decoded);
+    nuccodec_decode_records(nuccodec, ctrl, rname, pos, seq, seqlen, exs, posoff, stogy, inserts, modcnt, modpos,
+                            modbases, trail, rname_decoded, pos_decoded, cigar_decoded, seq_decoded);
 
     // Free memory used for decoded bitstreams
     free(ctrl);
