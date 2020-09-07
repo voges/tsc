@@ -15,7 +15,7 @@ while IFS= read -r -d '' f; do
     "${tsc}" "${sam_file}" --output "${tsc_file}"
     "${tsc}" --decompress "${tsc_file}" --output "${recon_file}"
 
-    diff "${sam_file}" "${recon_file}"
+    diff --report-identical-files "${sam_file}" "${recon_file}"
 
     rm "${tsc_file}"
     rm "${recon_file}"
