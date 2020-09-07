@@ -9,13 +9,15 @@
 //
 
 #include "paircodec.h"
+
 #include <inttypes.h>
 #include <string.h>
+
 #include "crc64.h"
 #include "fio.h"
 #include "log.h"
 #include "mem.h"
-#include "zlib-wrap.h"
+#include "zlib_wrap.h"
 
 static void paircodec_init(paircodec_t *paircodec) {
     paircodec->record_cnt = 0;
@@ -102,12 +104,11 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp) {
 
 static size_t paircodec_decode(unsigned char *tmp, size_t tmp_sz, str_t **rnext, uint32_t *pnext, int64_t *tlen) {
     size_t ret = 0;
-    size_t i = 0;
     size_t line = 0;
     unsigned char *cstr = tmp;
     unsigned int idx = 0;
 
-    for (i = 0; i < tmp_sz; i++) {
+    for (size_t i = 0; i < tmp_sz; i++) {
         if (tmp[i] == '\n') {
             tmp[i] = '\0';
             tlen[line] = strtoll((const char *)cstr, NULL, 10);

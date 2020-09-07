@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+
 #include "samrec.h"
 #include "str.h"
 

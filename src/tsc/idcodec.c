@@ -9,12 +9,14 @@
 //
 
 #include "idcodec.h"
+
 #include <string.h>
+
 #include "crc64.h"
 #include "fio.h"
 #include "log.h"
 #include "mem.h"
-#include "zlib-wrap.h"
+#include "zlib_wrap.h"
 
 static void idcodec_init(idcodec_t *idcodec) {
     idcodec->record_cnt = 0;
@@ -91,10 +93,9 @@ size_t idcodec_write_block(idcodec_t *idcodec, FILE *fp) {
 
 static size_t idcodec_decode(unsigned char *tmp, size_t tmp_sz, str_t **qname) {
     size_t ret = 0;
-    size_t i = 0;
     size_t rec = 0;
 
-    for (i = 0; i < tmp_sz; i++) {
+    for (size_t i = 0; i < tmp_sz; i++) {
         if (tmp[i] != '\n') {
             str_append_char(qname[rec], (const char)tmp[i]);
             ret++;

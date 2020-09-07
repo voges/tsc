@@ -2,6 +2,7 @@
 #define TSC_QUALCODEC_H
 
 #include <stdio.h>
+
 #include "str.h"
 
 typedef struct qualcodec_t_ {

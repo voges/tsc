@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+
 #include "str.h"
 
 typedef struct paircodec_t_ {

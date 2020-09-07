@@ -17,7 +17,7 @@ set(source_files
         str.c
         tsc.c
         tscfmt.c
-        zlib-wrap.c
+        zlib_wrap.c
 )
 
 add_executable(tsc ${source_files})

@@ -1,4 +1,5 @@
 #include "common.h"
+
 #include <stdio.h>
 
 bool yesno(void) {

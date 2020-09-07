@@ -9,13 +9,15 @@
 //
 
 #include "auxcodec.h"
+
 #include <inttypes.h>
 #include <string.h>
+
 #include "crc64.h"
 #include "fio.h"
 #include "log.h"
 #include "mem.h"
-#include "zlib-wrap.h"
+#include "zlib_wrap.h"
 
 static void auxcodec_init(auxcodec_t *auxcodec) {
     auxcodec->record_cnt = 0;
@@ -100,12 +102,11 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp) {
 
 static size_t auxcodec_decode(unsigned char *tmp, size_t tmp_sz, uint16_t *flag, uint8_t *mapq, str_t **opt) {
     size_t ret = 0;
-    size_t i = 0;
     size_t line = 0;
     unsigned char *cstr = tmp;
     unsigned int idx = 0;
 
-    for (i = 0; i < tmp_sz; i++) {
+    for (size_t i = 0; i < tmp_sz; i++) {
         if (tmp[i] == '\n') {
             tmp[i] = '\0';
             str_append_cstr(opt[line], (const char *)cstr);

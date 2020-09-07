@@ -1,4 +1,5 @@
 #include "tsc.h"
+
 #include <getopt.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -6,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #include "common.h"
 #include "fio.h"
 #include "log.h"
@@ -171,7 +173,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (access((const char *)tsc_in_fname->s, F_OK | R_OK))
+    if (access((const char *)tsc_in_fname->s, F_OK | R_OK))  // NOLINT(hicpp-signed-bitwise)
         tsc_error("Cannot access input file: %s\n", tsc_in_fname->s);
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
@@ -185,7 +187,8 @@ int main(int argc, char *argv[]) {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
+            opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (yesno())
@@ -216,7 +219,8 @@ int main(int argc, char *argv[]) {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) && opt_flag_force == false) {
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
+            opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (yesno())

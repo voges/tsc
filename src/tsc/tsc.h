@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+
 #include "str.h"
 
 #define KB 1000LL

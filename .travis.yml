@@ -33,4 +33,4 @@ before_script:
 
 script:
   - ./ci/build.sh
-  - ./ci/test-roundtrip.sh
+  - ./ci/test_roundtrip.sh

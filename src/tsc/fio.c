@@ -1,4 +1,5 @@
 #include "fio.h"
+
 #include <stdlib.h>
 
 FILE *tsc_fopen(const char *fname, const char *mode) {

@@ -1,4 +1,5 @@
 #include "cbufstr.h"
+
 #include <stdio.h>
 
 static void cbufstr_init(cbufstr_t *cbufstr, const size_t sz) {
@@ -12,16 +13,14 @@ cbufstr_t *cbufstr_new(const size_t sz) {
     if (!cbufstr) abort();
     cbufstr->buf = (str_t **)malloc(sizeof(str_t *) * sz);
     if (!cbufstr->buf) abort();
-    size_t i = 0;
-    for (i = 0; i < sz; i++) cbufstr->buf[i] = str_new();
+    for (size_t i = 0; i < sz; i++) cbufstr->buf[i] = str_new();
     cbufstr_init(cbufstr, sz);
     return cbufstr;
 }
 
 void cbufstr_free(cbufstr_t *cbufstr) {
     if (cbufstr != NULL) {
-        size_t i = 0;
-        for (i = 0; i < cbufstr->sz; i++) str_free(cbufstr->buf[i]);
+        for (size_t i = 0; i < cbufstr->sz; i++) str_free(cbufstr->buf[i]);
         free(cbufstr->buf);
         free(cbufstr);
     } else {
@@ -31,8 +30,7 @@ void cbufstr_free(cbufstr_t *cbufstr) {
 }
 
 void cbufstr_clear(cbufstr_t *cbufstr) {
-    size_t i = 0;
-    for (i = 0; i < cbufstr->sz; i++) str_clear(cbufstr->buf[i]);
+    for (size_t i = 0; i < cbufstr->sz; i++) str_clear(cbufstr->buf[i]);
     cbufstr->nxt = 0;
     cbufstr->n = 0;
 }

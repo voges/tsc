@@ -25,16 +25,18 @@
 //
 
 #include "nuccodec.h"
+
 #include <ctype.h>
 #include <inttypes.h>
 #include <string.h>
+
 #include "crc64.h"
 #include "fio.h"
 #include "log.h"
 #include "mem.h"
 #include "range.h"
 #include "tsc.h"
-#include "zlib-wrap.h"
+#include "zlib_wrap.h"
 
 static void reset_encoder(nuccodec_t *nuccodec);
 
@@ -213,10 +215,9 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
     // Allocate frequency table
     size_t width = nuccodec->ref_pos_max - nuccodec->ref_pos_min + 1;
     size_t height = 6;  // Possible symbols are: A, C, G, T, N, ?
-    size_t w = 0, h = 0;
     size_t *freq = (size_t *)tsc_malloc(sizeof(size_t) * width * height);
-    for (h = 0; h < height; h++) {
-        for (w = 0; w < width; w++) freq[w + h * width] = 0;
+    for (size_t h = 0; h < height; h++) {
+        for (size_t w = 0; w < width; w++) freq[w + h * width] = 0;
     }
 
     // Fill frequency table
@@ -225,7 +226,7 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
         uint32_t pos_curr = (uint32_t)cbufint64_get(nuccodec->pos_cbuf, cbuf_idx);
         uint32_t pos_off = pos_curr - nuccodec->ref_pos_min;
         str_t *exs_curr = cbufstr_get(nuccodec->exs_cbuf, cbuf_idx);
-        for (w = 0; w < exs_curr->len; w++) {
+        for (size_t w = 0; w < exs_curr->len; w++) {
             switch (exs_curr->s[w]) {
                 case 'A':
                     freq[pos_off + w + 0 * width]++;
@@ -254,10 +255,10 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
 
     // Compute consensus reference
     str_clear(nuccodec->ref);
-    for (w = 0; w < width; w++) {
+    for (size_t w = 0; w < width; w++) {
         size_t freq_curr_max = 0;
         size_t selected = 0;
-        for (h = 0; h < height; h++) {
+        for (size_t h = 0; h < height; h++) {
             if (freq[w + h * width] > freq_curr_max) {
                 freq_curr_max = freq[w + h * width];
                 selected = h;
@@ -298,12 +299,11 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
  *  INSERTS
  */
 static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar, const char *seq) {
-    size_t cigar_idx = 0;
     size_t cigar_len = strlen(cigar);
     size_t op_len = 0;  // Length of current CIGAR operation
     size_t seq_idx = 0;
 
-    for (cigar_idx = 0; cigar_idx < cigar_len; cigar_idx++) {
+    for (size_t cigar_idx = 0; cigar_idx < cigar_len; cigar_idx++) {
         if (isdigit(cigar[cigar_idx])) {
             op_len = op_len * 10 + (size_t)cigar[cigar_idx] - (size_t)'0';
             continue;
@@ -330,8 +330,7 @@ static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar, 
             case 'D':
             case 'N': {
                 // Inflate EXS
-                size_t i = 0;
-                for (i = 0; i < op_len; i++) {
+                for (size_t i = 0; i < op_len; i++) {
                     str_append_char(exs, '?');
                 }
                 break;
@@ -367,14 +366,13 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos, str_t *mod
 
     size_t idx_exs = 0;
     size_t idx_ref = pos - nuccodec->ref_pos_min;
-    size_t idx_store = 0;
     size_t idx_prev = 0;
 
     size_t exs_len = strlen(exs);
 
     while (exs[idx_exs] && nuccodec->ref->s[idx_ref]) {
         if (exs[idx_exs] != nuccodec->ref->s[idx_ref]) {
-            idx_store = idx_exs - idx_prev;
+            size_t idx_store = idx_exs - idx_prev;
             idx_prev = idx_exs;
 
             (*modcnt)++;
@@ -540,19 +538,19 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp) {
     ret += tsc_fwrite_uint64(fp, (uint64_t)nuccodec->record_cnt);
 
     // Compress and write sub-blocks
-    size_t ctrl_sz = 0;
-    size_t rname_sz = 0;
-    size_t pos_sz = 0;
-    size_t seq_sz = 0;
-    size_t seqlen_sz = 0;
-    size_t exs_sz = 0;
-    size_t posoff_sz = 0;
-    size_t stogy_sz = 0;
-    size_t inserts_sz = 0;
-    size_t modcnt_sz = 0;
-    size_t modpos_sz = 0;
-    size_t modbases_sz = 0;
-    size_t trail_sz = 0;
+    size_t ctrl_sz;
+    size_t rname_sz;
+    size_t pos_sz;
+    size_t seq_sz;
+    size_t seqlen_sz;
+    size_t exs_sz;
+    size_t posoff_sz;
+    size_t stogy_sz;
+    size_t inserts_sz;
+    size_t modcnt_sz;
+    size_t modpos_sz;
+    size_t modbases_sz;
+    size_t trail_sz;
     ret += ctrl_sz = write_zlib_block(fp, (unsigned char *)nuccodec->ctrl->s, nuccodec->ctrl->len);
     ret += rname_sz = write_zlib_block(fp, (unsigned char *)nuccodec->rname->s, nuccodec->rname->len);
     ret += pos_sz = write_zlib_block(fp, (unsigned char *)nuccodec->pos->s, nuccodec->pos->len);
@@ -589,12 +587,11 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp) {
 // -----------------------------------------------------------------------------
 
 static size_t exslen(const char *cigar) {
-    size_t idx = 0;
     size_t op_len = 0;
     size_t ret = 0;
     size_t cigar_len = strlen(cigar);
 
-    for (idx = 0; idx < cigar_len; idx++) {
+    for (size_t idx = 0; idx < cigar_len; idx++) {
         if (isdigit(cigar[idx])) {
             op_len = op_len * 10 + (size_t)cigar[idx] - (size_t)'0';
             continue;
@@ -629,12 +626,11 @@ static size_t exslen(const char *cigar) {
 }
 
 static size_t insertslen(const char *cigar) {
-    size_t idx = 0;
     size_t op_len = 0;
     size_t ret = 0;
     size_t cigar_len = strlen(cigar);
 
-    for (idx = 0; idx < cigar_len; idx++) {
+    for (size_t idx = 0; idx < cigar_len; idx++) {
         if (isdigit(cigar[idx])) {
             op_len = op_len * 10 + (size_t)cigar[idx] - (size_t)'0';
             continue;
@@ -650,9 +646,7 @@ static size_t insertslen(const char *cigar) {
                 ret += op_len;
                 break;
             case 'D':
-            case 'N': {
-                break;
-            }
+            case 'N':
             case 'H':
             case 'P': {
                 break;
@@ -671,13 +665,12 @@ static size_t insertslen(const char *cigar) {
  *  Counterpart to expand()
  */
 static void contract(str_t *seq, const char *exs, const char *stogy, const char *inserts) {
-    size_t stogy_idx = 0;
     size_t inserts_idx = 0;
     size_t stogy_len = strlen(stogy);
     size_t op_len = 0;  // Length of current STOGY operation
     size_t exs_idx = 0;
 
-    for (stogy_idx = 0; stogy_idx < stogy_len; stogy_idx++) {
+    for (size_t stogy_idx = 0; stogy_idx < stogy_len; stogy_idx++) {
         if (isdigit(stogy[stogy_idx])) {
             op_len = op_len * 10 + (size_t)stogy[stogy_idx] - (size_t)'0';
             continue;
@@ -723,7 +716,7 @@ static void contract(str_t *seq, const char *exs, const char *stogy, const char 
 static void alike(str_t *exs, const size_t exs_len, const char *ref, const size_t ref_pos_min, const uint32_t pos,
                   const uint16_t modcnt, const uint16_t *modpos, const char *modbases, const char *trail) {
     // Compute match length
-    size_t match_len = 0;
+    size_t match_len;
     if (strlen(ref) - (pos - ref_pos_min) <= exs_len)
         match_len = strlen(ref) - (pos - ref_pos_min);
     else
@@ -733,11 +726,9 @@ static void alike(str_t *exs, const size_t exs_len, const char *ref, const size_
     str_append_cstrn(exs, &ref[pos - ref_pos_min], match_len);
 
     // Replace MODs
-    size_t i = 0;
-    size_t modpos_curr = 0;
     size_t modpos_prev = 0;
-    for (i = 0; i < modcnt; i++) {
-        modpos_curr = modpos_prev + modpos[i];
+    for (size_t i = 0; i < modcnt; i++) {
+        size_t modpos_curr = modpos_prev + modpos[i];
         modpos_prev = modpos_curr;
         exs->s[modpos_curr] = modbases[i];
     }
@@ -753,7 +744,6 @@ static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, u
                                     unsigned char *modbases, unsigned char *trail, str_t **rname_decoded,
                                     uint32_t *pos_decoded, str_t **cigar_decoded, str_t **seq_decoded) {
     size_t record_idx = 0;
-    size_t i = 0;
 
     size_t rname_idx = 0;
     size_t pos_idx = 0;
@@ -801,7 +791,7 @@ static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, u
                 (uint16_t)((seqlen[seqlen_idx] << 8) + seqlen[seqlen_idx + 1]);  // NOLINT(hicpp-signed-bitwise)
             seqlen_idx += 2;
 
-            for (i = 0; i < seqlen_curr; i++) str_append_char(_seq_, (char)seq[seq_idx++]);
+            for (uint16_t i = 0; i < seqlen_curr; i++) str_append_char(_seq_, (char)seq[seq_idx++]);
             if (!_seq_->len) str_append_char(_seq_, '*');
         } else if (*ctrl == 'i') {
             nuccodec->irecord_cnt++;
@@ -817,11 +807,11 @@ static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, u
 
             size_t exs_len = exslen(_cigar_->s);
             str_t *exs_curr = str_new();
-            for (i = 0; i < exs_len; i++) str_append_char(exs_curr, (char)exs[exs_idx++]);
+            for (size_t i = 0; i < exs_len; i++) str_append_char(exs_curr, (char)exs[exs_idx++]);
 
             size_t inserts_len = insertslen(_cigar_->s);
             str_t *inserts_curr = str_new();
-            for (i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
+            for (size_t i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
 
             contract(_seq_, exs_curr->s, _cigar_->s, inserts_curr->s);
 
@@ -847,33 +837,33 @@ static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, u
 
             size_t inserts_len = insertslen(_cigar_->s);
             str_t *inserts_curr = str_new();
-            for (i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
+            for (size_t i = 0; i < inserts_len; i++) str_append_char(inserts_curr, (char)inserts[inserts_idx++]);
 
             uint16_t modcnt_curr =
                 (uint16_t)((modcnt[modcnt_idx] << 8) + modcnt[modcnt_idx + 1]);  // NOLINT(hicpp-signed-bitwise)
             modcnt_idx += 2;
 
             uint16_t *modpos_curr = (uint16_t *)tsc_malloc(sizeof(uint16_t) * modcnt_curr);
-            for (i = 0; i < modcnt_curr; i++) {
+            for (uint16_t i = 0; i < modcnt_curr; i++) {
                 modpos_curr[i] = (uint16_t)((modpos[modpos_idx] << 8) +  // NOLINT(hicpp-signed-bitwise)
                                             modpos[modpos_idx + 1]);
                 modpos_idx += 2;
             }
 
             str_t *modbases_curr = str_new();
-            for (i = 0; i < modcnt_curr; i++) str_append_char(modbases_curr, (char)modbases[modbases_idx++]);
+            for (uint16_t i = 0; i < modcnt_curr; i++) str_append_char(modbases_curr, (char)modbases[modbases_idx++]);
 
             *_pos_ = nuccodec->pos_prev + posoff_curr;
             size_t exs_len = exslen(_cigar_->s);
             size_t exs_pos_max = *_pos_ + exs_len - 1;
-            size_t trail_len = 0;
+            size_t trail_len;
             if (exs_pos_max <= nuccodec->ref_pos_max)
                 trail_len = 0;
             else
                 trail_len = exs_pos_max - nuccodec->ref_pos_max;
 
             str_t *trail_curr = str_new();
-            for (i = 0; i < trail_len; i++) str_append_char(trail_curr, (char)trail[trail_idx++]);
+            for (size_t i = 0; i < trail_len; i++) str_append_char(trail_curr, (char)trail[trail_idx++]);
 
             str_t *exs_curr = str_new();
             alike(exs_curr, exs_len, nuccodec->ref->s, nuccodec->ref_pos_min, *_pos_, modcnt_curr, modpos_curr,

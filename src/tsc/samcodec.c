@@ -1,7 +1,9 @@
 #include "samcodec.h"
+
 #include <inttypes.h>
 #include <string.h>
 #include <sys/time.h>
+
 #include "common.h"
 #include "fio.h"
 #include "log.h"

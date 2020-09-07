@@ -2,6 +2,7 @@
 #define TSC_SAMREC_H
 
 #include <stdint.h>
+
 #include "tsc.h"
 
 //

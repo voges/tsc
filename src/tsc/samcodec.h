@@ -2,6 +2,7 @@
 #define TSC_SAMCODEC_H
 
 #include <stdio.h>
+
 #include "auxcodec.h"
 #include "idcodec.h"
 #include "nuccodec.h"

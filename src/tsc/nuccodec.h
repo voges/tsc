@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+
 #include "cbufint64.h"
 #include "cbufstr.h"
 #include "str.h"
@@ -67,10 +68,11 @@ void nuccodec_free(nuccodec_t *nuccodec);
 void nuccodec_add_record(nuccodec_t *nuccodec,
                          // const uint16_t flag,
                          const char *rname, uint32_t pos, const char *cigar, const char *seq);
-void nuccodec_write_single_stream_block(nuccodec_t *nuccodec, FILE *ctrl_fp, FILE *rname_fp, FILE *pos_fp, FILE *seq_fp,
-                                        FILE *seqlen_fp, FILE *exs_fp, FILE *posoff_fp, FILE *stogy_fp,
-                                        FILE *inserts_fp, FILE *modcnt_fp, FILE *modpos_fp, FILE *modbases_fp,
-                                        FILE *trail_fp);
+// void nuccodec_write_single_stream_block(nuccodec_t *nuccodec, FILE *ctrl_fp, FILE *rname_fp, FILE *pos_fp, FILE
+// *seq_fp,
+//                                        FILE *seqlen_fp, FILE *exs_fp, FILE *posoff_fp, FILE *stogy_fp,
+//                                        FILE *inserts_fp, FILE *modcnt_fp, FILE *modpos_fp, FILE *modbases_fp,
+//                                        FILE *trail_fp);
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp);
 
 // Decoder methods

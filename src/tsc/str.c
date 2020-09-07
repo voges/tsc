@@ -1,6 +1,8 @@
 #include "str.h"
+
 #include <stdio.h>
 #include <string.h>
+
 #include "mem.h"
 
 static void str_init(str_t *str) {

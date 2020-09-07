@@ -2,6 +2,7 @@
 #define TSC_IDCODEC_H
 
 #include <stdio.h>
+
 #include "str.h"
 
 typedef struct idcodec_t_ {
