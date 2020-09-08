@@ -36,8 +36,6 @@
  * his coders6c2 archive (c) 2003.
  * Range coder adopted by James Bonfield, Wellcome Trust Sanger Insitute (c)
  * 2014.
- * Subsequently, range coder adopted by Jan Voges, Institut fuer
- * Informationsverarbeitung (TNT) (c) 2015.
  */
 
 /*

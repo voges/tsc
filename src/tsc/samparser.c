@@ -7,9 +7,7 @@
 #include "log.h"
 #include "mem.h"
 
-static void samparser_init(samparser_t *samparser, FILE *fp) {
-    samparser->fp = fp;
-}
+static void samparser_init(samparser_t *samparser, FILE *fp) { samparser->fp = fp; }
 
 samparser_t *samparser_new(FILE *fp) {
     samparser_t *samparser = (samparser_t *)tsc_malloc(sizeof(samparser_t));

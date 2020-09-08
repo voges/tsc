@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 readonly git_root_dir="$(git rev-parse --show-toplevel)"
 

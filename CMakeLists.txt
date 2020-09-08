@@ -1,7 +1,3 @@
-#==============================================================================
-# Generic
-#==============================================================================
-
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 project("tsc")
@@ -13,35 +9,15 @@ endif()
 
 set(CMAKE_C_STANDARD 11)
 
-
-#==============================================================================
-# Compiler
-#==============================================================================
-
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wextra")
-
-
-#==============================================================================
-# Executable/library paths
-#==============================================================================
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-
-#==============================================================================
-# Include paths
-#==============================================================================
-
 include_directories("${CMAKE_SOURCE_DIR}/src")
 include_directories("${CMAKE_SOURCE_DIR}/third_party")
-
-
-#==============================================================================
-# Subdirectories
-#==============================================================================
 
 add_subdirectory(src)
 add_subdirectory(third_party)
