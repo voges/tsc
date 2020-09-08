@@ -10,3 +10,6 @@ cmake-build-debug/
 
 # CLion project directory
 .idea/
+
+# Python venv virtual environment directory
+env/
