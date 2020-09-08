@@ -19,6 +19,8 @@ Build the TSC application using CMake:
     cmake ..
     make
 
+This generates an executable named ``tsc`` in the ``build/bin/`` folder.
+
 ## Who do I talk to?
 
 Jan Voges <[voges@tnt.uni-hannover.de](mailto:voges@tnt.uni-hannover.de)>
