@@ -100,113 +100,114 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
     size_t tsc_total_sz = tsc_sz[TSC_FH] + tsc_sz[TSC_SH] + tsc_sz[TSC_BH] + tsc_sz[TSC_AUX] + tsc_sz[TSC_ID] +
                           tsc_sz[TSC_NUC] + tsc_sz[TSC_PAIR] + tsc_sz[TSC_QUAL];
 
-    tsc_log("\nsamcodec stats:\n"
-            "---------------\n"
-            "Number of records   : %12" PRIu64
-            "\n"
-            "Number of blocks    : %12" PRIu64
-            "\n"
-            "\n"
-            "SAM file size       : %12zu (%6.2f%%)\n"
-            "  QNAME             : %12zu (%6.2f%%)\n"
-            "  FLAG              : %12zu (%6.2f%%)\n"
-            "  RNAME             : %12zu (%6.2f%%)\n"
-            "  POS               : %12zu (%6.2f%%)\n"
-            "  MAPQ              : %12zu (%6.2f%%)\n"
-            "  CIGAR             : %12zu (%6.2f%%)\n"
-            "  RNEXT             : %12zu (%6.2f%%)\n"
-            "  PNEXT             : %12zu (%6.2f%%)\n"
-            "  TLEN              : %12zu (%6.2f%%)\n"
-            "  SEQ               : %12zu (%6.2f%%)\n"
-            "  QUAL              : %12zu (%6.2f%%)\n"
-            "  OPT               : %12zu (%6.2f%%)\n"
-            "  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
-            "  HEAD (SAM header) : %12zu (%6.2f%%)\n"
-            "\n"
-            "Tsc file size       : %12zu (%6.2f%%)\n"
-            "  File header       : %12zu (%6.2f%%)\n"
-            "  SAM header        : %12zu (%6.2f%%)\n"
-            "  Block header(s)   : %12zu (%6.2f%%)\n"
-            "  Aux               : %12zu (%6.2f%%)\n"
-            "  Id                : %12zu (%6.2f%%)\n"
-            "  Nuc               : %12zu (%6.2f%%)\n"
-            "  Pair              : %12zu (%6.2f%%)\n"
-            "  Qual              : %12zu (%6.2f%%)\n"
-            "\n"
-            "Compression ratios             SAM /          tsc\n"
-            "  Total             : %12zu / %12zu (%6.2f%%)\n"
-            "  Aux               : %12zu / %12zu (%6.2f%%)\n"
-            "  Id                : %12zu / %12zu (%6.2f%%)\n"
-            "  Nuc               : %12zu / %12zu (%6.2f%%)\n"
-            "  Pair              : %12zu / %12zu (%6.2f%%)\n"
-            "  Qual              : %12zu / %12zu (%6.2f%%)\n"
-            "\n"
-            "Timing\n"
-            "  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
-            "\n"
-            "Speed (with respect to SAM sizes)\n"
-            "  Total             : %12.2f MB/s\n"
-            "  Aux               : %12.2f MB/s\n"
-            "  Id                : %12.2f MB/s\n"
-            "  Nuc               : %12.2f MB/s\n"
-            "  Pair              : %12.2f MB/s\n"
-            "  Qual              : %12.2f MB/s\n"
-            "\n",
-            tscfh->rec_n, tscfh->blk_n,
+    tsc_log(
+        "\nsamcodec stats:\n"
+        "---------------\n"
+        "Number of records   : %12" PRIu64
+        "\n"
+        "Number of blocks    : %12" PRIu64
+        "\n"
+        "\n"
+        "SAM file size       : %12zu (%6.2f%%)\n"
+        "  QNAME             : %12zu (%6.2f%%)\n"
+        "  FLAG              : %12zu (%6.2f%%)\n"
+        "  RNAME             : %12zu (%6.2f%%)\n"
+        "  POS               : %12zu (%6.2f%%)\n"
+        "  MAPQ              : %12zu (%6.2f%%)\n"
+        "  CIGAR             : %12zu (%6.2f%%)\n"
+        "  RNEXT             : %12zu (%6.2f%%)\n"
+        "  PNEXT             : %12zu (%6.2f%%)\n"
+        "  TLEN              : %12zu (%6.2f%%)\n"
+        "  SEQ               : %12zu (%6.2f%%)\n"
+        "  QUAL              : %12zu (%6.2f%%)\n"
+        "  OPT               : %12zu (%6.2f%%)\n"
+        "  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
+        "  HEAD (SAM header) : %12zu (%6.2f%%)\n"
+        "\n"
+        "Tsc file size       : %12zu (%6.2f%%)\n"
+        "  File header       : %12zu (%6.2f%%)\n"
+        "  SAM header        : %12zu (%6.2f%%)\n"
+        "  Block header(s)   : %12zu (%6.2f%%)\n"
+        "  Aux               : %12zu (%6.2f%%)\n"
+        "  Id                : %12zu (%6.2f%%)\n"
+        "  Nuc               : %12zu (%6.2f%%)\n"
+        "  Pair              : %12zu (%6.2f%%)\n"
+        "  Qual              : %12zu (%6.2f%%)\n"
+        "\n"
+        "Compression ratios             SAM /          tsc\n"
+        "  Total             : %12zu / %12zu (%6.2f%%)\n"
+        "  Aux               : %12zu / %12zu (%6.2f%%)\n"
+        "  Id                : %12zu / %12zu (%6.2f%%)\n"
+        "  Nuc               : %12zu / %12zu (%6.2f%%)\n"
+        "  Pair              : %12zu / %12zu (%6.2f%%)\n"
+        "  Qual              : %12zu / %12zu (%6.2f%%)\n"
+        "\n"
+        "Timing\n"
+        "  Total time elapsed: %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Aux               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Id                : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Nuc               : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Pair              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
+        "\n"
+        "Speed (with respect to SAM sizes)\n"
+        "  Total             : %12.2f MB/s\n"
+        "  Aux               : %12.2f MB/s\n"
+        "  Id                : %12.2f MB/s\n"
+        "  Nuc               : %12.2f MB/s\n"
+        "  Pair              : %12.2f MB/s\n"
+        "  Qual              : %12.2f MB/s\n"
+        "\n",
+        tscfh->rec_n, tscfh->blk_n,
 
-            sam_total_sz, (100 * (double)sam_total_sz / (double)sam_total_sz), sam_sz[SAM_QNAME],
-            (100 * (double)sam_sz[SAM_QNAME] / (double)sam_total_sz), sam_sz[SAM_FLAG],
-            (100 * (double)sam_sz[SAM_FLAG] / (double)sam_total_sz), sam_sz[SAM_RNAME],
-            (100 * (double)sam_sz[SAM_RNAME] / (double)sam_total_sz), sam_sz[SAM_POS],
-            (100 * (double)sam_sz[SAM_POS] / (double)sam_total_sz), sam_sz[SAM_MAPQ],
-            (100 * (double)sam_sz[SAM_MAPQ] / (double)sam_total_sz), sam_sz[SAM_CIGAR],
-            (100 * (double)sam_sz[SAM_CIGAR] / (double)sam_total_sz), sam_sz[SAM_RNEXT],
-            (100 * (double)sam_sz[SAM_RNEXT] / (double)sam_total_sz), sam_sz[SAM_PNEXT],
-            (100 * (double)sam_sz[SAM_PNEXT] / (double)sam_total_sz), sam_sz[SAM_TLEN],
-            (100 * (double)sam_sz[SAM_TLEN] / (double)sam_total_sz), sam_sz[SAM_SEQ],
-            (100 * (double)sam_sz[SAM_SEQ] / (double)sam_total_sz), sam_sz[SAM_QUAL],
-            (100 * (double)sam_sz[SAM_QUAL] / (double)sam_total_sz), sam_sz[SAM_OPT],
-            (100 * (double)sam_sz[SAM_OPT] / (double)sam_total_sz), sam_sz[SAM_CTRL],
-            (100 * (double)sam_sz[SAM_CTRL] / (double)sam_total_sz), sam_sz[SAM_HEAD],
-            (100 * (double)sam_sz[SAM_HEAD] / (double)sam_total_sz),
+        sam_total_sz, (100 * (double)sam_total_sz / (double)sam_total_sz), sam_sz[SAM_QNAME],
+        (100 * (double)sam_sz[SAM_QNAME] / (double)sam_total_sz), sam_sz[SAM_FLAG],
+        (100 * (double)sam_sz[SAM_FLAG] / (double)sam_total_sz), sam_sz[SAM_RNAME],
+        (100 * (double)sam_sz[SAM_RNAME] / (double)sam_total_sz), sam_sz[SAM_POS],
+        (100 * (double)sam_sz[SAM_POS] / (double)sam_total_sz), sam_sz[SAM_MAPQ],
+        (100 * (double)sam_sz[SAM_MAPQ] / (double)sam_total_sz), sam_sz[SAM_CIGAR],
+        (100 * (double)sam_sz[SAM_CIGAR] / (double)sam_total_sz), sam_sz[SAM_RNEXT],
+        (100 * (double)sam_sz[SAM_RNEXT] / (double)sam_total_sz), sam_sz[SAM_PNEXT],
+        (100 * (double)sam_sz[SAM_PNEXT] / (double)sam_total_sz), sam_sz[SAM_TLEN],
+        (100 * (double)sam_sz[SAM_TLEN] / (double)sam_total_sz), sam_sz[SAM_SEQ],
+        (100 * (double)sam_sz[SAM_SEQ] / (double)sam_total_sz), sam_sz[SAM_QUAL],
+        (100 * (double)sam_sz[SAM_QUAL] / (double)sam_total_sz), sam_sz[SAM_OPT],
+        (100 * (double)sam_sz[SAM_OPT] / (double)sam_total_sz), sam_sz[SAM_CTRL],
+        (100 * (double)sam_sz[SAM_CTRL] / (double)sam_total_sz), sam_sz[SAM_HEAD],
+        (100 * (double)sam_sz[SAM_HEAD] / (double)sam_total_sz),
 
-            tsc_total_sz, (100 * (double)tsc_total_sz / (double)tsc_total_sz), tsc_sz[TSC_FH],
-            (100 * (double)tsc_sz[TSC_FH] / (double)tsc_total_sz), tsc_sz[TSC_SH],
-            (100 * (double)tsc_sz[TSC_SH] / (double)tsc_total_sz), tsc_sz[TSC_BH],
-            (100 * (double)tsc_sz[TSC_BH] / (double)tsc_total_sz), tsc_sz[TSC_AUX],
-            (100 * (double)tsc_sz[TSC_AUX] / (double)tsc_total_sz), tsc_sz[TSC_ID],
-            (100 * (double)tsc_sz[TSC_ID] / (double)tsc_total_sz), tsc_sz[TSC_NUC],
-            (100 * (double)tsc_sz[TSC_NUC] / (double)tsc_total_sz), tsc_sz[TSC_PAIR],
-            (100 * (double)tsc_sz[TSC_PAIR] / (double)tsc_total_sz), tsc_sz[TSC_QUAL],
-            (100 * (double)tsc_sz[TSC_QUAL] / (double)tsc_total_sz),
+        tsc_total_sz, (100 * (double)tsc_total_sz / (double)tsc_total_sz), tsc_sz[TSC_FH],
+        (100 * (double)tsc_sz[TSC_FH] / (double)tsc_total_sz), tsc_sz[TSC_SH],
+        (100 * (double)tsc_sz[TSC_SH] / (double)tsc_total_sz), tsc_sz[TSC_BH],
+        (100 * (double)tsc_sz[TSC_BH] / (double)tsc_total_sz), tsc_sz[TSC_AUX],
+        (100 * (double)tsc_sz[TSC_AUX] / (double)tsc_total_sz), tsc_sz[TSC_ID],
+        (100 * (double)tsc_sz[TSC_ID] / (double)tsc_total_sz), tsc_sz[TSC_NUC],
+        (100 * (double)tsc_sz[TSC_NUC] / (double)tsc_total_sz), tsc_sz[TSC_PAIR],
+        (100 * (double)tsc_sz[TSC_PAIR] / (double)tsc_total_sz), tsc_sz[TSC_QUAL],
+        (100 * (double)tsc_sz[TSC_QUAL] / (double)tsc_total_sz),
 
-            sam_total_sz, tsc_total_sz, (100 * (double)tsc_total_sz / (double)sam_total_sz), sam_aux_sz,
-            tsc_sz[TSC_AUX], (100 * (double)tsc_sz[TSC_AUX] / (double)sam_aux_sz), sam_id_sz, tsc_sz[TSC_ID],
-            (100 * (double)tsc_sz[TSC_ID] / (double)sam_id_sz), sam_nuc_sz, tsc_sz[TSC_NUC],
-            (100 * (double)tsc_sz[TSC_NUC] / (double)sam_nuc_sz), sam_pair_sz, tsc_sz[TSC_PAIR],
-            (100 * (double)tsc_sz[TSC_PAIR] / (double)sam_pair_sz), sam_qual_sz, tsc_sz[TSC_QUAL],
-            (100 * (double)tsc_sz[TSC_QUAL] / (double)sam_qual_sz),
+        sam_total_sz, tsc_total_sz, (100 * (double)tsc_total_sz / (double)sam_total_sz), sam_aux_sz, tsc_sz[TSC_AUX],
+        (100 * (double)tsc_sz[TSC_AUX] / (double)sam_aux_sz), sam_id_sz, tsc_sz[TSC_ID],
+        (100 * (double)tsc_sz[TSC_ID] / (double)sam_id_sz), sam_nuc_sz, tsc_sz[TSC_NUC],
+        (100 * (double)tsc_sz[TSC_NUC] / (double)sam_nuc_sz), sam_pair_sz, tsc_sz[TSC_PAIR],
+        (100 * (double)tsc_sz[TSC_PAIR] / (double)sam_pair_sz), sam_qual_sz, tsc_sz[TSC_QUAL],
+        (100 * (double)tsc_sz[TSC_QUAL] / (double)sam_qual_sz),
 
-            et[ET_TOT], (double)et[ET_TOT] / (double)1000000, (100 * (double)et[ET_TOT] / (double)et[ET_TOT]),
-            et[ET_AUX], (double)et[ET_AUX] / (double)1000000, (100 * (double)et[ET_AUX] / (double)et[ET_TOT]),
-            et[ET_ID], (double)et[ET_ID] / (double)1000000, (100 * (double)et[ET_ID] / (double)et[ET_TOT]), et[ET_NUC],
-            (double)et[ET_NUC] / (double)1000000, (100 * (double)et[ET_NUC] / (double)et[ET_TOT]), et[ET_PAIR],
-            (double)et[ET_PAIR] / (double)1000000, (100 * (double)et[ET_PAIR] / (double)et[ET_TOT]), et[ET_QUAL],
-            (double)et[ET_QUAL] / (double)1000000, (100 * (double)et[ET_QUAL] / (double)et[ET_TOT]), et[ET_REM],
-            (double)et[ET_REM] / (double)1000000, (100 * (double)et[ET_REM] / (double)et[ET_TOT]),
+        et[ET_TOT], (double)et[ET_TOT] / (double)1000000, (100 * (double)et[ET_TOT] / (double)et[ET_TOT]), et[ET_AUX],
+        (double)et[ET_AUX] / (double)1000000, (100 * (double)et[ET_AUX] / (double)et[ET_TOT]), et[ET_ID],
+        (double)et[ET_ID] / (double)1000000, (100 * (double)et[ET_ID] / (double)et[ET_TOT]), et[ET_NUC],
+        (double)et[ET_NUC] / (double)1000000, (100 * (double)et[ET_NUC] / (double)et[ET_TOT]), et[ET_PAIR],
+        (double)et[ET_PAIR] / (double)1000000, (100 * (double)et[ET_PAIR] / (double)et[ET_TOT]), et[ET_QUAL],
+        (double)et[ET_QUAL] / (double)1000000, (100 * (double)et[ET_QUAL] / (double)et[ET_TOT]), et[ET_REM],
+        (double)et[ET_REM] / (double)1000000, (100 * (double)et[ET_REM] / (double)et[ET_TOT]),
 
-            ((double)sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
-            ((double)sam_aux_sz / MB) / ((double)et[ET_AUX] / (double)1000000),
-            ((double)sam_id_sz / MB) / ((double)et[ET_ID] / (double)1000000),
-            ((double)sam_nuc_sz / MB) / ((double)et[ET_NUC] / (double)1000000),
-            ((double)sam_pair_sz / MB) / ((double)et[ET_PAIR] / (double)1000000),
-            ((double)sam_qual_sz / MB) / ((double)et[ET_QUAL] / (double)1000000));
+        ((double)sam_total_sz / MB) / ((double)et[ET_TOT] / (double)1000000),
+        ((double)sam_aux_sz / MB) / ((double)et[ET_AUX] / (double)1000000),
+        ((double)sam_id_sz / MB) / ((double)et[ET_ID] / (double)1000000),
+        ((double)sam_nuc_sz / MB) / ((double)et[ET_NUC] / (double)1000000),
+        ((double)sam_pair_sz / MB) / ((double)et[ET_PAIR] / (double)1000000),
+        ((double)sam_qual_sz / MB) / ((double)et[ET_QUAL] / (double)1000000));
 }
 
 void samcodec_encode(samcodec_t *samcodec) {

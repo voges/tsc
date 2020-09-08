@@ -68,9 +68,8 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp) {
 }
 
 size_t tscfh_size(tscfh_t *tscfh) {
-    size_t sz = sizeof(tscfh->magic)
-                + sizeof(tscfh->flags)
-                + sizeof(tscfh->rec_n) + sizeof(tscfh->blk_n) + sizeof(tscfh->sblk_n);
+    size_t sz = sizeof(tscfh->magic) + sizeof(tscfh->flags) + sizeof(tscfh->rec_n) + sizeof(tscfh->blk_n) +
+                sizeof(tscfh->sblk_n);
     return sz;
 }
 
