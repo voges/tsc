@@ -1,5 +1,7 @@
-#ifndef TSC_NUCCODEC_H
-#define TSC_NUCCODEC_H
+// Copyright 2015 Leibniz University Hannover (LUH)
+
+#ifndef TSC_NUCCODEC_H_
+#define TSC_NUCCODEC_H_
 
 #define TSC_NUCCODEC_WINDOW_SIZE 10
 
@@ -59,7 +61,8 @@ typedef struct nuccodec_t_ {
     uint32_t ref_pos_max;
 } nuccodec_t;
 
-nuccodec_t *nuccodec_new(void);
+nuccodec_t *nuccodec_new();
+
 void nuccodec_free(nuccodec_t *nuccodec);
 
 // Encoder
@@ -68,11 +71,7 @@ void nuccodec_free(nuccodec_t *nuccodec);
 void nuccodec_add_record(nuccodec_t *nuccodec,
                          // const uint16_t flag,
                          const char *rname, uint32_t pos, const char *cigar, const char *seq);
-// void nuccodec_write_single_stream_block(nuccodec_t *nuccodec, FILE *ctrl_fp, FILE *rname_fp, FILE *pos_fp, FILE
-// *seq_fp,
-//                                        FILE *seqlen_fp, FILE *exs_fp, FILE *posoff_fp, FILE *stogy_fp,
-//                                        FILE *inserts_fp, FILE *modcnt_fp, FILE *modpos_fp, FILE *modbases_fp,
-//                                        FILE *trail_fp);
+
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp);
 
 // Decoder methods
@@ -80,4 +79,4 @@ size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp);
 
 size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp, str_t **rname, uint32_t *pos, str_t **cigar, str_t **seq);
 
-#endif  // TSC_NUCCODEC_H
+#endif  // TSC_NUCCODEC_H_

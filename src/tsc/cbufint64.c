@@ -1,7 +1,11 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "cbufint64.h"
 
-#include <stdio.h>
 #include <string.h>
+
+#include "log.h"
+#include "mem.h"
 
 static void cbufint64_init(cbufint64_t *cbufint64, const size_t sz) {
     cbufint64->sz = sz;
@@ -21,11 +25,10 @@ cbufint64_t *cbufint64_new(const size_t sz) {
 
 void cbufint64_free(cbufint64_t *cbufint64) {
     if (cbufint64 != NULL) {
-        free(cbufint64->buf);
-        free(cbufint64);
+        tsc_free(cbufint64->buf);
+        tsc_free(cbufint64);
     } else {
-        fprintf(stderr, "tsc: error: Tried to free null pointer\n");
-        exit(EXIT_FAILURE);
+        tsc_error("Tried to free null pointer\n");
     }
 }
 
@@ -41,32 +44,12 @@ void cbufint64_push(cbufint64_t *cbufint64, int64_t x) {
     if (cbufint64->n < cbufint64->sz) cbufint64->n++;
 }
 
-// int64_t cbufint64_top(cbufint64_t *cbufint64)
-// {
-//     if (cbufint64->n == 0) {
-//         fprintf(stderr, "tsc: error: Tried to access empty cbufint64\n");
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     size_t nxt = cbufint64->nxt;
-//     size_t last = 0;
-//
-//     if (nxt == 0)
-//         last = cbufint64->sz - 1;
-//     else
-//         last = cbufint64->nxt - 1;
-//
-//     return cbufint64->buf[last];
-// }
-
 int64_t cbufint64_get(const cbufint64_t *cbufint64, size_t pos) {
     if (cbufint64->n == 0) {
-        fprintf(stderr, "tsc: error: Tried to access empty cbufint64\n");
-        exit(EXIT_FAILURE);
+        tsc_error("Tried to access empty cbufint64\n");
     }
     if (pos > (cbufint64->n - 1)) {
-        fprintf(stderr, "tsc: error: Not enough elements in cbufint64\n");
-        exit(EXIT_FAILURE);
+        tsc_error("Not enough elements in cbufint64\n");
     }
 
     return cbufint64->buf[pos];

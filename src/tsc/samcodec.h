@@ -1,5 +1,7 @@
-#ifndef TSC_SAMCODEC_H
-#define TSC_SAMCODEC_H
+// Copyright 2015 Leibniz University Hannover (LUH)
+
+#ifndef TSC_SAMCODEC_H_
+#define TSC_SAMCODEC_H_
 
 #include <stdio.h>
 
@@ -24,9 +26,13 @@ typedef struct samcodec_t_ {
 } samcodec_t;
 
 samcodec_t *samcodec_new(FILE *ifp, FILE *ofp, unsigned int blk_sz);
+
 void samcodec_free(samcodec_t *samcodec);
+
 void samcodec_encode(samcodec_t *samcodec);
+
 void samcodec_decode(samcodec_t *samcodec);
+
 void samcodec_info(samcodec_t *samcodec);
 
-#endif  // TSC_SAMCODEC_H
+#endif  // TSC_SAMCODEC_H_

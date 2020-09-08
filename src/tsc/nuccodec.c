@@ -1,5 +1,7 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
-// Nuc o1 block format:
+// Nuc block format:
 //   unsigned char id[8]     : "nuc----" + '\0'
 //   uint64_t      record_cnt: No. of lines in block
 //   CTRL (zlib block)
@@ -34,7 +36,7 @@
 #include "fio.h"
 #include "log.h"
 #include "mem.h"
-#include "range.h"
+#include "range/range.h"
 #include "tsc.h"
 #include "zlib_wrap.h"
 
@@ -103,7 +105,7 @@ static void reset(nuccodec_t *nuccodec) {
     reset_sliding_window(nuccodec);
 }
 
-nuccodec_t *nuccodec_new(void) {
+nuccodec_t *nuccodec_new() {
     nuccodec_t *nuccodec = (nuccodec_t *)tsc_malloc(sizeof(nuccodec_t));
 
     nuccodec->rname_prev = str_new();
@@ -187,7 +189,7 @@ void nuccodec_free(nuccodec_t *nuccodec) {
         cbufstr_free(nuccodec->exs_cbuf);
         str_free(nuccodec->ref);
 
-        free(nuccodec);
+        tsc_free(nuccodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -288,7 +290,7 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
         }
     }
 
-    free(freq);
+    tsc_free(freq);
 }
 
 // Encoder methods
@@ -431,7 +433,7 @@ void nuccodec_add_record(nuccodec_t *nuccodec,
 
     goto add_precord;
 
-add_mrecord:;
+add_mrecord:
     nuccodec->mrecord_cnt++;
 
     str_append_cstr(nuccodec->ctrl, "m");
@@ -447,7 +449,7 @@ add_mrecord:;
 
     goto cleanup;
 
-add_irecord:;  // This is the first read in a block
+add_irecord:  // This is the first read in a block
     nuccodec->irecord_cnt++;
 
     str_append_cstr(nuccodec->ctrl, "i");
@@ -468,7 +470,7 @@ add_irecord:;  // This is the first read in a block
 
     goto cleanup;
 
-add_precord:;  // This read passed all checks and can be coded
+add_precord:  // This read passed all checks and can be coded
     nuccodec->precord_cnt++;
 
     bool success = diff(nuccodec, &modcnt, modpos, modbases, trail, pos, exs->s);
@@ -494,7 +496,7 @@ add_precord:;  // This read passed all checks and can be coded
 
     goto cleanup;
 
-cleanup:;
+cleanup:
     str_free(exs);
     str_free(stogy);
     str_free(inserts);
@@ -512,7 +514,7 @@ static size_t write_zlib_block(FILE *fp, unsigned char *data, size_t data_sz) {
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
-    free(compressed);
+    tsc_free(compressed);
     return ret;
 }
 
@@ -524,7 +526,7 @@ static size_t write_rangeO1_block(FILE *fp, unsigned char *data, size_t data_sz)
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_sz);
     ret += tsc_fwrite_uint64(fp, (uint64_t)compressed_crc);
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
-    free(compressed);
+    tsc_free(compressed);
     return ret;
 }
 
@@ -876,7 +878,7 @@ static void nuccodec_decode_records(nuccodec_t *nuccodec, unsigned char *ctrl, u
             str_copy_str(nuccodec->rname_prev, _rname_);
             nuccodec->pos_prev = *_pos_;
 
-            free(modpos_curr);
+            tsc_free(modpos_curr);
             str_free(exs_curr);
             str_free(trail_curr);
             str_free(inserts_curr);
@@ -902,7 +904,7 @@ static unsigned char *read_zlib_block(FILE *fp, size_t *sz) {
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
     if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc) tsc_error("CRC64 check failed\n");
     unsigned char *data = zlib_decompress(data_compressed, data_compressed_sz, data_sz);
-    free(data_compressed);
+    tsc_free(data_compressed);
     data = tsc_realloc(data, ++data_sz);
     data[data_sz - 1] = '\0';
     return data;
@@ -919,7 +921,7 @@ static unsigned char *read_rangeO1_block(FILE *fp, size_t *sz) {
     *sz += tsc_fread_buf(fp, data_compressed, data_compressed_sz);
     if (crc64(data_compressed, data_compressed_sz) != data_compressed_crc) tsc_error("CRC64 check failed\n");
     unsigned char *data = range_decompress_o1(data_compressed, (unsigned int *)&data_sz);
-    free(data_compressed);
+    tsc_free(data_compressed);
     data = tsc_realloc(data, ++data_sz);
     data[data_sz - 1] = '\0';
 
@@ -995,19 +997,19 @@ size_t nuccodec_decode_block(nuccodec_t *nuccodec, FILE *fp, str_t **rname_decod
                             modbases, trail, rname_decoded, pos_decoded, cigar_decoded, seq_decoded);
 
     // Free memory used for decoded bitstreams
-    free(ctrl);
-    free(rname);
-    free(pos);
-    free(seq);
-    free(seqlen);
-    free(exs);
-    free(posoff);
-    free(stogy);
-    free(inserts);
-    free(modcnt);
-    free(modpos);
-    free(modbases);
-    free(trail);
+    tsc_free(ctrl);
+    tsc_free(rname);
+    tsc_free(pos);
+    tsc_free(seq);
+    tsc_free(seqlen);
+    tsc_free(exs);
+    tsc_free(posoff);
+    tsc_free(stogy);
+    tsc_free(inserts);
+    tsc_free(modcnt);
+    tsc_free(modpos);
+    tsc_free(modbases);
+    tsc_free(trail);
 
     reset(nuccodec);
 

@@ -1,11 +1,15 @@
-#ifndef TSC_COMMON_H
-#define TSC_COMMON_H
+// Copyright 2015 Leibniz University Hannover (LUH)
+
+#ifndef TSC_COMMON_H_
+#define TSC_COMMON_H_
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-bool yesno(void);
-long tvdiff(struct timeval tv0, struct timeval tv1);
-size_t ndigits(int64_t x);
+bool yesno();
 
-#endif  // TSC_COMMON_H
+long tv_diff(struct timeval tv0, struct timeval tv1);
+
+size_t num_digits(int64_t x);
+
+#endif  // TSC_COMMON_H_

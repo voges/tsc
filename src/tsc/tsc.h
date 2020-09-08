@@ -1,5 +1,7 @@
-#ifndef TSC_TSC_H
-#define TSC_TSC_H
+// Copyright 2015 Leibniz University Hannover (LUH)
+
+#ifndef TSC_TSC_H_
+#define TSC_TSC_H_
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -22,4 +24,4 @@ extern tsc_mode_t tsc_mode;
 extern bool tsc_stats;
 extern unsigned int tsc_blocksz;
 
-#endif  // TSC_TSC_H
+#endif  // TSC_TSC_H_

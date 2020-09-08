@@ -1,8 +1,11 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "str.h"
 
 #include <stdio.h>
 #include <string.h>
 
+#include "log.h"
 #include "mem.h"
 
 static void str_init(str_t *str) {
@@ -15,7 +18,7 @@ static void str_init(str_t *str) {
     str->s[str->len] = '\0';
 }
 
-str_t *str_new(void) {
+str_t *str_new() {
     str_t *str = (str_t *)tsc_malloc(sizeof(str_t));
     str_init(str);
     return str;
@@ -24,19 +27,18 @@ str_t *str_new(void) {
 void str_free(str_t *str) {
     if (str != NULL) {
         if (str->s != NULL) {
-            free(str->s);
+            tsc_free(str->s);
             str->s = NULL;
         }
-        free(str);
+        tsc_free(str);
     } else {
-        fprintf(stderr, "tsc: error: Tried to free null pointer\n");
-        exit(EXIT_FAILURE);
+        tsc_error("Tried to free null pointer\n");
     }
 }
 
 void str_clear(str_t *str) {
     if (str->s != NULL) {
-        free(str->s);
+        tsc_free(str->s);
         str->s = NULL;
     }
     str_init(str);
@@ -73,8 +75,7 @@ void str_append_cstr(str_t *str, const char *cstr) {
 
 void str_append_cstrn(str_t *str, const char *cstr, const size_t len) {
     if (len > strlen(cstr)) {
-        fprintf(stderr, "tsc: error: Failed to append C-string\n");
-        exit(EXIT_FAILURE);
+        tsc_error("Failed to append C-string\n");
     }
     str_extend(str, len);
     memcpy(str->s + str->len, cstr, len);
@@ -93,13 +94,6 @@ void str_append_int(str_t *str, const int64_t num) {
     snprintf(num_cstr, sizeof(num_cstr), "%" PRId64, num);
     str_append_cstr(str, num_cstr);
 }
-
-// void str_append_double2(str_t *str, const double dbl)
-// {
-//     char dbl_cstr[101];
-//     snprintf(dbl_cstr, sizeof(dbl_cstr), "%.2f", dbl);
-//     str_append_cstr(str, dbl_cstr);
-// }
 
 void str_copy_str(str_t *dest, const str_t *src) {
     str_clear(dest);

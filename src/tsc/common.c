@@ -1,20 +1,21 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "common.h"
 
 #include <stdio.h>
 
-bool yesno(void) {
+bool yesno() {
     int c = getchar();
     bool yes = c == 'y' || c == 'Y';
     while (c != '\n' && c != EOF) c = getchar();
     return yes;
 }
 
-long tvdiff(struct timeval tv0, struct timeval tv1) {
+long tv_diff(struct timeval tv0, struct timeval tv1) {
     return (tv1.tv_sec - tv0.tv_sec) * 1000000 + tv1.tv_usec - tv0.tv_usec;
 }
 
-size_t ndigits(int64_t x) {
-    // Ugly but fast
+size_t num_digits(int64_t x) {
     size_t n = 0;
     if (x < 0) n++;
     x = llabs(x);
@@ -37,5 +38,5 @@ size_t ndigits(int64_t x) {
     if (x < 10000000000000000) return n + 16;
     if (x < 100000000000000000) return n + 17;
     if (x < 1000000000000000000) return n + 18;
-    return n + 19; /* INT64_MAX: 2^63 - 1 = 9223372036854775807 */
+    return n + 19;  // INT64_MAX: 2^63 - 1 = 9223372036854775807
 }

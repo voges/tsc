@@ -1,5 +1,7 @@
-#ifndef TSC_SAMREC_H
-#define TSC_SAMREC_H
+// Copyright 2015 Leibniz University Hannover (LUH)
+
+#ifndef TSC_SAMREC_H_
+#define TSC_SAMREC_H_
 
 #include <stdint.h>
 
@@ -28,4 +30,4 @@ typedef struct samrec_t_ {
     char *opt;       // OPTional information
 } samrec_t;
 
-#endif  // TSC_SAMREC_H
+#endif  // TSC_SAMREC_H_

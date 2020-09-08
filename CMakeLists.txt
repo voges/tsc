@@ -36,6 +36,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 #==============================================================================
 
 include_directories("${CMAKE_SOURCE_DIR}/src")
+include_directories("${CMAKE_SOURCE_DIR}/third_party")
 
 
 #==============================================================================
@@ -43,3 +44,4 @@ include_directories("${CMAKE_SOURCE_DIR}/src")
 #==============================================================================
 
 add_subdirectory(src)
+add_subdirectory(third_party)

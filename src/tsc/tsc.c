@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "tsc.h"
 
 #include <getopt.h>
@@ -31,18 +33,18 @@ tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
 unsigned int tsc_blocksz = 0;
 
-static void print_help(void) {
-    printf("Usage: tsc [OPTIONS] FILE\n");
-    printf("TNT Sequence Compressor\n");
-    printf("\n");
-    printf("Options:\n");
-    printf("  -b, --blocksz=SIZE    specify block SIZE\n");
-    printf("  -d, --decompress      decompress\n");
-    printf("  -f, --force           force overwriting of output file(s)\n");
-    printf("  -h, --help            print this help\n");
-    printf("  -i, --info            print information about TSC file\n");
-    printf("  -o, --output=OUTFILE  specify output FILE\n");
-    printf("  -s, --stats           print (de-)compression statistics\n");
+static void print_help() {
+    tsc_log("Usage: tsc [OPTIONS] FILE\n");
+    tsc_log("TNT Sequence Compressor\n");
+    tsc_log("\n");
+    tsc_log("Options:\n");
+    tsc_log("  -b, --blocksz=SIZE    specify block SIZE\n");
+    tsc_log("  -d, --decompress      decompress\n");
+    tsc_log("  -f, --force           force overwriting of output file(s)\n");
+    tsc_log("  -h, --help            print this help\n");
+    tsc_log("  -i, --info            print information about TSC file\n");
+    tsc_log("  -o, --output=OUTFILE  specify output FILE\n");
+    tsc_log("  -s, --stats           print (de-)compression statistics\n");
 }
 
 static void parse_options(int argc, char *argv[]) {
@@ -191,10 +193,7 @@ int main(int argc, char *argv[]) {
             opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
-            if (yesno())
-                ;  // proceed
-            else
-                exit(EXIT_SUCCESS);
+            if (!yesno()) exit(EXIT_SUCCESS);
         }
 
         // Invoke compressor
@@ -223,10 +222,7 @@ int main(int argc, char *argv[]) {
             opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
-            if (yesno())
-                ;  // proceed
-            else
-                exit(EXIT_SUCCESS);
+            if (!yesno()) exit(EXIT_SUCCESS);
         }
 
         // Invoke decompressor

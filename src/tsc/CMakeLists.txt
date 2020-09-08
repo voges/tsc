@@ -1,4 +1,4 @@
-set(source_files
+set(src_files
         auxcodec.c
         cbufint64.c
         cbufstr.c
@@ -11,7 +11,6 @@ set(source_files
         nuccodec.c
         paircodec.c
         qualcodec.c
-        range.c
         samcodec.c
         samparser.c
         str.c
@@ -20,6 +19,7 @@ set(source_files
         zlib_wrap.c
 )
 
-add_executable(tsc ${source_files})
+add_executable(tsc ${src_files})
 
+target_link_libraries(tsc range)
 target_link_libraries(tsc z)

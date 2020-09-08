@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
 // Qual block format:
 //   unsigned char id[8]          : "qual---" + '\0'
@@ -22,12 +24,12 @@ static void qualcodec_init(qualcodec_t *qualcodec) {
     qualcodec->record_cnt = 0;
     str_clear(qualcodec->uncompressed);
     if (qualcodec->compressed != NULL) {
-        free(qualcodec->compressed);
+        tsc_free(qualcodec->compressed);
         qualcodec->compressed = NULL;
     }
 }
 
-qualcodec_t *qualcodec_new(void) {
+qualcodec_t *qualcodec_new() {
     qualcodec_t *qualcodec = (qualcodec_t *)tsc_malloc(sizeof(qualcodec_t));
     qualcodec->uncompressed = str_new();
     qualcodec->compressed = NULL;
@@ -39,10 +41,10 @@ void qualcodec_free(qualcodec_t *qualcodec) {
     if (qualcodec != NULL) {
         str_free(qualcodec->uncompressed);
         if (qualcodec->compressed != NULL) {
-            free(qualcodec->compressed);
+            tsc_free(qualcodec->compressed);
             qualcodec->compressed = NULL;
         }
-        free(qualcodec);
+        tsc_free(qualcodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -81,7 +83,7 @@ size_t qualcodec_write_block(qualcodec_t *qualcodec, FILE *fp) {
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
-    free(compressed);
+    tsc_free(compressed);
 
     qualcodec_init(qualcodec);
 
@@ -131,12 +133,11 @@ size_t qualcodec_decode_block(qualcodec_t *qualcodec, FILE *fp, str_t **qual) {
 
     // Decompress block
     unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
-    free(compressed);
+    tsc_free(compressed);
 
     // Decode block
     qualcodec_decode(uncompressed, uncompressed_sz, qual);
-    free(uncompressed);  // Free memory used for decoded bitstream
-
+    tsc_free(uncompressed);
     qualcodec_init(qualcodec);
 
     return ret;

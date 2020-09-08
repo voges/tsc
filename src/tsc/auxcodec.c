@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
 // Aux block format:
 //   unsigned char id[8]          :"aux----" + '\0'
@@ -22,11 +24,11 @@
 static void auxcodec_init(auxcodec_t *auxcodec) {
     auxcodec->record_cnt = 0;
     str_clear(auxcodec->uncompressed);
-    if (auxcodec->compressed != NULL) free(auxcodec->compressed);
+    if (auxcodec->compressed != NULL) tsc_free(auxcodec->compressed);
     auxcodec->compressed = NULL;
 }
 
-auxcodec_t *auxcodec_new(void) {
+auxcodec_t *auxcodec_new() {
     auxcodec_t *auxcodec = (auxcodec_t *)tsc_malloc(sizeof(auxcodec_t));
     auxcodec->uncompressed = str_new();
     auxcodec->compressed = NULL;
@@ -38,10 +40,10 @@ void auxcodec_free(auxcodec_t *auxcodec) {
     if (auxcodec != NULL) {
         str_free(auxcodec->uncompressed);
         if (auxcodec->compressed != NULL) {
-            free(auxcodec->compressed);
+            tsc_free(auxcodec->compressed);
             auxcodec->compressed = NULL;
         }
-        free(auxcodec);
+        tsc_free(auxcodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -90,7 +92,7 @@ size_t auxcodec_write_block(auxcodec_t *auxcodec, FILE *fp) {
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
-    free(compressed);
+    tsc_free(compressed);
 
     auxcodec_init(auxcodec);
 
@@ -168,11 +170,11 @@ size_t auxcodec_decode_block(auxcodec_t *auxcodec, FILE *fp, uint16_t *flag, uin
 
     // Decompress block
     unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
-    free(compressed);
+    tsc_free(compressed);
 
     // Decode block
     auxcodec_decode(uncompressed, uncompressed_sz, flag, mapq, opt);
-    free(uncompressed);  // Free memory used for decoded bitstream
+    tsc_free(uncompressed);
 
     auxcodec_init(auxcodec);
 

@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "samcodec.h"
 
 #include <inttypes.h>
@@ -78,7 +80,7 @@ void samcodec_free(samcodec_t *samcodec) {
         nuccodec_free(samcodec->nuccodec);
         paircodec_free(samcodec->paircodec);
         qualcodec_free(samcodec->qualcodec);
-        free(samcodec);
+        tsc_free(samcodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -98,8 +100,7 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
     size_t tsc_total_sz = tsc_sz[TSC_FH] + tsc_sz[TSC_SH] + tsc_sz[TSC_BH] + tsc_sz[TSC_AUX] + tsc_sz[TSC_ID] +
                           tsc_sz[TSC_NUC] + tsc_sz[TSC_PAIR] + tsc_sz[TSC_QUAL];
 
-    fprintf(stdout,
-            "\nsamcodec stats:\n"
+    tsc_log("\nsamcodec stats:\n"
             "---------------\n"
             "Number of records   : %12" PRIu64
             "\n"
@@ -275,12 +276,12 @@ void samcodec_encode(samcodec_t *samcodec) {
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_AUX] += auxcodec_write_block(samcodec->auxcodec, samcodec->ofp);
             gettimeofday(&tv1, NULL);
-            et[ET_AUX] += tvdiff(tv0, tv1);
+            et[ET_AUX] += tv_diff(tv0, tv1);
 
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_ID] += idcodec_write_block(samcodec->idcodec, samcodec->ofp);
             gettimeofday(&tv1, NULL);
-            et[ET_ID] += tvdiff(tv0, tv1);
+            et[ET_ID] += tv_diff(tv0, tv1);
 
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_NUC] += nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
@@ -289,56 +290,56 @@ void samcodec_encode(samcodec_t *samcodec) {
             //                seqlen_fp, exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp,
             //                modpos_fp, modbases_fp, trail_fp);
             gettimeofday(&tv1, NULL);
-            et[ET_NUC] += tvdiff(tv0, tv1);
+            et[ET_NUC] += tv_diff(tv0, tv1);
 
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_PAIR] += paircodec_write_block(samcodec->paircodec, samcodec->ofp);
             gettimeofday(&tv1, NULL);
-            et[ET_PAIR] += tvdiff(tv0, tv1);
+            et[ET_PAIR] += tv_diff(tv0, tv1);
 
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_QUAL] += qualcodec_write_block(samcodec->qualcodec, samcodec->ofp);
             gettimeofday(&tv1, NULL);
-            et[ET_QUAL] += tvdiff(tv0, tv1);
+            et[ET_QUAL] += tv_diff(tv0, tv1);
         }
 
         // Add record to encoders
         gettimeofday(&tv0, NULL);
         auxcodec_add_record(samcodec->auxcodec, samrec->flag, samrec->mapq, samrec->opt);
         gettimeofday(&tv1, NULL);
-        et[ET_AUX] += tvdiff(tv0, tv1);
+        et[ET_AUX] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         idcodec_add_record(samcodec->idcodec, samrec->qname);
         gettimeofday(&tv1, NULL);
-        et[ET_ID] += tvdiff(tv0, tv1);
+        et[ET_ID] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         nuccodec_add_record(samcodec->nuccodec, /*samrec->flag,*/ samrec->rname, samrec->pos, samrec->cigar,
                             samrec->seq);
         gettimeofday(&tv1, NULL);
-        et[ET_NUC] += tvdiff(tv0, tv1);
+        et[ET_NUC] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         paircodec_add_record(samcodec->paircodec, samrec->rnext, samrec->pnext, samrec->tlen);
         gettimeofday(&tv1, NULL);
-        et[ET_QUAL] += tvdiff(tv0, tv1);
+        et[ET_QUAL] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         qualcodec_add_record(samcodec->qualcodec, samrec->qual);
         gettimeofday(&tv1, NULL);
-        et[ET_QUAL] += tvdiff(tv0, tv1);
+        et[ET_QUAL] += tv_diff(tv0, tv1);
 
         // Accumulate input statistics
         sam_sz[SAM_QNAME] += strlen(samrec->qname);
-        sam_sz[SAM_FLAG] += ndigits(samrec->flag);
+        sam_sz[SAM_FLAG] += num_digits(samrec->flag);
         sam_sz[SAM_RNAME] += strlen(samrec->rname);
-        sam_sz[SAM_POS] += ndigits(samrec->pos);
-        sam_sz[SAM_MAPQ] += ndigits(samrec->mapq);
+        sam_sz[SAM_POS] += num_digits(samrec->pos);
+        sam_sz[SAM_MAPQ] += num_digits(samrec->mapq);
         sam_sz[SAM_CIGAR] += strlen(samrec->cigar);
         sam_sz[SAM_RNEXT] += strlen(samrec->rnext);
-        sam_sz[SAM_PNEXT] += ndigits(samrec->pnext);
-        sam_sz[SAM_TLEN] += ndigits(samrec->tlen);
+        sam_sz[SAM_PNEXT] += num_digits(samrec->pnext);
+        sam_sz[SAM_TLEN] += num_digits(samrec->tlen);
         sam_sz[SAM_SEQ] += strlen(samrec->seq);
         sam_sz[SAM_QUAL] += strlen(samrec->qual);
         sam_sz[SAM_OPT] += strlen(samrec->opt);
@@ -370,12 +371,12 @@ void samcodec_encode(samcodec_t *samcodec) {
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_AUX] += auxcodec_write_block(samcodec->auxcodec, samcodec->ofp);
     gettimeofday(&tv1, NULL);
-    et[ET_AUX] += tvdiff(tv0, tv1);
+    et[ET_AUX] += tv_diff(tv0, tv1);
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_ID] += idcodec_write_block(samcodec->idcodec, samcodec->ofp);
     gettimeofday(&tv1, NULL);
-    et[ET_ID] += tvdiff(tv0, tv1);
+    et[ET_ID] += tv_diff(tv0, tv1);
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_NUC] += nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
@@ -384,17 +385,17 @@ void samcodec_encode(samcodec_t *samcodec) {
     //        exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp, modpos_fp,
     //        modbases_fp, trail_fp);
     gettimeofday(&tv1, NULL);
-    et[ET_NUC] += tvdiff(tv0, tv1);
+    et[ET_NUC] += tv_diff(tv0, tv1);
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_PAIR] += paircodec_write_block(samcodec->paircodec, samcodec->ofp);
     gettimeofday(&tv1, NULL);
-    et[ET_PAIR] += tvdiff(tv0, tv1);
+    et[ET_PAIR] += tv_diff(tv0, tv1);
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_QUAL] += qualcodec_write_block(samcodec->qualcodec, samcodec->ofp);
     gettimeofday(&tv1, NULL);
-    et[ET_QUAL] += tvdiff(tv0, tv1);
+    et[ET_QUAL] += tv_diff(tv0, tv1);
 
     // Write file header
     tscfh->blk_n = tscbh->blk_cnt;
@@ -404,7 +405,7 @@ void samcodec_encode(samcodec_t *samcodec) {
 
     // Print summary
     gettimeofday(&tt1, NULL);
-    et[ET_TOT] = tvdiff(tt0, tt1);
+    et[ET_TOT] = tv_diff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_ID] - et[ET_NUC] - et[ET_PAIR] - et[ET_QUAL];
     tsc_log("Compressed %zu record(s)\n", tscfh->rec_n);
     tsc_log("Wrote %zu block(s)\n", tscfh->blk_n);
@@ -420,21 +421,6 @@ void samcodec_encode(samcodec_t *samcodec) {
     // If selected, print detailed statistics
     if (tsc_stats) samcodec_print_stats(sam_sz, tsc_sz, tscfh, et);
 
-    // Close single-stream files
-    //    tsc_fclose(ctrl_fp);
-    //    tsc_fclose(rname_fp);
-    //    tsc_fclose(pos_fp);
-    //    tsc_fclose(seq_fp);
-    //    tsc_fclose(seqlen_fp);
-    //    tsc_fclose(exs_fp);
-    //    tsc_fclose(posoff_fp);
-    //    tsc_fclose(stogy_fp);
-    //    tsc_fclose(inserts_fp);
-    //    tsc_fclose(modcnt_fp);
-    //    tsc_fclose(modpos_fp);
-    //    tsc_fclose(modbases_fp);
-    //    tsc_fclose(trail_fp);
-
     tscfh_free(tscfh);
     tscsh_free(tscsh);
     tscbh_free(tscbh);
@@ -442,7 +428,7 @@ void samcodec_encode(samcodec_t *samcodec) {
 
 void samcodec_decode(samcodec_t *samcodec) {
     size_t sam_sz[14] = {0};  // SAM statistics
-    size_t tsc_sz[8] = {0};   // Tsc statistics
+    size_t tsc_sz[8] = {0};   // TSC statistics
     long et[7] = {0};         // Timing statistics
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
@@ -496,27 +482,27 @@ void samcodec_decode(samcodec_t *samcodec) {
         gettimeofday(&tv0, NULL);
         tsc_sz[TSC_AUX] += auxcodec_decode_block(samcodec->auxcodec, samcodec->ifp, flag, mapq, opt);
         gettimeofday(&tv1, NULL);
-        et[ET_AUX] += tvdiff(tv0, tv1);
+        et[ET_AUX] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         tsc_sz[TSC_ID] += idcodec_decode_block(samcodec->idcodec, samcodec->ifp, qname);
         gettimeofday(&tv1, NULL);
-        et[ET_ID] += tvdiff(tv0, tv1);
+        et[ET_ID] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         tsc_sz[TSC_NUC] += nuccodec_decode_block(samcodec->nuccodec, samcodec->ifp, rname, pos, cigar, seq);
         gettimeofday(&tv1, NULL);
-        et[ET_NUC] += tvdiff(tv0, tv1);
+        et[ET_NUC] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         tsc_sz[TSC_PAIR] += paircodec_decode_block(samcodec->paircodec, samcodec->ifp, rnext, pnext, tlen);
         gettimeofday(&tv1, NULL);
-        et[ET_PAIR] += tvdiff(tv0, tv1);
+        et[ET_PAIR] += tv_diff(tv0, tv1);
 
         gettimeofday(&tv0, NULL);
         tsc_sz[TSC_QUAL] += qualcodec_decode_block(samcodec->qualcodec, samcodec->ifp, qual);
         gettimeofday(&tv1, NULL);
-        et[ET_QUAL] += tvdiff(tv0, tv1);
+        et[ET_QUAL] += tv_diff(tv0, tv1);
 
         // These are dummies for testing
         // int i = 0;
@@ -583,23 +569,23 @@ void samcodec_decode(samcodec_t *samcodec) {
         }
 
         // Free memory allocated for this block
-        free(qname);
-        free(flag);
-        free(rname);
-        free(pos);
-        free(mapq);
-        free(cigar);
-        free(rnext);
-        free(pnext);
-        free(tlen);
-        free(seq);
-        free(qual);
-        free(opt);
+        tsc_free(qname);
+        tsc_free(flag);
+        tsc_free(rname);
+        tsc_free(pos);
+        tsc_free(mapq);
+        tsc_free(cigar);
+        tsc_free(rnext);
+        tsc_free(pnext);
+        tsc_free(tlen);
+        tsc_free(seq);
+        tsc_free(qual);
+        tsc_free(opt);
     }
 
     // Print summary
     gettimeofday(&tt1, NULL);
-    et[ET_TOT] = tvdiff(tt0, tt1);
+    et[ET_TOT] = tv_diff(tt0, tt1);
     et[ET_REM] = et[ET_TOT] - et[ET_AUX] - et[ET_ID] - et[ET_NUC] - et[ET_PAIR] - et[ET_QUAL];
     tsc_log("Decompressed %zu record(s)\n", tscfh->rec_n);
     tsc_log("Read %zu block(s)\n", tscfh->blk_n);
@@ -625,7 +611,7 @@ void samcodec_info(samcodec_t *samcodec) {
     tscsh_read(tscsh, samcodec->ifp);
 
     // Read and print block headers
-    printf(
+    tsc_log(
         "\n"
         "\t        fpos      fpos_nxt       blk_cnt       rec_cnt"
         "       rec_max         rname       pos_min       pos_max\n");
@@ -633,23 +619,23 @@ void samcodec_info(samcodec_t *samcodec) {
     while (1) {
         tscbh_read(tscbh, samcodec->ifp);
 
-        printf("\t");
-        printf("%12" PRIu64 "  ", tscbh->fpos);
-        printf("%12" PRIu64 "  ", tscbh->fpos_nxt);
-        printf("%12" PRIu64 "  ", tscbh->blk_cnt);
-        printf("%12" PRIu64 "  ", tscbh->rec_cnt);
-        printf("%12" PRIu64 "  ", tscbh->rec_max);
-        printf("%12" PRIu64 "  ", tscbh->rname);
-        printf("%12" PRIu64 "  ", tscbh->pos_min);
-        printf("%12" PRIu64 "  ", tscbh->pos_max);
-        printf("\n");
+        tsc_log("\t");
+        tsc_log("%12" PRIu64 "  ", tscbh->fpos);
+        tsc_log("%12" PRIu64 "  ", tscbh->fpos_nxt);
+        tsc_log("%12" PRIu64 "  ", tscbh->blk_cnt);
+        tsc_log("%12" PRIu64 "  ", tscbh->rec_cnt);
+        tsc_log("%12" PRIu64 "  ", tscbh->rec_max);
+        tsc_log("%12" PRIu64 "  ", tscbh->rname);
+        tsc_log("%12" PRIu64 "  ", tscbh->pos_min);
+        tsc_log("%12" PRIu64 "  ", tscbh->pos_max);
+        tsc_log("\n");
 
         if (tscbh->fpos_nxt)
             fseek(samcodec->ifp, (long)tscbh->fpos_nxt, SEEK_SET);
         else
             break;  // Last block has zeros here
     }
-    printf("\n");
+    tsc_log("\n");
 
     tscfh_free(tscfh);
     tscsh_free(tscsh);

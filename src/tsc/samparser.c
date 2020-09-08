@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 #include "samparser.h"
 
 #include <string.h>
@@ -17,7 +19,7 @@ samparser_t *samparser_new(FILE *fp) {
 void samparser_free(samparser_t *samparser) {
     if (samparser != NULL) {
         str_free(samparser->head);
-        free(samparser);
+        tsc_free(samparser);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -25,13 +27,13 @@ void samparser_free(samparser_t *samparser) {
 
 void samparser_head(samparser_t *samparser) {
     // Read the SAM header
-    bool samheader = false;
+    bool sam_header = false;
     while (fgets(samparser->curr.line, sizeof(samparser->curr.line), samparser->fp)) {
         if (*(samparser->curr.line) == '@') {
             str_append_cstr(samparser->head, samparser->curr.line);
-            samheader = true;
+            sam_header = true;
         } else {
-            if (!samheader) tsc_error("SAM header missing\n");
+            if (!sam_header) tsc_error("SAM header missing\n");
             size_t offset = -strlen(samparser->curr.line);
             fseek(samparser->fp, (long)offset, SEEK_CUR);
             break;

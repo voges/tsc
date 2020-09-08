@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
 // Tsc file format:
 // ----------------
@@ -21,8 +23,8 @@
 //     [Sub-block (N-1).(M-1)]
 //
 
-#ifndef TSC_TSCFMT_H
-#define TSC_TSCFMT_H
+#ifndef TSC_TSCFMT_H_
+#define TSC_TSCFMT_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -38,10 +40,14 @@ typedef struct tscfh_t_ {
     uint64_t sblk_n;  // number of sub-blocks per block
 } tscfh_t;
 
-tscfh_t *tscfh_new(void);
+tscfh_t *tscfh_new();
+
 void tscfh_free(tscfh_t *tscfh);
+
 size_t tscfh_read(tscfh_t *tscfh, FILE *fp);
+
 size_t tscfh_write(tscfh_t *tscfh, FILE *fp);
+
 size_t tscfh_size(tscfh_t *tscfh);
 
 // SAM header
@@ -50,11 +56,13 @@ typedef struct tscsh_t_ {
     unsigned char *data;  // SAM header data
 } tscsh_t;
 
-tscsh_t *tscsh_new(void);
+tscsh_t *tscsh_new();
+
 void tscsh_free(tscsh_t *tscsh);
+
 size_t tscsh_read(tscsh_t *tscsh, FILE *fp);
+
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp);
-// size_t tscsh_size(tscsh_t * tscsh);
 
 // Block header
 typedef struct tscbh_t_ {
@@ -69,10 +77,12 @@ typedef struct tscbh_t_ {
     uint64_t pos_max;   // largest POSition contained in block
 } tscbh_t;
 
-tscbh_t *tscbh_new(void);
-void tscbh_free(tscbh_t *tscbh);
-size_t tscbh_read(tscbh_t *tscbh, FILE *fp);
-size_t tscbh_write(tscbh_t *tscbh, FILE *fp);
-// size_t tscbh_size(tscbh_t * tscbh);
+tscbh_t *tscbh_new();
 
-#endif  // TSC_TSCFMT_H
+void tscbh_free(tscbh_t *tscbh);
+
+size_t tscbh_read(tscbh_t *tscbh, FILE *fp);
+
+size_t tscbh_write(tscbh_t *tscbh, FILE *fp);
+
+#endif  // TSC_TSCFMT_H_

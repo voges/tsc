@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 /*
  * Specification of this CRC64 variant follows:
  * Name: crc-64-jones

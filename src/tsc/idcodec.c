@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
 // Id block format:
 //   unsigned char id[8]          : "id-----" + '\0'
@@ -22,12 +24,12 @@ static void idcodec_init(idcodec_t *idcodec) {
     idcodec->record_cnt = 0;
     str_clear(idcodec->uncompressed);
     if (idcodec->compressed != NULL) {
-        free(idcodec->compressed);
+        tsc_free(idcodec->compressed);
         idcodec->compressed = NULL;
     }
 }
 
-idcodec_t *idcodec_new(void) {
+idcodec_t *idcodec_new() {
     idcodec_t *idcodec = (idcodec_t *)tsc_malloc(sizeof(idcodec_t));
     idcodec->uncompressed = str_new();
     idcodec->compressed = NULL;
@@ -39,10 +41,10 @@ void idcodec_free(idcodec_t *idcodec) {
     if (idcodec != NULL) {
         str_free(idcodec->uncompressed);
         if (idcodec->compressed != NULL) {
-            free(idcodec->compressed);
+            tsc_free(idcodec->compressed);
             idcodec->compressed = NULL;
         }
-        free(idcodec);
+        tsc_free(idcodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -81,7 +83,7 @@ size_t idcodec_write_block(idcodec_t *idcodec, FILE *fp) {
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
-    free(compressed);
+    tsc_free(compressed);
 
     idcodec_init(idcodec);
 
@@ -131,11 +133,11 @@ size_t idcodec_decode_block(idcodec_t *idcodec, FILE *fp, str_t **qname) {
 
     // Decompress block
     unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
-    free(compressed);
+    tsc_free(compressed);
 
     // Decode block
     idcodec_decode(uncompressed, uncompressed_sz, qname);
-    free(uncompressed);  // Free memory used for decoded bitstream
+    tsc_free(uncompressed);
 
     idcodec_init(idcodec);
 

@@ -1,3 +1,5 @@
+// Copyright 2015 Leibniz University Hannover (LUH)
+
 //
 // Pair block format:
 //   unsigned char id[8]          : "pair---" + '\0'
@@ -23,12 +25,12 @@ static void paircodec_init(paircodec_t *paircodec) {
     paircodec->record_cnt = 0;
     str_clear(paircodec->uncompressed);
     if (paircodec->compressed != NULL) {
-        free(paircodec->compressed);
+        tsc_free(paircodec->compressed);
         paircodec->compressed = NULL;
     }
 }
 
-paircodec_t *paircodec_new(void) {
+paircodec_t *paircodec_new() {
     paircodec_t *paircodec = (paircodec_t *)tsc_malloc(sizeof(paircodec_t));
     paircodec->uncompressed = str_new();
     paircodec->compressed = NULL;
@@ -40,10 +42,10 @@ void paircodec_free(paircodec_t *paircodec) {
     if (paircodec != NULL) {
         str_free(paircodec->uncompressed);
         if (paircodec->compressed != NULL) {
-            free(paircodec->compressed);
+            tsc_free(paircodec->compressed);
             paircodec->compressed = NULL;
         }
-        free(paircodec);
+        tsc_free(paircodec);
     } else {
         tsc_error("Tried to free null pointer\n");
     }
@@ -92,7 +94,7 @@ size_t paircodec_write_block(paircodec_t *paircodec, FILE *fp) {
     ret += tsc_fwrite_buf(fp, compressed, compressed_sz);
 
     // Free memory allocated by zlib_compress
-    free(compressed);
+    tsc_free(compressed);
 
     paircodec_init(paircodec);
 
@@ -164,11 +166,11 @@ size_t paircodec_decode_block(paircodec_t *paircodec, FILE *fp, str_t **rnext, u
 
     // Decompress block
     unsigned char *uncompressed = zlib_decompress(compressed, compressed_sz, uncompressed_sz);
-    free(compressed);
+    tsc_free(compressed);
 
     // Decode block
     paircodec_decode(uncompressed, uncompressed_sz, rnext, pnext, tlen);
-    free(uncompressed);  // Free memory used for decoded bitstream
+    tsc_free(uncompressed);
 
     paircodec_init(paircodec);
 
