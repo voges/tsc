@@ -1,16 +1,14 @@
 // Copyright 2015 Leibniz University Hannover (LUH)
 
-/*
- * Specification of this CRC64 variant follows:
- * Name: crc-64-jones
- * Width: 64 bits
- * Poly: 0xad93d23594c935a9
- * Reflected In: True
- * Xor_In: 0xffffffffffffffff
- * Reflected_Out: True
- * Xor_Out: 0x0
- * Check ("123456789"): 0xe9c6d914c4b8d9ca
- */
+// Specification of this CRC64 variant follows:
+// Name: crc-64-jones
+// Width: 64 bits
+// Poly: 0xad93d23594c935a9
+// Reflected In: True
+// Xor_In: 0xffffffffffffffff
+// Reflected_Out: True
+// Xor_Out: 0x0
+// Check ("123456789"): 0xe9c6d914c4b8d9ca
 
 #include "crc64.h"
 

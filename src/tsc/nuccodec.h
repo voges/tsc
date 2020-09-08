@@ -15,15 +15,15 @@
 
 typedef struct nuccodec_t_ {
     // Only used in encoder
-    size_t record_cnt;  // No. of records processed in the current block
-    bool first;         // 'true', if first line has not been processed yet
-    str_t *rname_prev;  // Previous RNAME
-    uint32_t pos_prev;  // Previous POSition
+    size_t record_cnt;
+    bool first;
+    str_t *rname_prev;
+    uint32_t pos_prev;
 
     // Statistics
-    size_t mrecord_cnt;  // Total no. of M-Records processed
-    size_t irecord_cnt;  // Total no. of I-Records processed
-    size_t precord_cnt;  // Total no. of P-Records processed
+    size_t mrecord_cnt;
+    size_t irecord_cnt;
+    size_t precord_cnt;
     size_t ctrl_sz;
     size_t rname_sz;
     size_t pos_sz;
@@ -68,9 +68,7 @@ void nuccodec_free(nuccodec_t *nuccodec);
 // Encoder
 // -----------------------------------------------------------------------------
 
-void nuccodec_add_record(nuccodec_t *nuccodec,
-                         // const uint16_t flag,
-                         const char *rname, uint32_t pos, const char *cigar, const char *seq);
+void nuccodec_add_record(nuccodec_t *nuccodec, const char *rname, uint32_t pos, const char *cigar, const char *seq);
 
 size_t nuccodec_write_block(nuccodec_t *nuccodec, FILE *fp);
 

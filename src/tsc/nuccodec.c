@@ -1,31 +1,5 @@
 // Copyright 2015 Leibniz University Hannover (LUH)
 
-//
-// Nuc block format:
-//   unsigned char id[8]     : "nuc----" + '\0'
-//   uint64_t      record_cnt: No. of lines in block
-//   CTRL (zlib block)
-//     uint64_t      sz            : Size of uncompressed data
-//     uint64_t      compressed_sz : Compressed data size
-//     uint64_t      compressed_crc: CRC64 of compressed data
-//     unsigned char *compressed   : Compressed data
-//   RNAME (zlib block)
-//   POS (zlib block)
-//   SEQ (zlib block)
-//   SEQLEN (rangeO1 block)
-//     uint64_t      compressed_sz : Compressed data size
-//     uint64_t      compressed_crc: CRC64 of compressed data
-//     unsigned char *compressed   : Compressed data
-//   EXS (zlib block)
-//   POSOFF (rangeO1 block)
-//   STOGY (zlib block)
-//   INSERTS (zlib block)
-//   MODCNT (rangeO1 block)
-//   MODPOS (rangeO1 block)
-//   MODBASES (zlib block)
-//   TRAIL (zlib block)
-//
-
 #include "nuccodec.h"
 
 #include <ctype.h>
@@ -296,10 +270,6 @@ static void update_sliding_window(nuccodec_t *nuccodec, uint32_t pos, const char
 // Encoder methods
 // -----------------------------------------------------------------------------
 
-/**
- *  Iterate trough the CIGAR string and expand SEQ; this yield EXS, STOGY, and
- *  INSERTS
- */
 static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar, const char *seq) {
     size_t cigar_len = strlen(cigar);
     size_t op_len = 0;  // Length of current CIGAR operation
@@ -350,14 +320,6 @@ static void expand(str_t *exs, str_t *stogy, str_t *inserts, const char *cigar, 
     }
 }
 
-/**
- *  Compute the modifications between the expanded read EXS mapping to POS
- *  and the sliding reference REF.
- *  The number of  modifications is stored in MODCNT, their positions
- *  are written to MODPOS and the actual modified bases are stored in
- *  MODBASES.
- *  The trailing sequence from EXS is stored in TRAIL.
- */
 static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos, str_t *modbases, str_t *trail, const uint32_t pos,
                  const char *exs) {
     // Reset things just if the caller hasn't done yet
@@ -395,9 +357,8 @@ static bool diff(nuccodec_t *nuccodec, size_t *modcnt, str_t *modpos, str_t *mod
     return true;
 }
 
-void nuccodec_add_record(nuccodec_t *nuccodec,
-                         // const uint16_t flag,
-                         const char *rname, const uint32_t pos, const char *cigar, const char *seq) {
+void nuccodec_add_record(nuccodec_t *nuccodec, const char *rname, const uint32_t pos, const char *cigar,
+                         const char *seq) {
     nuccodec->record_cnt++;
 
     str_t *exs = str_new();
@@ -408,10 +369,10 @@ void nuccodec_add_record(nuccodec_t *nuccodec,
     str_t *modbases = str_new();
     str_t *trail = str_new();
 
+    // Also try to code unmapped reads
     if ((!strlen(rname) || (rname[0] == '*' && rname[1] == '\0')) || (!pos) ||
-        (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) || (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))
-        /*|| (flag & 0x4)*/) {  // Also try to code unmapped reads
-        // tsc_log("Missing RNAME|POS|CIGAR|SEQ\n");
+        (!strlen(cigar) || (cigar[0] == '*' && cigar[1] == '\0')) ||
+        (!strlen(seq) || (seq[0] == '*' && seq[1] == '\0'))) {
         goto add_mrecord;
     }
 
@@ -663,9 +624,6 @@ static size_t insertslen(const char *cigar) {
     return ret;
 }
 
-/**
- *  Counterpart to expand()
- */
 static void contract(str_t *seq, const char *exs, const char *stogy, const char *inserts) {
     size_t inserts_idx = 0;
     size_t stogy_len = strlen(stogy);
@@ -712,9 +670,6 @@ static void contract(str_t *seq, const char *exs, const char *stogy, const char 
     }
 }
 
-/**
- *  Counterpart to diff()
- */
 static void alike(str_t *exs, const size_t exs_len, const char *ref, const size_t ref_pos_min, const uint32_t pos,
                   const uint16_t modcnt, const uint16_t *modpos, const char *modbases, const char *trail) {
     // Compute match length

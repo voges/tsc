@@ -1,3 +1,1 @@
-set(src_files range.c)
-
-add_library(range ${src_files})
+add_library(range range.c)

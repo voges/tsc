@@ -1,15 +1,5 @@
 // Copyright 2015 Leibniz University Hannover (LUH)
 
-//
-// Pair block format:
-//   unsigned char id[8]          : "pair---" + '\0'
-//   uint64_t      record_cnt     : No. of lines in block
-//   uint64_t      uncompressed_sz: Size of uncompressed data
-//   uint64_t      compressed_sz  : Compressed data size
-//   uint64_t      compressed_crc : CRC64 of compressed data
-//   unsigned char *compressed    : Compressed data
-//
-
 #include "paircodec.h"
 
 #include <inttypes.h>

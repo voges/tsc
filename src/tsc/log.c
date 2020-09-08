@@ -22,7 +22,7 @@ void tsc_log(const char *fmt, ...) {
         exit(EXIT_FAILURE);
     }
     va_end(args);
-    fprintf(stdout, "%s", msg);
+    printf("%s", msg);
     tsc_free(msg);
 }
 

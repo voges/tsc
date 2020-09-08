@@ -15,15 +15,15 @@
 #include "log.h"
 #include "samcodec.h"
 
-// Options/flags from getopt
+// Options/flags
 static const char *opt_input = NULL;
 static const char *opt_output = NULL;
-static const char *opt_blocksz = NULL;
+static const char *opt_block_size = NULL;
 static bool opt_flag_force = false;
 static bool opt_flag_stats = false;
 
-// Initializing global vars from 'tsclib.h'
-str_t *tsc_prog_name = NULL;
+// Initialize global variables
+str_t *tsc_program_name = NULL;
 str_t *tsc_version = NULL;
 str_t *tsc_in_fname = NULL;
 str_t *tsc_out_fname = NULL;
@@ -31,14 +31,14 @@ FILE *tsc_in_fp = NULL;
 FILE *tsc_out_fp = NULL;
 tsc_mode_t tsc_mode = TSC_MODE_COMPRESS;
 bool tsc_stats = false;
-unsigned int tsc_blocksz = 0;
+unsigned int tsc_block_size = 0;
 
 static void print_help() {
     tsc_log("Usage: tsc [OPTIONS] FILE\n");
     tsc_log("TNT Sequence Compressor\n");
     tsc_log("\n");
     tsc_log("Options:\n");
-    tsc_log("  -b, --blocksz=SIZE    specify block SIZE\n");
+    tsc_log("  -b, --block-size=SIZE specify block SIZE\n");
     tsc_log("  -d, --decompress      decompress\n");
     tsc_log("  -f, --force           force overwriting of output file(s)\n");
     tsc_log("  -h, --help            print this help\n");
@@ -50,11 +50,14 @@ static void print_help() {
 static void parse_options(int argc, char *argv[]) {
     int opt;
 
-    static struct option long_options[] = {
-        {"blocksz", required_argument, NULL, 'b'}, {"decompress", no_argument, NULL, 'd'},
-        {"force", no_argument, NULL, 'f'},         {"help", no_argument, NULL, 'h'},
-        {"info", no_argument, NULL, 'i'},          {"output", required_argument, NULL, 'o'},
-        {"stats", no_argument, NULL, 's'},         {NULL, 0, NULL, 0}};
+    static struct option long_options[] = {{"block-size", required_argument, NULL, 'b'},
+                                           {"decompress", no_argument, NULL, 'd'},
+                                           {"force", no_argument, NULL, 'f'},
+                                           {"help", no_argument, NULL, 'h'},
+                                           {"info", no_argument, NULL, 'i'},
+                                           {"output", required_argument, NULL, 'o'},
+                                           {"stats", no_argument, NULL, 's'},
+                                           {NULL, 0, NULL, 0}};
 
     const char *short_options = "b:dfhio:s";
 
@@ -65,7 +68,7 @@ static void parse_options(int argc, char *argv[]) {
             case -1:
                 break;
             case 'b':
-                opt_blocksz = optarg;
+                opt_block_size = optarg;
                 break;
             case 'd':
                 if (tsc_mode == TSC_MODE_INFO) tsc_error("Cannot decompress and get info at once\n");
@@ -101,7 +104,7 @@ static void parse_options(int argc, char *argv[]) {
         opt_input = argv[optind];
 }
 
-static const char *fext(const char *path) {
+static const char *file_name_extension(const char *path) {
     const char *dot = strrchr(path, '.');
     if (!dot || dot == path) {
         return "";
@@ -111,26 +114,26 @@ static const char *fext(const char *path) {
 
 static void handle_signal(int sig) {
     signal(sig, SIG_IGN);  // Ignore the signal
-    tsc_log("Catched signal: %d\n", sig);
+    tsc_log("Caught signal: %d\n", sig);
     signal(sig, SIG_DFL);  // Invoke default signal action
     raise(sig);
 }
 
 int main(int argc, char *argv[]) {
-    tsc_prog_name = str_new();
+    tsc_program_name = str_new();
     tsc_version = str_new();
     str_append_cstr(tsc_version, "");
     tsc_in_fname = str_new();
     tsc_out_fname = str_new();
 
     // Determine program name and truncate path if needed
-    const char *prog_name = argv[0];
+    const char *program_name = argv[0];
     char *p;
-    if ((p = strrchr(argv[0], '/')) != NULL) prog_name = p + 1;
-    str_copy_cstr(tsc_prog_name, prog_name);
+    if ((p = strrchr(argv[0], '/')) != NULL) program_name = p + 1;
+    str_copy_cstr(tsc_program_name, program_name);
 
     // If invoked as 'de...' switch to decompressor mode
-    if (!strncmp(tsc_prog_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
+    if (!strncmp(tsc_program_name->s, "de", 2)) tsc_mode = TSC_MODE_DECOMPRESS;
 
     // Install signal handler for the following signal types:
     //   SIGTERM  termination request, sent to the program
@@ -152,25 +155,23 @@ int main(int argc, char *argv[]) {
     str_copy_cstr(tsc_in_fname, opt_input);
     if (opt_flag_stats) tsc_stats = true;
 
+    // Check for legal/illegal options
     if (tsc_mode == TSC_MODE_COMPRESS) {
-        // All possible options are legal in this mode
-        if (!opt_blocksz) {
-            tsc_blocksz = 10000;  // Default value
+        if (!opt_block_size) {
+            tsc_block_size = 10000;  // Default value
         } else {
-            if (strtol(opt_blocksz, NULL, 10) <= 0) {
+            if (strtol(opt_block_size, NULL, 10) <= 0) {
                 tsc_error("Block size must be positive\n");
             } else {
-                tsc_blocksz = (unsigned int)strtol(opt_blocksz, NULL, 10);
+                tsc_block_size = (unsigned int)strtol(opt_block_size, NULL, 10);
             }
         }
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
-        // Option -b is illegal in this mode
-        if (opt_blocksz) {
+        if (opt_block_size) {
             tsc_error("Illegal option(s) detected\n");
         }
     } else {  // TSC_MODE_INFO */
-        // Options -bfos are illegal in this mode
-        if (opt_blocksz || opt_flag_force || opt_output || opt_flag_stats) {
+        if (opt_block_size || opt_flag_force || opt_output || opt_flag_stats) {
             tsc_error("Illegal option(s) detected\n");
         }
     }
@@ -180,7 +181,8 @@ int main(int argc, char *argv[]) {
 
     if (tsc_mode == TSC_MODE_COMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "sam") != 0) tsc_error("Input file extension must be 'sam'\n");
+        if (strcmp(file_name_extension((const char *)tsc_in_fname->s), "sam") != 0)
+            tsc_error("Input file extension must be 'sam'\n");
 
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
@@ -189,8 +191,8 @@ int main(int argc, char *argv[]) {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
-            opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&  // NOLINT(hicpp-signed-bitwise)
+            opt_flag_force == false) {
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (!yesno()) exit(EXIT_SUCCESS);
@@ -200,7 +202,7 @@ int main(int argc, char *argv[]) {
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "r");
         tsc_out_fp = tsc_fopen((const char *)tsc_out_fname->s, "wb");
         tsc_log("Compressing: %s\n", tsc_in_fname->s);
-        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_blocksz);
+        samcodec_t *samcodec = samcodec_new(tsc_in_fp, tsc_out_fp, tsc_block_size);
         samcodec_encode(samcodec);
         samcodec_free(samcodec);
         tsc_log("Finished: %s\n", tsc_out_fname->s);
@@ -208,18 +210,20 @@ int main(int argc, char *argv[]) {
         tsc_fclose(tsc_out_fp);
     } else if (tsc_mode == TSC_MODE_DECOMPRESS) {
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0) tsc_error("Input file extension must be 'tsc'\n");
+        if (strcmp(file_name_extension((const char *)tsc_in_fname->s), "tsc") != 0)
+            tsc_error("Input file extension must be 'tsc'\n");
 
         if (opt_output == NULL) {
             str_copy_str(tsc_out_fname, tsc_in_fname);
             str_trunc(tsc_out_fname, 4);  // strip '.tsc'
-            if (strcmp(fext((const char *)tsc_out_fname->s), "sam") != 0) str_append_cstr(tsc_out_fname, ".sam");
+            if (strcmp(file_name_extension((const char *)tsc_out_fname->s), "sam") != 0)
+                str_append_cstr(tsc_out_fname, ".sam");
         } else {
             str_copy_cstr(tsc_out_fname, opt_output);
         }
 
-        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&
-            opt_flag_force == false) {  // NOLINT(hicpp-signed-bitwise)
+        if (!access((const char *)tsc_out_fname->s, F_OK | W_OK) &&  // NOLINT(hicpp-signed-bitwise)
+            opt_flag_force == false) {                               // NOLINT(hicpp-signed-bitwise)
             tsc_log("Output file already exists: %s\n", tsc_out_fname->s);
             tsc_log("Do you want to overwrite %s? ", tsc_out_fname->s);
             if (!yesno()) exit(EXIT_SUCCESS);
@@ -237,7 +241,8 @@ int main(int argc, char *argv[]) {
         tsc_fclose(tsc_out_fp);
     } else {  // TSC_MODE_INFO
         // Check I/O
-        if (strcmp(fext((const char *)tsc_in_fname->s), "tsc") != 0) tsc_error("Input file extension must be 'tsc'\n");
+        if (strcmp(file_name_extension((const char *)tsc_in_fname->s), "tsc") != 0)
+            tsc_error("Input file extension must be 'tsc'\n");
 
         // Read information from compressed tsc file
         tsc_in_fp = tsc_fopen((const char *)tsc_in_fname->s, "rb");
@@ -248,7 +253,7 @@ int main(int argc, char *argv[]) {
         tsc_fclose(tsc_in_fp);
     }
 
-    str_free(tsc_prog_name);
+    str_free(tsc_program_name);
     str_free(tsc_version);
     str_free(tsc_in_fname);
     str_free(tsc_out_fname);

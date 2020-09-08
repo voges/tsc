@@ -10,6 +10,8 @@
 #include "mem.h"
 
 // File header
+// -----------------------------------------------------------------------------
+
 static void tscfh_init(tscfh_t *tscfh) {
     tscfh->magic[0] = 't';
     tscfh->magic[1] = 's';
@@ -74,6 +76,8 @@ size_t tscfh_size(tscfh_t *tscfh) {
 }
 
 // SAM header
+// -----------------------------------------------------------------------------
+
 static void tscsh_init(tscsh_t *tscsh) {
     tscsh->data_sz = 0;
     tscsh->data = NULL;
@@ -122,6 +126,8 @@ size_t tscsh_write(tscsh_t *tscsh, FILE *fp) {
 }
 
 // Block header
+// -----------------------------------------------------------------------------
+
 static void tscbh_init(tscbh_t *tscbh) {
     tscbh->fpos = 0;
     tscbh->fpos_nxt = 0;

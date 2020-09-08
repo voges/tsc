@@ -101,7 +101,8 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
                           tsc_sz[TSC_NUC] + tsc_sz[TSC_PAIR] + tsc_sz[TSC_QUAL];
 
     tsc_log(
-        "\nsamcodec stats:\n"
+        "\n"
+        "samcodec stats:\n"
         "---------------\n"
         "Number of records   : %12" PRIu64
         "\n"
@@ -124,7 +125,7 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
         "  CTRL (\\t, \\n)     : %12zu (%6.2f%%)\n"
         "  HEAD (SAM header) : %12zu (%6.2f%%)\n"
         "\n"
-        "Tsc file size       : %12zu (%6.2f%%)\n"
+        "TSC file size       : %12zu (%6.2f%%)\n"
         "  File header       : %12zu (%6.2f%%)\n"
         "  SAM header        : %12zu (%6.2f%%)\n"
         "  Block header(s)   : %12zu (%6.2f%%)\n"
@@ -134,7 +135,7 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
         "  Pair              : %12zu (%6.2f%%)\n"
         "  Qual              : %12zu (%6.2f%%)\n"
         "\n"
-        "Compression ratios             SAM /          tsc\n"
+        "Compression ratios             SAM /          TSC\n"
         "  Total             : %12zu / %12zu (%6.2f%%)\n"
         "  Aux               : %12zu / %12zu (%6.2f%%)\n"
         "  Id                : %12zu / %12zu (%6.2f%%)\n"
@@ -151,7 +152,7 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
         "  Qual              : %12ld us ~= %12.2f s (%6.2f%%)\n"
         "  Remaining         : %12ld us ~= %12.2f s (%6.2f%%)\n"
         "\n"
-        "Speed (with respect to SAM sizes)\n"
+        "Speed (w.r.t. SAM sizes)\n"
         "  Total             : %12.2f MB/s\n"
         "  Aux               : %12.2f MB/s\n"
         "  Id                : %12.2f MB/s\n"
@@ -212,30 +213,15 @@ static void samcodec_print_stats(const size_t *sam_sz, const size_t *tsc_sz, con
 
 void samcodec_encode(samcodec_t *samcodec) {
     size_t sam_sz[14] = {0};  // SAM statistics
-    size_t tsc_sz[8] = {0};   // Tsc statistics
+    size_t tsc_sz[8] = {0};   // TSC statistics
     long et[7] = {0};         // Timing statistics
-    long fpos_prev = 0;       // fp offset of the previous block
+    long fpos_prev = 0;
     struct timeval tt0, tt1, tv0, tv1;
     gettimeofday(&tt0, NULL);
 
     tscfh_t *tscfh = tscfh_new();
     tscsh_t *tscsh = tscsh_new();
     tscbh_t *tscbh = tscbh_new();
-
-    // Set up single-stream files
-    //    FILE *ctrl_fp = tsc_fopen("ctrl.stream", "w");
-    //    FILE *rname_fp = tsc_fopen("rname.stream", "w");
-    //    FILE *pos_fp = tsc_fopen("pos.stream", "w");
-    //    FILE *seq_fp = tsc_fopen("seq.stream", "w");
-    //    FILE *seqlen_fp = tsc_fopen("seqlen.stream", "w");
-    //    FILE *exs_fp = tsc_fopen("exs.stream", "w");
-    //    FILE *posoff_fp = tsc_fopen("posoff.stream", "w");
-    //    FILE *stogy_fp = tsc_fopen("stogy.stream", "w");
-    //    FILE *inserts_fp = tsc_fopen("inserts.stream", "w");
-    //    FILE *modcnt_fp = tsc_fopen("modcnt.stream", "w");
-    //    FILE *modpos_fp = tsc_fopen("modpos.stream", "w");
-    //    FILE *modbases_fp = tsc_fopen("modbases.stream", "w");
-    //    FILE *trail_fp = tsc_fopen("trail.stream", "w");
 
     // Set up tsc file header, then seek past it for now
     tscfh->flags = 0x1;  // LSB signals SAM
@@ -286,10 +272,6 @@ void samcodec_encode(samcodec_t *samcodec) {
 
             gettimeofday(&tv0, NULL);
             tsc_sz[TSC_NUC] += nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
-            //            nuccodec_write_single_stream_block(
-            //                samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp,
-            //                seqlen_fp, exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp,
-            //                modpos_fp, modbases_fp, trail_fp);
             gettimeofday(&tv1, NULL);
             et[ET_NUC] += tv_diff(tv0, tv1);
 
@@ -381,10 +363,6 @@ void samcodec_encode(samcodec_t *samcodec) {
 
     gettimeofday(&tv0, NULL);
     tsc_sz[TSC_NUC] += nuccodec_write_block(samcodec->nuccodec, samcodec->ofp);
-    //    nuccodec_write_single_stream_block(
-    //        samcodec->nuccodec, ctrl_fp, rname_fp, pos_fp, seq_fp, seqlen_fp,
-    //        exs_fp, posoff_fp, stogy_fp, inserts_fp, modcnt_fp, modpos_fp,
-    //        modbases_fp, trail_fp);
     gettimeofday(&tv1, NULL);
     et[ET_NUC] += tv_diff(tv0, tv1);
 
@@ -415,10 +393,6 @@ void samcodec_encode(samcodec_t *samcodec) {
             100 * (double)tsc_sz[TSC_NUC] /
                 (double)(sam_sz[SAM_RNAME] + sam_sz[SAM_POS] + sam_sz[SAM_CIGAR] + sam_sz[SAM_SEQ]));
 
-    // size_t sam_nuc_sz = sam_sz[SAM_POS] + sam_sz[SAM_CIGAR] + sam_sz[SAM_SEQ];
-    // fprintf(stderr, "%6.2f%%\n",
-    //         (100 * (double)tsc_sz[TSC_NUC] / (double)sam_nuc_sz));
-
     // If selected, print detailed statistics
     if (tsc_stats) samcodec_print_stats(sam_sz, tsc_sz, tscfh, et);
 
@@ -445,8 +419,7 @@ void samcodec_decode(samcodec_t *samcodec) {
     tsc_sz[TSC_SH] = tscsh_read(tscsh, samcodec->ifp);
     sam_sz[SAM_HEAD] += tsc_fwrite_buf(samcodec->ofp, tscsh->data, tscsh->data_sz);
 
-    size_t b = 0;
-    for (b = 0; b < tscfh->blk_n; b++) {
+    for (size_t b = 0; b < tscfh->blk_n; b++) {
         tsc_sz[TSC_BH] += tscbh_read(tscbh, samcodec->ifp);
 
         // Allocate memory to prepare decoding of the sub-blocks
@@ -463,8 +436,7 @@ void samcodec_decode(samcodec_t *samcodec) {
         str_t **qual = (str_t **)tsc_malloc(sizeof(str_t *) * tscbh->rec_cnt);
         str_t **opt = (str_t **)tsc_malloc(sizeof(str_t *) * tscbh->rec_cnt);
 
-        size_t r = 0;
-        for (r = 0; r < tscbh->rec_cnt; r++) {
+        for (size_t r = 0; r < tscbh->rec_cnt; r++) {
             qname[r] = str_new();
             flag[r] = 0;
             rname[r] = str_new();
@@ -505,25 +477,8 @@ void samcodec_decode(samcodec_t *samcodec) {
         gettimeofday(&tv1, NULL);
         et[ET_QUAL] += tv_diff(tv0, tv1);
 
-        // These are dummies for testing
-        // int i = 0;
-        // for (i = 0; i < tscbh->rec_cnt; i++) {
-        // str_append_cstr(qname[i], "qname");
-        // flag[i] = 2146;
-        // str_append_cstr(rname[i], "rname");
-        // pos[i] = 905;
-        // mapq[i] = 3490;
-        // str_append_cstr(cigar[i], "cigar");
-        // str_append_cstr(rnext[i], "rnext");
-        // pnext[i] = 68307;
-        // tlen[i] = 7138;
-        // str_append_cstr(seq[i], "seq");
-        // str_append_cstr(qual[i], "qual");
-        // str_append_cstr(opt[i], "opt");
-        //}
-
         // Write decoded sub-blocks in correct order to outfile
-        for (r = 0; r < tscbh->rec_cnt; r++) {
+        for (size_t r = 0; r < tscbh->rec_cnt; r++) {
             // Convert int-fields to C-strings (101 bytes should be enough)
             char flag_cstr[101];
             char pos_cstr[101];
@@ -552,8 +507,7 @@ void samcodec_decode(samcodec_t *samcodec) {
             sam_fields[SAM_OPT] = opt[r]->s;
 
             // Write data to file
-            size_t f = 0;
-            for (f = 0; f < 12; f++) {
+            for (size_t f = 0; f < 12; f++) {
                 sam_sz[f] += tsc_fwrite_buf(samcodec->ofp, (unsigned char *)sam_fields[f], strlen(sam_fields[f]));
                 if (f != 11 && strlen(sam_fields[f + 1])) sam_sz[SAM_CTRL] += tsc_fwrite_byte(samcodec->ofp, '\t');
             }
@@ -634,7 +588,7 @@ void samcodec_info(samcodec_t *samcodec) {
         if (tscbh->fpos_nxt)
             fseek(samcodec->ifp, (long)tscbh->fpos_nxt, SEEK_SET);
         else
-            break;  // Last block has zeros here
+            break;  // Last block has zeroes here
     }
     tsc_log("\n");
 

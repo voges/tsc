@@ -1,12 +1,12 @@
 // Copyright 2015 Leibniz University Hannover (LUH)
 
 //
-// Tsc file format:
+// TSC file format:
 // ----------------
-//   * Tsc stores the SAM header as plain ASCII text.
-//   * Tsc uses dedicated sub-block codecs which generate 'sub-blocks'.
-//   * For fast random-access and for minimizing fseek operations, the position
-//   * of the next block is stored in each block header.
+//   - TSC stores the SAM header as plain ASCII text.
+//   - TSC uses dedicated sub-block codecs which generate 'sub-blocks'.
+//   - For fast random-access and for minimizing seek operations, the position
+//   - of the next block is stored in each block header.
 //
 //   [File header            ]
 //   [SAM header             ]
@@ -31,13 +31,14 @@
 #include <stdlib.h>
 
 // File header
+// -----------------------------------------------------------------------------
+
 typedef struct tscfh_t_ {
-    unsigned char magic[4];  // "tsc----" + '\0'
-    uint8_t flags;           // flags
-    // unsigned char ver[6];    // Maj.Min.Pat (5 bytes) + '\0'
-    uint64_t rec_n;   // number of records
-    uint64_t blk_n;   // number of blocks
-    uint64_t sblk_n;  // number of sub-blocks per block
+    unsigned char magic[4];
+    uint8_t flags;
+    uint64_t rec_n;
+    uint64_t blk_n;
+    uint64_t sblk_n;
 } tscfh_t;
 
 tscfh_t *tscfh_new();
@@ -51,9 +52,11 @@ size_t tscfh_write(tscfh_t *tscfh, FILE *fp);
 size_t tscfh_size(tscfh_t *tscfh);
 
 // SAM header
+// -----------------------------------------------------------------------------
+
 typedef struct tscsh_t_ {
-    uint64_t data_sz;     // SAM header size
-    unsigned char *data;  // SAM header data
+    uint64_t data_sz;
+    unsigned char *data;
 } tscsh_t;
 
 tscsh_t *tscsh_new();
@@ -65,16 +68,17 @@ size_t tscsh_read(tscsh_t *tscsh, FILE *fp);
 size_t tscsh_write(tscsh_t *tscsh, FILE *fp);
 
 // Block header
+// -----------------------------------------------------------------------------
+
 typedef struct tscbh_t_ {
-    uint64_t fpos;      // fp offset to the beginning of -this- block
-    uint64_t fpos_nxt;  // fp offset to the beginning of the -next- block
-                        // (the last block has all zeros here)
-    uint64_t blk_cnt;   // block count, starting with 0
-    uint64_t rec_cnt;   // no. of records in this block
-    uint64_t rec_max;   // max no. of records in this block
-    uint64_t rname;     // RNAME
-    uint64_t pos_min;   // smallest POSition contained in block
-    uint64_t pos_max;   // largest POSition contained in block
+    uint64_t fpos;
+    uint64_t fpos_nxt;
+    uint64_t blk_cnt;
+    uint64_t rec_cnt;
+    uint64_t rec_max;
+    uint64_t rname;
+    uint64_t pos_min;
+    uint64_t pos_max;
 } tscbh_t;
 
 tscbh_t *tscbh_new();
