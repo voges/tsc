@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+set -euo pipefail
 
 readonly git_root_dir="$(git rev-parse --show-toplevel)"
 
@@ -12,10 +12,12 @@ while IFS= read -r -d '' f; do
     tsc_file="${f}.tsc"
     recon_file="${f}.recon"
 
-    "${tsc}" "${sam_file}" --output "${tsc_file}"
-    "${tsc}" --decompress "${tsc_file}" --output "${recon_file}"
+    echo "Testing roundtrip with: ${sam_file}"
 
-    diff --report-identical-files "${sam_file}" "${recon_file}"
+    "${tsc}" "${sam_file}" --output "${tsc_file}" 1> /dev/null
+    "${tsc}" --decompress "${tsc_file}" --output "${recon_file}" 1> /dev/null
+
+    diff "${sam_file}" "${recon_file}"
 
     rm "${tsc_file}"
     rm "${recon_file}"
