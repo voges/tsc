@@ -6,7 +6,7 @@ TNT Sequence Compressor
 
 ---
 
-## Quick start on Linux
+## Quick Start
 
 Clone the repository:
 
@@ -21,6 +21,12 @@ Build the TSC application using CMake:
 
 This generates an executable named ``tsc`` in the ``build/bin/`` folder.
 
-## Who do I talk to?
+## Publication
+
+The TSC technology is described in:
+
+Jan Voges, Marco Munderloh, Jörn Ostermann, Predictive Coding of Aligned Next-Generation Sequencing Data, 2016 Data Compression Conference (DCC), Snowbird, UT, 2016, Pages 241–250, https://doi.org/10.1109/DCC.2016.98
+
+## Contact
 
 Jan Voges <[voges@tnt.uni-hannover.de](mailto:voges@tnt.uni-hannover.de)>
