@@ -25,7 +25,7 @@ This generates an executable named ``tsc`` in the ``build/bin/`` folder.
 
 The TSC technology is described in:
 
-J. Voges, M. Munderloh and J. Ostermann, "Predictive Coding of Aligned Next-Generation Sequencing Data", 2016 Data Compression Conference (DCC), Pages 241-250, 2016, DOI: [10.1109/DCC.2016.98](https://doi.org/10.1109/DCC.2016.98).
+J. Voges, M. Munderloh, J. Ostermann, "Predictive Coding of Aligned Next-Generation Sequencing Data", 2016 Data Compression Conference (DCC), Pages 241-250, 2016, DOI: [10.1109/DCC.2016.98](https://doi.org/10.1109/DCC.2016.98).
 
 ## Contact
 
