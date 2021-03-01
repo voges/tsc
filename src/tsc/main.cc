@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
         Options opts = ParseArgs(argc, argv);
         opts.Print();
     } catch (const std::exception& e) {
-        if (e.what == "help") {
+        if (e.what() == "help") {
             return EXIT_SUCCESS;
         }
         std::cerr << "Exception: " << e.what() << std::endl;
