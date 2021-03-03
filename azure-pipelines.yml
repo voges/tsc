@@ -32,13 +32,13 @@ stages:
         cd cmake-build-debug
         make --jobs
       displayName: 'Make'
-      condition: ne( variables['Agent.OS'], 'Windows_NT' )
+      condition: ne(variables['Agent.OS'], 'Windows_NT')
     - task: VSBuild@1
       inputs:
         solution: 'cmake-build-debug\tsc.sln'
         msbuildArgs: '-m'
       displayName: 'MSVC'
-      condition: eq( variables['Agent.OS'], 'Windows_NT' )
+      condition: eq(variables['Agent.OS'], 'Windows_NT')
     - publish: cmake-build-debug/$(binDir)
       artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
 - stage: 'Test'
@@ -48,6 +48,7 @@ stages:
         matrix:
           ubuntu-20.04:
             imageName: 'ubuntu-20.04'
+            artifactName: 'ubuntu2004'
       pool:
         vmImage: $(imageName)
       steps:
