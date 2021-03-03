@@ -6,6 +6,8 @@ stages:
       matrix:
         ubuntu-20.04:
           imageName: 'ubuntu-20.04'
+          artifactName: 'ubuntu-20.04'
+          binDir: 'bin'
         ubuntu-18.04:
           imageName: 'ubuntu-18.04'
         ubuntu-16.04:
@@ -55,7 +57,7 @@ stages:
       - bash: |
           cd ..
           chmod +x ./tsc-debug-$(artifactName)-$(Build.SourceVersion)/*
-          tsc-debug-$(artifactName)-$(Build.SourceVersion)/test$(fileExt)
+          tsc-debug-$(artifactName)-$(Build.SourceVersion)/test
         displayName: 'TSC Unit Tests'
 
 
