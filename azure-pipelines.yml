@@ -38,7 +38,7 @@ stages:
     - script: |
         mkdir cmake-build-debug
         cd cmake-build-debug
-        cmake .. -DCMAKE_BUILD_TYPE=Debug
+        cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
       displayName: 'CMake'
     - script: |
         cd cmake-build-debug
