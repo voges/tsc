@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
 
         while (true) {
             auto alignment = sam_parser.NextAlignment();
-            if (alignment.empty()) break;
-            std::cout << "Alignment: " << alignment << std::endl;
+            if (!alignment.has_value()) break;
+            std::cout << "Alignment: " << alignment.value().qname << std::endl;
         }
     } catch (const std::exception& e) {
         if (std::string(e.what()) == "help") {

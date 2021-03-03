@@ -1,20 +1,33 @@
 #include <fstream>
+#include <optional>
+#include <sstream>
 #include <vector>
 
-// class SamRecord {
-//     std::string qname;  // Query template NAME
-//     uint16_t    flag;   // bitwise FLAG (uint16_t)
-//     std::string rname;  // Reference sequence NAME
-//     uint32_t    pos;    // 1-based leftmost mapping POSition (uint32_t)
-//     uint8_t     mapq;   // MAPping Quality (uint8_t)
-//     std::string cigar;  // CIGAR string
-//     std::string rnext;  // Ref. name of the mate/NEXT read
-//     uint32_t    pnext;  // Position of the mate/NEXT read (uint32_t)
-//     int64_t     tlen;   // observed Template LENgth (int64_t)
-//     std::string seq;    // segment SEQuence
-//     std::string qual;   // QUALity scores
-//     std::string opt;    // OPTional information
-// };
+class SamAlignment {
+public:
+    std::string qname; // Query template NAME
+    uint16_t flag; // bitwise FLAG
+    std::string rname; // Reference sequence NAME
+    uint32_t pos; // 1-based leftmost mapping POSition
+    uint8_t mapq; // MAPping Quality
+    std::string cigar; // CIGAR string
+    std::string rnext; // Reference name of the mate/NEXT read
+    uint32_t pnext; // Position of the mate/NEXT read
+    int64_t tlen; // observed Template LENgth
+    std::string seq; // segment SEQuence
+    std::string qual; // QUALity scores
+    std::vector<std::string> opt; // OPTional fields
+};
+
+std::vector<std::string> Split(const std::string& s, char delim) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream token_stream(s);
+    while (std::getline(token_stream, token, delim)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
 
 class SamParser {
 public:
@@ -29,10 +42,37 @@ public:
         return this->header_;
     }
 
-    std::string NextAlignment() {
+    std::optional<SamAlignment> NextAlignment() {
         std::string line;
-        std::getline(this->ifs_, line);
-        return line;
+
+        if (std::getline(this->ifs_, line)) {
+            std::vector<std::string> fields = Split(line, '\t');
+            // for (const auto& f: fields) {
+            //     std::cout << f << std::endl;
+            // }
+
+            SamAlignment sam_alignment;
+            sam_alignment.qname = fields[0];
+            std::istringstream(fields[1]) >> sam_alignment.flag;
+            sam_alignment.rname = fields[2];
+            std::istringstream(fields[3]) >> sam_alignment.pos;
+            std::istringstream(fields[4]) >> sam_alignment.mapq;
+            sam_alignment.cigar = fields[5];
+            sam_alignment.rnext = fields[6];
+            std::istringstream(fields[7]) >> sam_alignment.pnext;
+            std::istringstream(fields[8]) >> sam_alignment.tlen;
+            sam_alignment.seq = fields[9];
+            sam_alignment.qual = fields[10];
+            if (fields.size() > 10) {
+                for (size_t i = 11; i < fields.size(); i++) {
+                    sam_alignment.opt.push_back(fields[i]);
+                }
+            }
+
+            return sam_alignment;
+        }
+
+        return std::nullopt;
     }
 
 private:
@@ -55,40 +95,3 @@ private:
     std::ifstream ifs_;
     std::vector<std::string> header_;
 };
-
-
-
-// static void samparser_parse(samparser_t *samparser)
-// {
-//     size_t l = strlen(samparser->curr.line) - 1;
-
-//     while (l && (samparser->curr.line[l] == '\r'
-//                || samparser->curr.line[l] == '\n'))
-//         samparser->curr.line[l--] = '\0';
-
-//     char *c = samparser->curr.qname = samparser->curr.line;
-//     int f = 1;
-
-//     while (*c) {
-//         if (*c == '\t') {
-//             if (f ==  1) samparser->curr.flag  = (uint16_t)atoi(c + 1);
-//             if (f ==  2) samparser->curr.rname = c + 1;
-//             if (f ==  3) samparser->curr.pos   = (uint32_t)atoi(c + 1);
-//             if (f ==  4) samparser->curr.mapq  = (uint8_t)atoi(c + 1);
-//             if (f ==  5) samparser->curr.cigar = c + 1;
-//             if (f ==  6) samparser->curr.rnext = c + 1;
-//             if (f ==  7) samparser->curr.pnext = (uint32_t)atoi(c + 1);
-//             if (f ==  8) samparser->curr.tlen  = (int64_t)atoi(c + 1);
-//             if (f ==  9) samparser->curr.seq   = c + 1;
-//             if (f == 10) samparser->curr.qual  = c + 1;
-//             if (f == 11) samparser->curr.opt   = c + 1;
-//             f++;
-//             *c = '\0';
-//             if (f == 12) break;
-//         }
-//         c++;
-//     }
-
-//     if (f == 11) samparser->curr.opt = c;
-// }
-
