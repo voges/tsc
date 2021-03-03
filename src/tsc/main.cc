@@ -10,10 +10,12 @@ public:
 
     void Print() {
         std::cout << "Options:" << std::endl;
-        std::cout << "  decompress: " << (this->decompress ? "true" : "false") << std::endl;
+        std::cout << "  decompress:      " << (this->decompress ? "true" : "false") << std::endl;
+        std::cout << "  input_file_name: " << this->input_file_name << std::endl;
     }
 
     bool decompress;
+    std::string input_file_name;
 };
 
 static void PrintHelp(const std::string& prog_name) {
@@ -22,6 +24,7 @@ static void PrintHelp(const std::string& prog_name) {
     std::cout << "Options:" << std::endl;
     std::cout << "  -h,--help        print this help" << std::endl;
     std::cout << "  -d,--decompress  decompress" << std::endl;
+    std::cout << "  -i,--input FILE  input FILE" << std::endl;
 }
 
 Options ParseArgs(int argc, char *argv[]) {
@@ -37,6 +40,15 @@ Options ParseArgs(int argc, char *argv[]) {
 
         if ((arg == "-d") || (arg == "--decompress")) {
             opts.decompress = true;
+        } else if ((arg == "-i") || (arg == "--input")) {
+            if ((i + 1) < argc) {
+                opts.input_file_name = argv[i + 1];
+                i++;
+            } else {
+                throw std::runtime_error("Option 'i, --input' requires one argument");
+            }
+        } else {
+            throw std::runtime_error("Unknown option: " + arg);
         }
     }
     return opts;
@@ -47,7 +59,7 @@ int main(int argc, char *argv[]) {
         Options opts = ParseArgs(argc, argv);
         opts.Print();
 
-        SamParser sam_parser("../data/samspec.sam");
+        SamParser sam_parser(opts.input_file_name);
         std::cout << "Header: " << std::endl;
         std::vector<std::string> header = sam_parser.Header();
         for (const auto& header_line: header) {
@@ -63,10 +75,10 @@ int main(int argc, char *argv[]) {
         if (std::string(e.what()) == "help") {
             return EXIT_SUCCESS;
         }
-        std::cerr << "Exception: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     } catch (...) {
-        std::cerr << "Unknown exception occurred" << std::endl;
+        std::cerr << "Unknown error occurred" << std::endl;
         return EXIT_FAILURE;
     }
 
