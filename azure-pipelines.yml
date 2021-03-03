@@ -37,6 +37,26 @@ stages:
         msbuildArgs: '-m'
       displayName: 'MSVC'
       condition: eq( variables['Agent.OS'], 'Windows_NT' )
+    - publish: cmake-build-debug/$(binDir)
+      artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
+- stage: 'Test'
+  jobs:
+    - job: 'Unit Tests'
+      strategy:
+        matrix:
+          ubuntu-20.04:
+          imageName: 'ubuntu-20.04'
+      pool:
+        vmImage: $(imageName)
+      steps:
+    - checkout: none
+    - download: current
+      artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
+    - bash: |
+        cd ..
+        chmod +x ./tsc-debug-$(artifactName)-$(Build.SourceVersion)/*
+        tsc-debug-$(artifactName)-$(Build.SourceVersion)/test$(fileExt)
+      displayName: 'TSC Unit Tests'
 
 
 # stages:

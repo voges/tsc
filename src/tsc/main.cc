@@ -2,6 +2,8 @@
 #include <iostream>
 #include <string>
 
+#include "sam.h"
+
 class Options {
 public:
     Options() : decompress(false) {}
@@ -44,11 +46,27 @@ int main(int argc, char *argv[]) {
     try {
         Options opts = ParseArgs(argc, argv);
         opts.Print();
+
+        SamParser sam_parser("../data/samspec.sam");
+        std::cout << "Header: " << std::endl;
+        std::vector<std::string> header = sam_parser.Header();
+        for (const auto& header_line: header) {
+            std::cout << header_line << std::endl;
+        }
+
+        while (true) {
+            auto alignment = sam_parser.NextAlignment();
+            if (alignment.empty()) break;
+            std::cout << "Alignment: " << alignment << std::endl;
+        }
     } catch (const std::exception& e) {
         if (std::string(e.what()) == "help") {
             return EXIT_SUCCESS;
         }
         std::cerr << "Exception: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    } catch (...) {
+        std::cerr << "Unknown exception occurred" << std::endl;
         return EXIT_FAILURE;
     }
 
