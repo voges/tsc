@@ -12,10 +12,10 @@ stages:
           imageName: 'ubuntu-18.04'
           artifactName: 'ubuntu1804'
           binDir: 'bin'
-        ubuntu-16.04:
-          imageName: 'ubuntu-16.04'
-          artifactName: 'ubuntu1604'
-          binDir: 'bin'
+        # ubuntu-16.04:
+        #   imageName: 'ubuntu-16.04'
+        #   artifactName: 'ubuntu1604'
+        #   binDir: 'bin'
         macOS-10.15:
           imageName: 'macOS-10.15'
           artifactName: 'macos1015'
