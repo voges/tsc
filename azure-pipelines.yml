@@ -41,7 +41,7 @@ stages:
       artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
 - stage: 'Test'
   jobs:
-    - job: 'Unit Tests'
+    - job: 'Unit'
       strategy:
         matrix:
           ubuntu-20.04:
