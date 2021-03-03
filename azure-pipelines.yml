@@ -23,21 +23,26 @@ stages:
     pool:
       vmImage: $(imageName)
     steps:
-    - script: |
-        mkdir cmake-build-debug
-        cd cmake-build-debug
-        cmake .. -DCMAKE_BUILD_TYPE=Debug
+    - task: CMake@1
       displayName: 'CMake'
+      inputs:
+        workingDirectore: cmake-build-debug
+        cmakeArgs: CMAKE_BUILD_TYPE=Debug
+    # - script: |
+    #     mkdir cmake-build-debug
+    #     cd cmake-build-debug
+    #     cmake .. -DCMAKE_BUILD_TYPE=Debug
+    #   displayName: 'CMake'
     - script: |
         cd cmake-build-debug
         make --jobs
-      displayName: 'Make'
+      displayName: 'Make Build'
       condition: ne(variables['Agent.OS'], 'Windows_NT')
     - task: VSBuild@1
       inputs:
         solution: 'cmake-build-debug\tsc.sln'
-        msbuildArgs: '-m'
-      displayName: 'MSVC'
+        msbuildArgs: '-maxCpuCount'
+      displayName: 'Visual Studio Build'
       condition: eq(variables['Agent.OS'], 'Windows_NT')
     - publish: cmake-build-debug/$(binDir)
       artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
@@ -59,4 +64,4 @@ stages:
           cd ..
           chmod +x ./tsc-debug-$(artifactName)-$(Build.SourceVersion)/*
           tsc-debug-$(artifactName)-$(Build.SourceVersion)/test
-        displayName: 'TSC Unit Tests'
+        displayName: 'Unit Tests'
