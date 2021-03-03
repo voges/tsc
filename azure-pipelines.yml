@@ -6,18 +6,37 @@ stages:
       matrix:
         ubuntu-20.04:
           imageName: 'ubuntu-20.04'
+        ubuntu-18.04:
+          imageName: 'ubuntu-18.04'
+        ubuntu-16.04:
+          imageName: 'ubuntu-16.04'
+        macOS-10.15:
+          imageName: 'macOS-10.15'
+        macOS-10.14:
+          imageName: 'macOS-10.14'
+        windows-2019:
+          imageName: 'windows-2019'
+        vs2017-win2016:
+          imageName: 'vs2017-win2016'
     pool:
       vmImage: $(imageName)
     steps:
     - script: |
         mkdir cmake-build-debug
         cd cmake-build-debug
-        cmake ..
+        cmake .. -DCMAKE_BUILD_TYPE=Debug
       displayName: 'CMake'
     - script: |
         cd cmake-build-debug
         make --jobs
       displayName: 'Make'
+      condition: ne( variables['Agent.OS'], 'Windows_NT' )
+    - task: VSBuild@1
+      inputs:
+        solution: 'cmake-build-debug\tsc.sln'
+        msbuildArgs: '-m'
+      displayName: 'MSVC'
+      condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
 
 # stages:
@@ -31,36 +50,6 @@ stages:
 #           artifactName: 'ubuntu2004'
 #           architecture: ''
 #           binDir: 'bin'
-#         ubuntu1804:
-#           imageName: 'ubuntu-18.04'
-#           artifactName: 'ubuntu1804'
-#           architecture: ''
-#           binDir: 'bin'
-#         ubuntu1604:
-#           imageName: 'ubuntu-16.04'
-#           artifactName: 'ubuntu1604'
-#           architecture: ''
-#           binDir: 'bin'
-#         macos1015:
-#           imageName: 'macos-10.15'
-#           artifactName: 'macos1015'
-#           architecture: ''
-#           binDir: 'bin'
-#         macos1014:
-#           imageName: 'macos-10.14'
-#           artifactName: 'macos1014'
-#           architecture: ''
-#           binDir: 'bin'
-#         windows2016:
-#           imageName: 'vs2017-win2016'
-#           artifactName: 'windows2016'
-#           architecture: '-A x64'
-#           binDir: 'bin/Debug'
-#         windows2019:
-#           imageName: 'windows-2019'
-#           artifactName: 'windows2019'
-#           architecture: '-A x64'
-#           binDir: 'bin/Debug'
 #     pool:
 #       vmImage: $(imageName)
 #     steps:
