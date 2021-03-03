@@ -8,44 +8,53 @@ stages:
           imageName: 'ubuntu-20.04'
           artifactName: 'ubuntu2004'
           binDir: 'bin'
-        # ubuntu-18.04:
-        #   imageName: 'ubuntu-18.04'
-        # ubuntu-16.04:
-        #   imageName: 'ubuntu-16.04'
-        # macOS-10.15:
-        #   imageName: 'macOS-10.15'
-        # macOS-10.14:
-        #   imageName: 'macOS-10.14'
-        # windows-2019:
-        #   imageName: 'windows-2019'
-        # vs2017-win2016:
-        #   imageName: 'vs2017-win2016'
+        ubuntu-18.04:
+          imageName: 'ubuntu-18.04'
+          artifactName: 'ubuntu1804'
+          binDir: 'bin'
+        ubuntu-16.04:
+          imageName: 'ubuntu-16.04'
+          artifactName: 'ubuntu1604'
+          binDir: 'bin'
+        macOS-10.15:
+          imageName: 'macOS-10.15'
+          artifactName: 'macos1015'
+          binDir: 'bin'
+        macOS-10.14:
+          imageName: 'macOS-10.14'
+          artifactName: 'macos1014'
+          binDir: 'bin'
+        windows-2019:
+          imageName: 'windows-2019'
+          artifactName: 'windows2019'
+          binDir: 'bin/Debug'
+        vs2017-win2016:
+          imageName: 'vs2017-win2016'
+          artifactName: 'vs2017win2016'
+          binDir: 'bin/Debug'
     pool:
       vmImage: $(imageName)
     steps:
-    - task: CMake@1
+    - script: |
+        mkdir cmake-build-debug
+        cd cmake-build-debug
+        cmake .. -DCMAKE_BUILD_TYPE=Debug
       displayName: 'CMake'
-      inputs:
-        workingDirectore: cmake-build-debug
-        cmakeArgs: CMAKE_BUILD_TYPE=Debug
-    # - script: |
-    #     mkdir cmake-build-debug
-    #     cd cmake-build-debug
-    #     cmake .. -DCMAKE_BUILD_TYPE=Debug
-    #   displayName: 'CMake'
     - script: |
         cd cmake-build-debug
         make --jobs
-      displayName: 'Make Build'
+      displayName: 'Build (Make)'
       condition: ne(variables['Agent.OS'], 'Windows_NT')
     - task: VSBuild@1
       inputs:
         solution: 'cmake-build-debug\tsc.sln'
         msbuildArgs: '-maxCpuCount'
-      displayName: 'Visual Studio Build'
+      displayName: 'Build (Visual Studio)'
       condition: eq(variables['Agent.OS'], 'Windows_NT')
     - publish: cmake-build-debug/$(binDir)
       artifact: 'tsc-debug-$(artifactName)-$(Build.SourceVersion)'
+      displayName: 'Publish'
+# Release build
 - stage: 'Test'
   jobs:
     - job: 'Unit'
