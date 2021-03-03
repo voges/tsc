@@ -3,6 +3,8 @@ project("tsc")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+set(CMAKE_CXX_STANDARD 17)
+
 if(MSVC)
     # warning level 4 and all warnings as errors
     add_compile_options(/W4 /WX)
