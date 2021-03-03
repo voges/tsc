@@ -6,20 +6,20 @@ stages:
       matrix:
         ubuntu-20.04:
           imageName: 'ubuntu-20.04'
-          artifactName: 'ubuntu-20.04'
+          artifactName: 'ubuntu2004'
           binDir: 'bin'
-        ubuntu-18.04:
-          imageName: 'ubuntu-18.04'
-        ubuntu-16.04:
-          imageName: 'ubuntu-16.04'
-        macOS-10.15:
-          imageName: 'macOS-10.15'
-        macOS-10.14:
-          imageName: 'macOS-10.14'
-        windows-2019:
-          imageName: 'windows-2019'
-        vs2017-win2016:
-          imageName: 'vs2017-win2016'
+        # ubuntu-18.04:
+        #   imageName: 'ubuntu-18.04'
+        # ubuntu-16.04:
+        #   imageName: 'ubuntu-16.04'
+        # macOS-10.15:
+        #   imageName: 'macOS-10.15'
+        # macOS-10.14:
+        #   imageName: 'macOS-10.14'
+        # windows-2019:
+        #   imageName: 'windows-2019'
+        # vs2017-win2016:
+        #   imageName: 'vs2017-win2016'
     pool:
       vmImage: $(imageName)
     steps:
