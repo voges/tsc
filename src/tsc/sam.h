@@ -1,7 +1,12 @@
+#ifndef TSC_SAM_H
+#define TSC_SAM_H
+
 #include <fstream>
 #include <optional>
 #include <sstream>
 #include <vector>
+
+namespace tsc {
 
 class SamAlignment {
 public:
@@ -95,3 +100,7 @@ private:
     std::ifstream ifs_;
     std::vector<std::string> header_;
 };
+
+} // namespace tsc
+
+#endif // TSC_SAM_H

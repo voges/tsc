@@ -16,18 +16,18 @@ static std::vector<std::byte> UniformDist(const size_t size) {
 
 TEST(ZlibWrapper, EmptyRoundtrip) {
     std::vector<std::byte> in;
-    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in), in.size());
+    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in));
     EXPECT_EQ(in, dec);
 }
 
 TEST(ZlibWrapper, LonelyByteRoundtrip) {
     std::vector<std::byte> in = { std::byte{0} };
-    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in), in.size());
+    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in));
     EXPECT_EQ(in, dec);
 }
 
 TEST(ZlibWrapper, RandomRoundtrip) {
     auto in = UniformDist(1 * 1024 * 1024); // 1 MiB
-    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in), in.size());
+    auto dec = zlib_wrapper::Decode(zlib_wrapper::Encode(in));
     EXPECT_EQ(in, dec);
 }

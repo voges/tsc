@@ -4,6 +4,8 @@
 
 #include "sam.h"
 
+namespace tsc {
+
 class Options {
 public:
     Options() : decompress(false) {}
@@ -54,12 +56,14 @@ Options ParseArgs(int argc, char *argv[]) {
     return opts;
 }
 
+} // namespace tsc
+
 int main(int argc, char *argv[]) {
     try {
-        Options opts = ParseArgs(argc, argv);
+        tsc::Options opts = tsc::ParseArgs(argc, argv);
         opts.Print();
 
-        SamParser sam_parser(opts.input_file_name);
+        tsc::SamParser sam_parser(opts.input_file_name);
         std::cout << "Header: " << std::endl;
         std::vector<std::string> header = sam_parser.Header();
         for (const auto& header_line: header) {

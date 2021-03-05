@@ -9,7 +9,7 @@ namespace zlib_wrapper {
 
 std::vector<std::byte> Encode(const std::vector<std::byte>& in, int level = Z_DEFAULT_COMPRESSION);
 
-std::vector<std::byte> Decode(const std::vector<std::byte>& in, size_t out_size);
+std::vector<std::byte> Decode(const std::vector<std::byte>& in);
 
 } // namespace zlib_wrapper
 
