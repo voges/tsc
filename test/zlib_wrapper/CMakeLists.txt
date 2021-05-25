@@ -1,4 +1,0 @@
-add_executable(zlib_wrapper_tests zlib_wrapper_test.cc)
-target_link_libraries(zlib_wrapper_tests PRIVATE gtest_main)
-target_link_libraries(zlib_wrapper_tests PRIVATE zlib_wrapper)
-target_link_libraries(zlib_wrapper_tests PRIVATE z)
